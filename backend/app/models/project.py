@@ -4,7 +4,10 @@ from uuid import uuid4
 from app.db.base import Base
 from sqlalchemy import DateTime, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if False:
+    from app.models.document import Document
 
 
 class Project(Base):
@@ -25,4 +28,9 @@ class Project(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         server_default=func.now(),
+    )
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )

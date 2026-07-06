@@ -6,18 +6,22 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
-Sprint 1 implements Project CRUD end to end:
+Sprint 2 implements Project CRUD plus document upload and text extraction:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
 - FastAPI backend scaffold
 - SQLAlchemy 2 database setup
-- Alembic migration for `projects`
+- Alembic migrations for `projects` and `documents`
 - Project CRUD REST API
+- Document upload, list, detail, retry, and delete API
+- Local file storage under `storage/uploads/`
+- Text extraction for `.txt`, `.md`, `.docx`, and `.pdf`
 - React/Vite frontend scaffold
 - TailwindCSS and shadcn-compatible UI foundation
 - Project list, create, edit, and delete UI
+- Per-project document upload, status, retry/delete actions, and extracted text preview
 
-AI settings, document upload, embeddings, theme generation, RAG chat, and exports are intentionally out of scope for Sprint 1.
+AI settings, chunking, embeddings, theme generation, RAG chat, and exports are intentionally out of scope for Sprint 2.
 
 ## Prerequisites
 
@@ -68,6 +72,14 @@ Project API base:
 http://localhost:8000/api/projects
 ```
 
+Documents API examples:
+
+```text
+GET  http://localhost:8000/api/projects/{project_id}/documents
+GET  http://localhost:8000/api/documents/{document_id}
+POST http://localhost:8000/api/documents/{document_id}/process
+```
+
 ## Run Frontend
 
 ```powershell
@@ -81,6 +93,18 @@ Frontend dev server:
 ```text
 http://localhost:5173
 ```
+
+## Sprint 2 UI
+
+From the home page you can:
+
+- Create, edit, and delete projects.
+- Upload `.txt`, `.md`, `.docx`, and `.pdf` files inside a project card.
+- Watch document status move through `uploaded`, `processing`, `complete`, or `failed`.
+- Preview extracted text for completed documents.
+- Retry processing or delete uploaded documents.
+
+Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
 
 ## Guardrails
 

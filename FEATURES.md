@@ -6,6 +6,7 @@ This file tracks planned and completed features for the hackathon build.
 
 - [x] Project context and temporary GitHub repo - done
 - [x] Sprint 1 Project CRUD vertical slice - done
+- [x] Sprint 2 Document upload and text extraction - done
 
 ## Sprint 1 Details
 
@@ -18,9 +19,20 @@ This file tracks planned and completed features for the hackathon build.
 - [x] TailwindCSS and shadcn-compatible UI foundation - done
 - [x] Project list/create/edit/delete UI - done
 
+## Sprint 2 Details
+
+- [x] Document model and migration - done
+- [x] Project document upload endpoint - done
+- [x] Document list/detail/retry/delete endpoints - done
+- [x] Local file storage under `storage/uploads/` - done
+- [x] Text extraction for `.txt`, `.md`, `.docx`, and `.pdf` - done
+- [x] Per-project upload UI - done
+- [x] Document status display - done
+- [x] Extracted text preview - done
+- [x] Synthetic transcript fixture - done
+
 ## Planned MVP
 
-- [ ] Document upload and text extraction - planned
 - [ ] Chunking and embeddings - planned
 - [ ] AI provider settings - planned
 - [ ] Evidence-aware theme generation - planned
@@ -30,4 +42,4 @@ This file tracks planned and completed features for the hackathon build.
 
 ## Notes
 
-Sprint 1 intentionally excludes AI settings, transcript upload, embeddings, theme generation, RAG chat, and exports.
+Sprint 2 intentionally excludes AI settings, chunking, embeddings, theme generation, RAG chat, and exports.

@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from app.models.document import Document
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 from sqlalchemy import select
@@ -35,5 +38,13 @@ def update_project(db: Session, project: Project, payload: ProjectUpdate) -> Pro
 
 
 def delete_project(db: Session, project: Project) -> None:
+    file_paths = list(
+        db.scalars(select(Document.file_path).where(Document.project_id == project.id)).all()
+    )
     db.delete(project)
     db.commit()
+
+    for file_path in file_paths:
+        path = Path(file_path)
+        if path.exists():
+            path.unlink()

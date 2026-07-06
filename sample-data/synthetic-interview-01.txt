@@ -1,0 +1,11 @@
+Moderator: What was difficult about the prototype?
+
+Participant: I expected the settings to be under my profile, but they were in a separate workspace menu.
+
+Moderator: How did that affect the task?
+
+Participant: I spent a few minutes looking around and started to think I had missed a step.
+
+Moderator: What would have helped?
+
+Participant: A clearer label in the navigation would have made the path easier to trust.

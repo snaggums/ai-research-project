@@ -1,10 +1,17 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Eye, FileText, Loader2, Pencil, Plus, RefreshCw, Trash2, Upload, X } from "lucide-react";
 
-import type { Project, ProjectPayload } from "@/api/types";
+import type { Project, ProjectPayload, ResearchDocument } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  useDeleteDocument,
+  useDocument,
+  useDocuments,
+  useRetryDocument,
+  useUploadDocument,
+} from "@/hooks/useDocuments";
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
@@ -74,6 +81,167 @@ function ProjectForm({
   );
 }
 
+function DocumentPanel({ projectId }: { projectId: string }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const documents = useDocuments(projectId);
+  const selectedDocument = useDocument(selectedDocumentId);
+  const uploadDocument = useUploadDocument(projectId);
+  const retryDocument = useRetryDocument(projectId);
+  const deleteDocument = useDeleteDocument(projectId);
+
+  const currentDocumentStillExists = documents.data?.some((document) => document.id === selectedDocumentId);
+  useEffect(() => {
+    if (selectedDocumentId && documents.data && !currentDocumentStillExists) {
+      setSelectedDocumentId(null);
+    }
+  }, [currentDocumentStillExists, documents.data, selectedDocumentId]);
+
+  function handleUpload() {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+
+    uploadDocument.mutate(file, {
+      onSuccess: () => {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      },
+    });
+  }
+
+  return (
+    <div className="grid gap-4 border-t border-border pt-5">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div className="grid gap-1">
+          <h3 className="font-semibold text-card-foreground">Documents</h3>
+          <p className="text-sm text-muted-foreground">Upload transcripts or research notes for this project.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input ref={fileInputRef} type="file" accept=".txt,.md,.docx,.pdf" className="sm:w-64" />
+          <Button type="button" size="sm" disabled={uploadDocument.isPending} onClick={handleUpload}>
+            {uploadDocument.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Upload
+          </Button>
+        </div>
+      </div>
+
+      {uploadDocument.isError ? (
+        <p className="text-sm text-destructive">Upload failed. Use .txt, .md, .docx, or .pdf files.</p>
+      ) : null}
+
+      {documents.isLoading ? <p className="text-sm text-muted-foreground">Loading documents...</p> : null}
+      {documents.isError ? (
+        <p className="text-sm text-destructive">Could not load documents for this project.</p>
+      ) : null}
+      {documents.data?.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+          No documents uploaded yet.
+        </div>
+      ) : null}
+
+      <div className="grid gap-2">
+        {documents.data?.map((document) => (
+          <DocumentRow
+            key={document.id}
+            document={document}
+            isSelected={document.id === selectedDocumentId}
+            isRetrying={retryDocument.isPending}
+            isDeleting={deleteDocument.isPending}
+            onPreview={() => setSelectedDocumentId(document.id)}
+            onRetry={() => retryDocument.mutate(document.id)}
+            onDelete={() => deleteDocument.mutate(document.id)}
+          />
+        ))}
+      </div>
+
+      {selectedDocumentId ? (
+        <div className="rounded-md border border-border bg-background">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <FileText className="h-4 w-4 text-primary" />
+              Extracted text preview
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedDocumentId(null)}>
+              <X className="h-4 w-4" />
+              Close
+            </Button>
+          </div>
+          <div className="max-h-72 overflow-auto whitespace-pre-wrap px-4 py-3 text-sm leading-6 text-muted-foreground">
+            {selectedDocument.isLoading ? "Loading extracted text..." : null}
+            {selectedDocument.isError ? "Could not load this document." : null}
+            {selectedDocument.data?.content || "No extracted text is available yet."}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DocumentRow({
+  document,
+  isSelected,
+  isRetrying,
+  isDeleting,
+  onPreview,
+  onRetry,
+  onDelete,
+}: {
+  document: ResearchDocument;
+  isSelected: boolean;
+  isRetrying: boolean;
+  isDeleting: boolean;
+  onPreview: () => void;
+  onRetry: () => void;
+  onDelete: () => void;
+}) {
+  const canPreview = document.status === "complete";
+
+  return (
+    <div className="grid gap-3 rounded-md border border-border bg-background px-4 py-3 md:grid-cols-[1fr_auto] md:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <FileText className="h-4 w-4 shrink-0 text-primary" />
+          <p className="break-words text-sm font-medium text-foreground">{document.filename}</p>
+          <StatusBadge status={document.status} />
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>Uploaded {new Date(document.uploaded_at).toLocaleString()}</span>
+          {document.processed_at ? <span>Processed {new Date(document.processed_at).toLocaleString()}</span> : null}
+        </div>
+        {document.error_message ? <p className="mt-2 text-sm text-destructive">{document.error_message}</p> : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant={isSelected ? "secondary" : "outline"} size="sm" disabled={!canPreview} onClick={onPreview}>
+          <Eye className="h-4 w-4" />
+          Preview
+        </Button>
+        <Button type="button" variant="outline" size="sm" disabled={isRetrying} onClick={onRetry}>
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </Button>
+        <Button type="button" variant="ghost" size="sm" disabled={isDeleting} onClick={onDelete}>
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: ResearchDocument["status"] }) {
+  const statusClassName =
+    status === "complete"
+      ? "bg-emerald-100 text-emerald-800"
+      : status === "failed"
+        ? "bg-red-100 text-red-800"
+        : status === "processing"
+          ? "bg-sky-100 text-sky-800"
+          : "bg-secondary text-secondary-foreground";
+
+  return <span className={`rounded-md px-2 py-1 text-xs font-medium ${statusClassName}`}>{status}</span>;
+}
+
 function ProjectCard({ project }: { project: Project }) {
   const [isEditing, setIsEditing] = useState(false);
   const updateProject = useUpdateProject();
@@ -128,6 +296,7 @@ function ProjectCard({ project }: { project: Project }) {
               </Button>
             </div>
           </div>
+          <DocumentPanel projectId={project.id} />
         </div>
       )}
     </article>
@@ -143,14 +312,14 @@ export function ProjectsPage() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 md:px-8">
         <header className="flex flex-col justify-between gap-5 border-b border-border pb-6 md:flex-row md:items-end">
           <div className="grid gap-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 1</p>
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 2</p>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">AI-Assisted UX Research Repository</h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create a research project to group transcripts, notes, generated themes, and evidence as the MVP grows.
+              Create research projects, upload transcript files, and preview extracted text before AI analysis begins.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            Project CRUD only
+            Project CRUD + document upload
           </div>
         </header>
 

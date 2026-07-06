@@ -21,6 +21,7 @@ build/
 
 # Local app storage
 storage/uploads/
+**/storage/uploads/
 
 # OS/editor noise
 .DS_Store
