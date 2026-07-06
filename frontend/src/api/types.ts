@@ -38,3 +38,33 @@ export type SearchResult = {
 export type SearchResponse = {
   results: SearchResult[];
 };
+
+export type AISettings = {
+  id: string;
+  provider: string;
+  model: string;
+  base_url: string | null;
+  embedding_provider: string;
+  embedding_model: string;
+  api_key_env_var: string | null;
+  has_api_key: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AISettingsPayload = {
+  provider: string;
+  model: string;
+  base_url?: string | null;
+  embedding_provider: string;
+  embedding_model: string;
+};
+
+export type AISettingsTestResult = {
+  ok: boolean;
+  message: string;
+  provider: string;
+  model: string;
+  api_key_env_var: string | null;
+  has_api_key: boolean;
+};

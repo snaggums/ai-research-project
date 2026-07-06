@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Eye, FileSearch, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
+import { Bot, Eye, FileSearch, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
 
-import type { Project, ProjectPayload, ResearchDocument } from "@/api/types";
+import type { AISettingsPayload, Project, ProjectPayload, ResearchDocument } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useDeleteDocument,
@@ -14,8 +15,11 @@ import {
 } from "@/hooks/useDocuments";
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useProjectSearch } from "@/hooks/useSearch";
+import { useAISettings, useTestAISettings, useUpdateAISettings } from "@/hooks/useSettings";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
+const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
+const embeddingProviders = ["mock", "openai", "ollama"];
 
 function ProjectForm({
   initialValue,
@@ -299,6 +303,152 @@ function SearchPanel({ projectId }: { projectId: string }) {
   );
 }
 
+function AISettingsPanel() {
+  const settings = useAISettings();
+  const updateSettings = useUpdateAISettings();
+  const testSettings = useTestAISettings();
+  const [form, setForm] = useState<AISettingsPayload>({
+    provider: "openai",
+    model: "gpt-4.1-mini",
+    base_url: "",
+    embedding_provider: "mock",
+    embedding_model: "mock-hash-64",
+  });
+
+  useEffect(() => {
+    if (!settings.data) return;
+    setForm({
+      provider: settings.data.provider,
+      model: settings.data.model,
+      base_url: settings.data.base_url ?? "",
+      embedding_provider: settings.data.embedding_provider,
+      embedding_model: settings.data.embedding_model,
+    });
+  }, [settings.data]);
+
+  function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    updateSettings.mutate({
+      provider: form.provider,
+      model: form.model,
+      base_url: form.base_url?.trim() || null,
+      embedding_provider: form.embedding_provider,
+      embedding_model: form.embedding_model,
+    });
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Bot className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-card-foreground">AI provider settings</h2>
+            <p className="text-sm text-muted-foreground">Store provider metadata; keep real keys in backend/.env.</p>
+          </div>
+        </div>
+        <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">Sprint 4</span>
+      </div>
+
+      {settings.isLoading ? <p className="text-sm text-muted-foreground">Loading settings...</p> : null}
+      {settings.isError ? <p className="text-sm text-destructive">Could not load AI settings.</p> : null}
+
+      <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSave}>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="provider">
+            Provider
+          </label>
+          <Select
+            id="provider"
+            value={form.provider}
+            onChange={(event) => setForm((current) => ({ ...current, provider: event.target.value }))}
+          >
+            {providers.map((provider) => (
+              <option key={provider} value={provider}>
+                {provider}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="model">
+            Model
+          </label>
+          <Input
+            id="model"
+            value={form.model}
+            onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
+            placeholder="gpt-4.1-mini"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="base-url">
+            Base URL
+          </label>
+          <Input
+            id="base-url"
+            value={form.base_url ?? ""}
+            onChange={(event) => setForm((current) => ({ ...current, base_url: event.target.value }))}
+            placeholder="Optional for OpenRouter, Azure, Ollama, or gateways"
+          />
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="embedding-provider">
+            Embedding provider
+          </label>
+          <Select
+            id="embedding-provider"
+            value={form.embedding_provider}
+            onChange={(event) => setForm((current) => ({ ...current, embedding_provider: event.target.value }))}
+          >
+            {embeddingProviders.map((provider) => (
+              <option key={provider} value={provider}>
+                {provider}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="embedding-model">
+            Embedding model
+          </label>
+          <Input
+            id="embedding-model"
+            value={form.embedding_model}
+            onChange={(event) => setForm((current) => ({ ...current, embedding_model: event.target.value }))}
+            placeholder="mock-hash-64"
+          />
+        </div>
+        <div className="flex flex-col justify-end gap-2">
+          <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+            Key env var: {settings.data?.api_key_env_var ?? "none required"} ·{" "}
+            {settings.data?.has_api_key ? "present" : "not detected"}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={updateSettings.isPending || !form.provider || !form.model}>
+              Save settings
+            </Button>
+            <Button type="button" variant="outline" disabled={testSettings.isPending} onClick={() => testSettings.mutate()}>
+              {testSettings.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+              Test config
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      {updateSettings.isSuccess ? <p className="mt-3 text-sm text-muted-foreground">Settings saved.</p> : null}
+      {updateSettings.isError ? <p className="mt-3 text-sm text-destructive">Could not save settings.</p> : null}
+      {testSettings.data ? (
+        <p className={`mt-3 text-sm ${testSettings.data.ok ? "text-muted-foreground" : "text-destructive"}`}>
+          {testSettings.data.message}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function ProjectCard({ project }: { project: Project }) {
   const [isEditing, setIsEditing] = useState(false);
   const updateProject = useUpdateProject();
@@ -380,6 +530,8 @@ export function ProjectsPage() {
             Project CRUD + document upload + search
           </div>
         </header>
+
+        <AISettingsPanel />
 
         <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
           <div className="h-fit rounded-lg border border-border bg-card p-5 shadow-sm">

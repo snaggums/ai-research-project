@@ -8,6 +8,7 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Sprint 1 Project CRUD vertical slice - done
 - [x] Sprint 2 Document upload and text extraction - done
 - [x] Sprint 3 Chunking, mock embeddings, and search - done
+- [x] Sprint 4 AI provider settings - done
 
 ## Sprint 1 Details
 
@@ -42,9 +43,18 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Project search UI - done
 - [x] Search smoke test with synthetic transcript - done
 
+## Sprint 4 Details
+
+- [x] AI settings model and migration - done
+- [x] AI settings API - done
+- [x] Provider/model/base URL metadata storage - done
+- [x] Environment-variable key status check - done
+- [x] No raw API key persistence - done
+- [x] AI settings UI panel - done
+- [x] AI settings API smoke test - done
+
 ## Planned MVP
 
-- [ ] AI provider settings - planned
 - [ ] Evidence-aware theme generation - planned
 - [ ] Theme review and editing - planned
 - [ ] RAG chat with citations - planned
@@ -52,4 +62,4 @@ This file tracks planned and completed features for the hackathon build.
 
 ## Notes
 
-Sprint 3 intentionally excludes AI settings, real embedding providers, theme generation, RAG chat, and exports.
+Sprint 4 intentionally excludes real model calls, real embedding providers, theme generation, RAG chat, and exports.
