@@ -1,6 +1,6 @@
-import os
 from datetime import datetime, timezone
 
+from app.core.config import settings as app_settings
 from app.models.settings import AISettings
 from app.schemas.settings import AISettingsTestResponse, AISettingsUpdate
 from sqlalchemy import select
@@ -126,4 +126,8 @@ def _normalize_provider(provider: str) -> str:
 
 
 def _has_key(api_key_env_var: str | None) -> bool:
-    return bool(api_key_env_var and os.getenv(api_key_env_var))
+    if not api_key_env_var:
+        return False
+
+    settings_field = api_key_env_var.lower()
+    return bool(getattr(app_settings, settings_field, None))
