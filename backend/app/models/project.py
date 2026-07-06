@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if False:
+    from app.models.chunk import Chunk
     from app.models.document import Document
 
 
@@ -30,6 +31,11 @@ class Project(Base):
         server_default=func.now(),
     )
     documents: Mapped[list["Document"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    chunks: Mapped[list["Chunk"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
         passive_deletes=True,

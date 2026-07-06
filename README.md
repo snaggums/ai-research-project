@@ -6,7 +6,7 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
-Sprint 2 implements Project CRUD plus document upload and text extraction:
+Sprint 3 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, and local search:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
 - FastAPI backend scaffold
@@ -16,12 +16,16 @@ Sprint 2 implements Project CRUD plus document upload and text extraction:
 - Document upload, list, detail, retry, and delete API
 - Local file storage under `storage/uploads/`
 - Text extraction for `.txt`, `.md`, `.docx`, and `.pdf`
+- Document chunking after successful text extraction
+- Deterministic local mock embeddings stored in pgvector
+- Project chunk search endpoint
 - React/Vite frontend scaffold
 - TailwindCSS and shadcn-compatible UI foundation
 - Project list, create, edit, and delete UI
 - Per-project document upload, status, retry/delete actions, and extracted text preview
+- Per-project search UI for extracted chunks
 
-AI settings, chunking, embeddings, theme generation, RAG chat, and exports are intentionally out of scope for Sprint 2.
+AI settings, real embedding providers, theme generation, RAG chat, and exports are intentionally out of scope for Sprint 3.
 
 ## Prerequisites
 
@@ -80,6 +84,12 @@ GET  http://localhost:8000/api/documents/{document_id}
 POST http://localhost:8000/api/documents/{document_id}/process
 ```
 
+Search API example:
+
+```text
+POST http://localhost:8000/api/projects/{project_id}/search
+```
+
 ## Run Frontend
 
 ```powershell
@@ -94,7 +104,7 @@ Frontend dev server:
 http://localhost:5173
 ```
 
-## Sprint 2 UI
+## Sprint 3 UI
 
 From the home page you can:
 
@@ -103,8 +113,11 @@ From the home page you can:
 - Watch document status move through `uploaded`, `processing`, `complete`, or `failed`.
 - View extracted text for completed documents. PDF support extracts embedded text; it does not render the original PDF pages.
 - Retry processing or delete uploaded documents.
+- Search extracted chunks with the project search box.
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
+
+Documents uploaded before Sprint 3 need to be reprocessed before they appear in search results. Click **Retry** on an existing document to extract text again and create chunks.
 
 ## Guardrails
 

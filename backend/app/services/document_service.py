@@ -5,11 +5,14 @@ from uuid import uuid4
 
 from app.core.config import settings
 from app.db.session import SessionLocal
+from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.project import Project
+from app.services.chunking_service import chunk_text
+from app.services.embedding_service import embed_text
 from app.services.parsing_service import SUPPORTED_EXTENSIONS, extract_text
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 
@@ -73,7 +76,9 @@ def process_document(document_id: str) -> None:
             document.status = "complete"
             document.error_message = None
             document.processed_at = datetime.now(timezone.utc)
+            _replace_document_chunks(db, document, content)
         except Exception as exc:
+            db.execute(delete(Chunk).where(Chunk.document_id == document.id))
             document.status = "failed"
             document.error_message = str(exc)
             document.processed_at = datetime.now(timezone.utc)
@@ -95,3 +100,20 @@ def delete_document(db: Session, document: Document) -> None:
 def _safe_filename(filename: str) -> str:
     safe = "".join(character if character.isalnum() or character in {".", "-", "_"} else "_" for character in filename)
     return safe[:120] or "upload"
+
+
+def _replace_document_chunks(db: Session, document: Document, content: str) -> None:
+    db.execute(delete(Chunk).where(Chunk.document_id == document.id))
+    for text_chunk in chunk_text(content):
+        db.add(
+            Chunk(
+                document_id=document.id,
+                project_id=document.project_id,
+                text=text_chunk.text,
+                embedding=embed_text(text_chunk.text),
+                chunk_index=text_chunk.chunk_index,
+                start_char=text_chunk.start_char,
+                end_char=text_chunk.end_char,
+                extra_metadata={"source": "document_processing"},
+            )
+        )

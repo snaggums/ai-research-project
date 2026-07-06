@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Eye, FileText, Loader2, Pencil, Plus, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import { Eye, FileSearch, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
 
 import type { Project, ProjectPayload, ResearchDocument } from "@/api/types";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   useUploadDocument,
 } from "@/hooks/useDocuments";
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
+import { useProjectSearch } from "@/hooks/useSearch";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
 
@@ -245,6 +246,59 @@ function StatusBadge({ status }: { status: ResearchDocument["status"] }) {
   return <span className={`rounded-md px-2 py-1 text-xs font-medium ${statusClassName}`}>{status}</span>;
 }
 
+function SearchPanel({ projectId }: { projectId: string }) {
+  const [query, setQuery] = useState("");
+  const searchProject = useProjectSearch(projectId);
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const cleanQuery = query.trim();
+    if (!cleanQuery) return;
+    searchProject.mutate({ query: cleanQuery });
+  }
+
+  return (
+    <div className="grid gap-4 border-t border-border pt-5">
+      <div className="grid gap-1">
+        <h3 className="font-semibold text-card-foreground">Search extracted text</h3>
+        <p className="text-sm text-muted-foreground">Find relevant transcript chunks using local mock embeddings.</p>
+      </div>
+      <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleSearch}>
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="navigation confusion, onboarding, settings..."
+        />
+        <Button type="submit" disabled={searchProject.isPending || !query.trim()}>
+          {searchProject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Search
+        </Button>
+      </form>
+      {searchProject.isError ? (
+        <p className="text-sm text-destructive">Search failed. Confirm documents are processed and the backend is running.</p>
+      ) : null}
+      {searchProject.data?.results.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+          No matching chunks found.
+        </div>
+      ) : null}
+      <div className="grid gap-3">
+        {searchProject.data?.results.map((result) => (
+          <article key={result.chunk_id} className="rounded-md border border-border bg-background px-4 py-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <FileSearch className="h-4 w-4 text-primary" />
+              <span>{result.document_name}</span>
+              <span>Chunk {result.chunk_index + 1}</span>
+              <span>Score {result.score.toFixed(2)}</span>
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{result.text}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProjectCard({ project }: { project: Project }) {
   const [isEditing, setIsEditing] = useState(false);
   const updateProject = useUpdateProject();
@@ -300,6 +354,7 @@ function ProjectCard({ project }: { project: Project }) {
             </div>
           </div>
           <DocumentPanel projectId={project.id} />
+          <SearchPanel projectId={project.id} />
         </div>
       )}
     </article>
@@ -318,11 +373,11 @@ export function ProjectsPage() {
             <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 2</p>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">AI-Assisted UX Research Repository</h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create research projects, upload transcript files, and preview extracted text before AI analysis begins.
+              Create research projects, upload transcript files, and search extracted chunks before AI analysis begins.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            Project CRUD + document upload
+            Project CRUD + document upload + search
           </div>
         </header>
 

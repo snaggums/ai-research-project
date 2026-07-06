@@ -25,3 +25,16 @@ export type ResearchDocument = {
 export type ResearchDocumentDetail = ResearchDocument & {
   content: string | null;
 };
+
+export type SearchResult = {
+  chunk_id: string;
+  document_id: string;
+  document_name: string;
+  chunk_index: number;
+  text: string;
+  score: number;
+};
+
+export type SearchResponse = {
+  results: SearchResult[];
+};

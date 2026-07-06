@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if False:
+    from app.models.chunk import Chunk
     from app.models.project import Project
 
 
@@ -35,3 +36,8 @@ class Document(Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship(back_populates="documents")
+    chunks: Mapped[list["Chunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

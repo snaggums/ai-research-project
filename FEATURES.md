@@ -7,6 +7,7 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Project context and temporary GitHub repo - done
 - [x] Sprint 1 Project CRUD vertical slice - done
 - [x] Sprint 2 Document upload and text extraction - done
+- [x] Sprint 3 Chunking, mock embeddings, and search - done
 
 ## Sprint 1 Details
 
@@ -31,9 +32,18 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Extracted text preview - done
 - [x] Synthetic transcript fixture - done
 
+## Sprint 3 Details
+
+- [x] Chunk model and migration - done
+- [x] pgvector extension setup - done
+- [x] Text chunking during document processing - done
+- [x] Deterministic local mock embeddings - done
+- [x] Project search API - done
+- [x] Project search UI - done
+- [x] Search smoke test with synthetic transcript - done
+
 ## Planned MVP
 
-- [ ] Chunking and embeddings - planned
 - [ ] AI provider settings - planned
 - [ ] Evidence-aware theme generation - planned
 - [ ] Theme review and editing - planned
@@ -42,4 +52,4 @@ This file tracks planned and completed features for the hackathon build.
 
 ## Notes
 
-Sprint 2 intentionally excludes AI settings, chunking, embeddings, theme generation, RAG chat, and exports.
+Sprint 3 intentionally excludes AI settings, real embedding providers, theme generation, RAG chat, and exports.
