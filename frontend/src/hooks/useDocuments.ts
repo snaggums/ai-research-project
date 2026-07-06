@@ -29,6 +29,11 @@ export function useDocument(documentId: string | null) {
     queryKey: documentKey(documentId),
     queryFn: () => getDocument(documentId as string),
     enabled: Boolean(documentId),
+    refetchInterval: (query) => {
+      const document = query.state.data;
+      if (!document) return false;
+      return document.status === "uploaded" || document.status === "processing" ? 1500 : false;
+    },
   });
 }
 

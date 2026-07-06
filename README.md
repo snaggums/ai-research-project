@@ -101,7 +101,7 @@ From the home page you can:
 - Create, edit, and delete projects.
 - Upload `.txt`, `.md`, `.docx`, and `.pdf` files inside a project card.
 - Watch document status move through `uploaded`, `processing`, `complete`, or `failed`.
-- Preview extracted text for completed documents.
+- View extracted text for completed documents. PDF support extracts embedded text; it does not render the original PDF pages.
 - Retry processing or delete uploaded documents.
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.

@@ -102,7 +102,8 @@ function DocumentPanel({ projectId }: { projectId: string }) {
     if (!file) return;
 
     uploadDocument.mutate(file, {
-      onSuccess: () => {
+      onSuccess: (document) => {
+        setSelectedDocumentId(document.id);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -119,10 +120,10 @@ function DocumentPanel({ projectId }: { projectId: string }) {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input ref={fileInputRef} type="file" accept=".txt,.md,.docx,.pdf" className="sm:w-64" />
-          <Button type="button" size="sm" disabled={uploadDocument.isPending} onClick={handleUpload}>
-            {uploadDocument.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Upload
-          </Button>
+        <Button type="button" size="sm" disabled={uploadDocument.isPending} onClick={handleUpload}>
+          {uploadDocument.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          Upload
+        </Button>
         </div>
       </div>
 
@@ -170,7 +171,9 @@ function DocumentPanel({ projectId }: { projectId: string }) {
           <div className="max-h-72 overflow-auto whitespace-pre-wrap px-4 py-3 text-sm leading-6 text-muted-foreground">
             {selectedDocument.isLoading ? "Loading extracted text..." : null}
             {selectedDocument.isError ? "Could not load this document." : null}
-            {selectedDocument.data?.content || "No extracted text is available yet."}
+            {selectedDocument.data?.status === "uploaded" || selectedDocument.data?.status === "processing"
+              ? "Extracting text..."
+              : selectedDocument.data?.content || "No extracted text is available yet."}
           </div>
         </div>
       ) : null}
@@ -214,7 +217,7 @@ function DocumentRow({
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant={isSelected ? "secondary" : "outline"} size="sm" disabled={!canPreview} onClick={onPreview}>
           <Eye className="h-4 w-4" />
-          Preview
+          View text
         </Button>
         <Button type="button" variant="outline" size="sm" disabled={isRetrying} onClick={onRetry}>
           <RefreshCw className="h-4 w-4" />
