@@ -1,4 +1,8 @@
-# AI-Assisted UX Research Repository
+# Sky-AIR
+
+30 Apps in 30 Days: Stephanie and Abigail Team
+
+AI-Assisted UX Research Repository
 
 An MVP AI-assisted qualitative research workspace for uploading research transcripts, generating evidence-backed themes, reviewing findings, asking cited questions, and exporting reports.
 
