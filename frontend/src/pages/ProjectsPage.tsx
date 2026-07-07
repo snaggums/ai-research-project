@@ -434,7 +434,6 @@ function ChatPanel({ projectId }: { projectId: string }) {
       {
         onSuccess: (response: ChatResponse) => {
           setTurns((current) => [
-            ...current,
             {
               id: `${Date.now()}-${current.length}`,
               question: response.question,
@@ -444,6 +443,7 @@ function ChatPanel({ projectId }: { projectId: string }) {
               model: response.model,
               used_mock: response.used_mock,
             },
+            ...current,
           ]);
           setQuestion("");
         },
