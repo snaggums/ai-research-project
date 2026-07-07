@@ -144,7 +144,17 @@ def generate_project_themes(
     settings = ai_settings_service.get_or_create_settings(db)
     provider = settings.provider
     used_mock = _should_use_mock(settings)
-    generated = _generate_mock_themes(chunks, max_themes) if used_mock else _generate_with_litellm(settings, chunks, max_themes)
+    try:
+        generated = _generate_mock_themes(chunks, max_themes) if used_mock else _generate_with_litellm(settings, chunks, max_themes)
+    except ValueError:
+        raise
+    except Exception as exc:
+        provider_label = f"{provider} ({settings.model})"
+        raise ValueError(
+            f"Theme generation reached {provider_label}, but the provider call failed. "
+            "Check the selected model name, API key, account access, and network connection. "
+            f"Provider error: {_clean_provider_error(exc)}"
+        ) from exc
 
     if replace_existing:
         db.execute(delete(Theme).where(Theme.project_id == project_id))
@@ -170,6 +180,12 @@ def generate_project_themes(
             _add_evidence_model(db, theme.id, evidence_payload, project_id=project_id)
         _refresh_evidence_count(db, theme)
         saved.append(theme_to_read(theme))
+
+    if not saved:
+        raise ValueError(
+            "Theme generation returned output, but none of the evidence referenced valid chunks from this project. "
+            "Try generating again or switch to the mock provider for local testing."
+        )
 
     db.commit()
     themes = list_project_themes(db, project_id)
@@ -290,14 +306,21 @@ def _generate_with_litellm(settings: AISettings, chunks: list[tuple[Chunk, str]]
             ),
         },
     ]
-    response = completion(
-        model=settings.model,
-        messages=messages,
-        response_format={"type": "json_object"},
-        temperature=0.2,
-        api_key=_api_key_for_provider(settings.provider),
-        api_base=settings.base_url,
-    )
+    try:
+        response = completion(
+            model=settings.model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            api_key=_api_key_for_provider(settings.provider),
+            api_base=settings.base_url,
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"Live AI theme generation failed for provider '{settings.provider}' and model '{settings.model}'. "
+            "Confirm the model is available to your account and the provider key is valid. "
+            f"Provider error: {_clean_provider_error(exc)}"
+        ) from exc
     raw = response.choices[0].message.content
     try:
         return GeneratedThemesPayload.model_validate_json(raw)
@@ -423,3 +446,10 @@ def _excerpt(text: str, max_length: int = 320) -> str:
 
 def _round_score(value: float) -> float:
     return round(max(0.0, min(1.0, value)), 2)
+
+
+def _clean_provider_error(exc: Exception) -> str:
+    message = str(exc).strip().replace("\n", " ")
+    if not message:
+        return exc.__class__.__name__
+    return message[:500]

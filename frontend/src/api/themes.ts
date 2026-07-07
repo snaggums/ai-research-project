@@ -12,7 +12,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    const message = await readErrorMessage(response);
     throw new Error(message || `Request failed with status ${response.status}`);
   }
 
@@ -54,4 +54,23 @@ export function updateEvidence(evidenceId: string, payload: ThemeEvidencePayload
 
 export function deleteEvidence(evidenceId: string) {
   return request<void>(`/evidence/${evidenceId}`, { method: "DELETE" });
+}
+
+async function readErrorMessage(response: Response) {
+  const rawMessage = await response.text();
+  if (!rawMessage) return "";
+
+  try {
+    const parsed = JSON.parse(rawMessage) as { detail?: unknown };
+    if (typeof parsed.detail === "string") {
+      return parsed.detail;
+    }
+    if (Array.isArray(parsed.detail)) {
+      return parsed.detail.map((item) => JSON.stringify(item)).join("; ");
+    }
+  } catch {
+    return rawMessage;
+  }
+
+  return rawMessage;
 }

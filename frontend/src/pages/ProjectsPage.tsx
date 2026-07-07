@@ -48,6 +48,10 @@ function roundScore(value: number | undefined) {
   return Number(Math.max(0, Math.min(1, value ?? 0)).toFixed(2));
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function ProjectForm({
   initialValue,
   submitLabel,
@@ -358,7 +362,7 @@ function ThemesPanel({ projectId }: { projectId: string }) {
       ) : null}
       {generateThemes.isError ? (
         <p className="text-sm text-destructive">
-          Theme generation failed. Confirm documents are processed and AI settings are configured.
+          {errorMessage(generateThemes.error, "Theme generation failed. Confirm documents are processed and AI settings are configured.")}
         </p>
       ) : null}
       {themes.isLoading ? <p className="text-sm text-muted-foreground">Loading themes...</p> : null}
