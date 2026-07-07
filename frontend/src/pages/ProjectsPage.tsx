@@ -44,6 +44,10 @@ const emptyForm: ProjectPayload = { name: "", description: "" };
 const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
 const embeddingProviders = ["mock", "openai", "ollama"];
 
+function roundScore(value: number | undefined) {
+  return Number(Math.max(0, Math.min(1, value ?? 0)).toFixed(2));
+}
+
 function ProjectForm({
   initialValue,
   submitLabel,
@@ -410,7 +414,7 @@ function ThemeCard({
   const [form, setForm] = useState<ThemePayload>({
     title: theme.title,
     description: theme.description,
-    confidence: theme.confidence,
+    confidence: roundScore(theme.confidence),
     user_notes: theme.user_notes ?? "",
   });
 
@@ -418,7 +422,7 @@ function ThemeCard({
     setForm({
       title: theme.title,
       description: theme.description,
-      confidence: theme.confidence,
+      confidence: roundScore(theme.confidence),
       user_notes: theme.user_notes ?? "",
     });
   }, [theme]);
@@ -429,7 +433,7 @@ function ThemeCard({
     onUpdate({
       title: form.title.trim(),
       description: form.description.trim(),
-      confidence: form.confidence,
+      confidence: roundScore(form.confidence),
       user_notes: form.user_notes?.trim() || null,
     });
     setIsEditing(false);
@@ -461,9 +465,9 @@ function ThemeCard({
               min="0"
               max="1"
               step="0.01"
-              value={form.confidence}
+              value={roundScore(form.confidence).toFixed(2)}
               onChange={(event) =>
-                setForm((current) => ({ ...current, confidence: Number(event.target.value) }))
+                setForm((current) => ({ ...current, confidence: roundScore(Number(event.target.value)) }))
               }
             />
           </div>
@@ -543,7 +547,7 @@ function EvidenceCard({
   const [form, setForm] = useState<ThemeEvidencePayload>({
     quote: evidence.quote,
     reasoning: evidence.reasoning,
-    relevance_score: evidence.relevance_score,
+    relevance_score: roundScore(evidence.relevance_score),
     evidence_type: evidence.evidence_type,
   });
 
@@ -551,7 +555,7 @@ function EvidenceCard({
     setForm({
       quote: evidence.quote,
       reasoning: evidence.reasoning,
-      relevance_score: evidence.relevance_score,
+      relevance_score: roundScore(evidence.relevance_score),
       evidence_type: evidence.evidence_type,
     });
   }, [evidence]);
@@ -562,7 +566,7 @@ function EvidenceCard({
     onUpdate({
       quote: form.quote.trim(),
       reasoning: form.reasoning.trim(),
-      relevance_score: form.relevance_score,
+      relevance_score: roundScore(form.relevance_score),
       evidence_type: form.evidence_type?.trim() || "supporting",
     });
     setIsEditing(false);
@@ -588,9 +592,9 @@ function EvidenceCard({
               min="0"
               max="1"
               step="0.01"
-              value={form.relevance_score ?? 0}
+              value={roundScore(form.relevance_score).toFixed(2)}
               onChange={(event) =>
-                setForm((current) => ({ ...current, relevance_score: Number(event.target.value) }))
+                setForm((current) => ({ ...current, relevance_score: roundScore(Number(event.target.value)) }))
               }
             />
             <Input

@@ -48,7 +48,7 @@ def create_theme(db: Session, project_id: str, payload: ThemeCreate, created_by:
         project_id=project_id,
         title=payload.title.strip(),
         description=payload.description.strip(),
-        confidence=payload.confidence,
+        confidence=_round_score(payload.confidence),
         user_notes=payload.user_notes.strip() if payload.user_notes else None,
         created_by=created_by,
     )
@@ -67,7 +67,7 @@ def update_theme(db: Session, theme: Theme, payload: ThemeUpdate) -> ThemeRead:
     if payload.description is not None:
         theme.description = payload.description.strip()
     if payload.confidence is not None:
-        theme.confidence = payload.confidence
+        theme.confidence = _round_score(payload.confidence)
     if payload.user_notes is not None:
         theme.user_notes = payload.user_notes.strip() or None
     theme.updated_at = datetime.now(timezone.utc)
@@ -114,7 +114,7 @@ def update_evidence(db: Session, evidence: ThemeEvidence, payload: ThemeEvidence
     if payload.reasoning is not None:
         evidence.reasoning = payload.reasoning.strip()
     if payload.relevance_score is not None:
-        evidence.relevance_score = payload.relevance_score
+        evidence.relevance_score = _round_score(payload.relevance_score)
     if payload.evidence_type is not None:
         evidence.evidence_type = payload.evidence_type.strip()
     db.add(evidence)
@@ -160,7 +160,7 @@ def generate_project_themes(
             project_id=project_id,
             title=generated_theme.title.strip(),
             description=generated_theme.description.strip(),
-            confidence=generated_theme.confidence,
+            confidence=_round_score(generated_theme.confidence),
             created_by="mock" if used_mock else provider,
             model=settings.model,
         )
@@ -226,7 +226,7 @@ def _generate_mock_themes(chunks: list[tuple[Chunk, str]], max_themes: int) -> G
             GeneratedTheme(
                 title=title,
                 description=f"Participants appear to share a pattern around {title.lower()}.",
-                confidence=min(0.92, 0.58 + (len(evidence) * 0.1)),
+                confidence=_round_score(min(0.92, 0.58 + (len(evidence) * 0.1))),
                 evidence=evidence,
             )
         )
@@ -239,7 +239,7 @@ def _generate_mock_themes(chunks: list[tuple[Chunk, str]], max_themes: int) -> G
             GeneratedTheme(
                 title="Emerging participant pattern",
                 description="The uploaded material contains an early pattern that needs researcher review.",
-                confidence=0.55,
+                confidence=_round_score(0.55),
                 evidence=[
                     GeneratedEvidence(
                         chunk_id=chunk.id,
@@ -337,7 +337,7 @@ def _validated_evidence(
                 chunk_id=chunk.id,
                 quote=quote,
                 reasoning=evidence.reasoning.strip(),
-                relevance_score=evidence.relevance_score,
+                relevance_score=_round_score(evidence.relevance_score),
                 evidence_type=evidence.evidence_type.strip(),
             )
         )
@@ -367,7 +367,7 @@ def _add_evidence_model(
         chunk_id=payload.chunk_id,
         quote=payload.quote.strip(),
         reasoning=payload.reasoning.strip(),
-        relevance_score=payload.relevance_score,
+        relevance_score=_round_score(payload.relevance_score),
         evidence_type=payload.evidence_type.strip(),
     )
     db.add(evidence)
@@ -388,7 +388,7 @@ def theme_to_read(theme: Theme) -> ThemeRead:
         project_id=theme.project_id,
         title=theme.title,
         description=theme.description,
-        confidence=theme.confidence,
+        confidence=_round_score(theme.confidence),
         user_notes=theme.user_notes,
         evidence_count=theme.evidence_count,
         created_by=theme.created_by,
@@ -407,7 +407,7 @@ def _evidence_to_read(evidence: ThemeEvidence) -> ThemeEvidenceRead:
         chunk_id=evidence.chunk_id,
         quote=evidence.quote,
         reasoning=evidence.reasoning,
-        relevance_score=evidence.relevance_score,
+        relevance_score=_round_score(evidence.relevance_score),
         evidence_type=evidence.evidence_type,
         document_name=evidence.document.filename if evidence.document else None,
         created_at=evidence.created_at,
@@ -419,3 +419,7 @@ def _excerpt(text: str, max_length: int = 320) -> str:
     if len(clean) <= max_length:
         return clean
     return f"{clean[: max_length - 3].rstrip()}..."
+
+
+def _round_score(value: float) -> float:
+    return round(max(0.0, min(1.0, value)), 2)
