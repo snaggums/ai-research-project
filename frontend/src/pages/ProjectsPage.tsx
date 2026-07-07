@@ -4,6 +4,7 @@ import {
   Eye,
   FileSearch,
   FileText,
+  Download,
   MessageSquare,
   Loader2,
   Pencil,
@@ -52,6 +53,7 @@ import {
   useUpdateEvidence,
   useUpdateTheme,
 } from "@/hooks/useThemes";
+import { exportUrl } from "@/api/exports";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
 const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
@@ -347,6 +349,37 @@ function SearchPanel({ projectId }: { projectId: string }) {
             <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{result.text}</p>
           </article>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function ExportPanel({ projectId }: { projectId: string }) {
+  return (
+    <div className="grid gap-3 border-t border-border pt-5">
+      <div className="grid gap-1">
+        <h3 className="font-semibold text-card-foreground">Exports</h3>
+        <p className="text-sm text-muted-foreground">Download findings, themes, and evidence for this project.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild type="button" variant="outline" size="sm">
+          <a href={exportUrl(projectId, "markdown")}>
+            <Download className="h-4 w-4" />
+            Markdown
+          </a>
+        </Button>
+        <Button asChild type="button" variant="outline" size="sm">
+          <a href={exportUrl(projectId, "csv")}>
+            <Download className="h-4 w-4" />
+            CSV
+          </a>
+        </Button>
+        <Button asChild type="button" variant="outline" size="sm">
+          <a href={exportUrl(projectId, "json")}>
+            <Download className="h-4 w-4" />
+            JSON
+          </a>
+        </Button>
       </div>
     </div>
   );
@@ -997,6 +1030,7 @@ function ProjectCard({ project }: { project: Project }) {
           <SearchPanel projectId={project.id} />
           <ThemesPanel projectId={project.id} />
           <ChatPanel projectId={project.id} />
+          <ExportPanel projectId={project.id} />
         </div>
       )}
     </article>
@@ -1012,14 +1046,14 @@ export function ProjectsPage() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 md:px-8">
         <header className="flex flex-col justify-between gap-5 border-b border-border pb-6 md:flex-row md:items-end">
           <div className="grid gap-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 6</p>
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 7</p>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">AI-Assisted UX Research Repository</h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create projects, upload transcripts, search extracted chunks, generate themes, and ask cited questions.
+              Create projects, upload transcripts, search chunks, generate themes, ask cited questions, and export findings.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            Project CRUD + documents + search + themes + chat
+            Project CRUD + documents + search + themes + chat + exports
           </div>
         </header>
 

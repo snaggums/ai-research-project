@@ -10,7 +10,7 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
-Sprint 6 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, evidence-backed theme generation, and session-only RAG chat:
+Sprint 7 completes the initial MVP with Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, evidence-backed theme generation, session-only RAG chat, and findings exports:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
 - FastAPI backend scaffold
@@ -29,6 +29,7 @@ Sprint 6 implements Project CRUD, document upload/text extraction, chunking, moc
 - Theme generation API using LiteLLM for live providers and mock generation for local testing
 - Theme review, edit, delete, and evidence edit/delete API
 - Session-only project chat API with retrieved chunk citations
+- Markdown, CSV, and JSON findings export API
 - React/Vite frontend scaffold
 - TailwindCSS and shadcn-compatible UI foundation
 - Project list, create, edit, and delete UI
@@ -38,8 +39,9 @@ Sprint 6 implements Project CRUD, document upload/text extraction, chunking, moc
 - Per-project theme generation and evidence review UI
 - Theme editing and evidence edit/delete controls
 - Per-project chat panel with suggested questions and citations
+- Per-project export buttons for Markdown, CSV, and JSON
 
-Real embedding providers, persisted chat history, and exports are intentionally out of scope for Sprint 6.
+Real embedding providers, persisted chat history, and richer document/presentation exports are intentionally out of scope for Sprint 7.
 
 ## Prerequisites
 
@@ -135,6 +137,14 @@ Chat API example:
 POST http://localhost:8000/api/projects/{project_id}/chat
 ```
 
+Export API examples:
+
+```text
+GET http://localhost:8000/api/projects/{project_id}/exports/markdown
+GET http://localhost:8000/api/projects/{project_id}/exports/csv
+GET http://localhost:8000/api/projects/{project_id}/exports/json
+```
+
 ## Run Frontend
 
 ```powershell
@@ -149,7 +159,7 @@ Frontend dev server:
 http://localhost:5173
 ```
 
-## Sprint 6 UI
+## Sprint 7 UI
 
 From the home page you can:
 
@@ -167,12 +177,13 @@ From the home page you can:
 - Edit or remove weak evidence.
 - Ask session-only questions about the project and review cited chunks.
 - Use suggested questions to smoke test the chat workflow.
+- Download Markdown, CSV, and JSON findings exports.
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
 
 Documents uploaded before Sprint 3 need to be reprocessed before they appear in search results. Click **Retry** on an existing document to extract text again and create chunks.
 
-Theme generation and chat use the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock behavior so the Sprint 6 workflow can still be tested without spending API credits.
+Theme generation and chat use the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock behavior so the Sprint 7 workflow can still be tested without spending API credits.
 
 ## Guardrails
 

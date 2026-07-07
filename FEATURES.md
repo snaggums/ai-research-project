@@ -11,6 +11,7 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Sprint 4 AI provider settings - done
 - [x] Sprint 5 Evidence-aware theme generation - done
 - [x] Sprint 6 Session-only RAG chat with citations - done
+- [x] Sprint 7 MVP exports - done
 
 ## Sprint 1 Details
 
@@ -81,13 +82,22 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Session-only message history - done
 - [x] Sprint 6 backend/frontend smoke tests - done
 
+## Sprint 7 Details
+
+- [x] Markdown findings export - done
+- [x] CSV evidence export - done
+- [x] JSON structured project export - done
+- [x] Export API download endpoints - done
+- [x] Per-project export UI controls - done
+- [x] Sprint 7 backend/frontend smoke tests - done
+
 ## Planned MVP
 
 - [x] Evidence-aware theme generation - done
 - [x] Theme review and editing - done
 - [x] RAG chat with citations - done
-- [ ] Markdown, CSV, and JSON exports - planned
+- [x] Markdown, CSV, and JSON exports - done
 
 ## Notes
 
-Sprint 6 intentionally keeps chat history session-only and excludes real embedding providers and exports.
+Sprint 7 completes the initial MVP and intentionally excludes real embedding providers, persisted chat history, PDF/DOCX/PPTX exports, and production auth.
