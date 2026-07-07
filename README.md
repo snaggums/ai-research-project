@@ -10,7 +10,7 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
-Sprint 4 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, and AI provider settings:
+Sprint 5 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, and evidence-backed theme generation:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
 - FastAPI backend scaffold
@@ -25,14 +25,19 @@ Sprint 4 implements Project CRUD, document upload/text extraction, chunking, moc
 - Project chunk search endpoint
 - AI provider settings API and UI
 - Provider metadata storage without raw API key persistence
+- Evidence-backed theme and evidence models
+- Theme generation API using LiteLLM for live providers and mock generation for local testing
+- Theme review, edit, delete, and evidence edit/delete API
 - React/Vite frontend scaffold
 - TailwindCSS and shadcn-compatible UI foundation
 - Project list, create, edit, and delete UI
 - Per-project document upload, status, retry/delete actions, and extracted text preview
 - Per-project search UI for extracted chunks
 - AI settings panel with provider/model/base URL and key environment status
+- Per-project theme generation and evidence review UI
+- Theme editing and evidence edit/delete controls
 
-Real model calls, real embedding providers, theme generation, RAG chat, and exports are intentionally out of scope for Sprint 4.
+Real embedding providers, RAG chat, and exports are intentionally out of scope for Sprint 5.
 
 ## Prerequisites
 
@@ -107,6 +112,21 @@ PUT  http://localhost:8000/api/settings/ai
 POST http://localhost:8000/api/settings/ai/test
 ```
 
+Themes API examples:
+
+```text
+GET    http://localhost:8000/api/projects/{project_id}/themes
+POST   http://localhost:8000/api/projects/{project_id}/themes/generate
+POST   http://localhost:8000/api/projects/{project_id}/themes
+GET    http://localhost:8000/api/themes/{theme_id}
+PATCH  http://localhost:8000/api/themes/{theme_id}
+DELETE http://localhost:8000/api/themes/{theme_id}
+GET    http://localhost:8000/api/themes/{theme_id}/evidence
+POST   http://localhost:8000/api/themes/{theme_id}/evidence
+PATCH  http://localhost:8000/api/evidence/{evidence_id}
+DELETE http://localhost:8000/api/evidence/{evidence_id}
+```
+
 ## Run Frontend
 
 ```powershell
@@ -121,7 +141,7 @@ Frontend dev server:
 http://localhost:5173
 ```
 
-## Sprint 4 UI
+## Sprint 5 UI
 
 From the home page you can:
 
@@ -133,10 +153,16 @@ From the home page you can:
 - Search extracted chunks with the project search box.
 - Configure AI provider metadata in the AI settings panel.
 - Test whether the selected provider has the expected environment key available.
+- Generate evidence-backed themes from processed chunks.
+- Review theme cards with source quotes and reasoning.
+- Edit theme title, description, confidence, and researcher notes.
+- Edit or remove weak evidence.
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
 
 Documents uploaded before Sprint 3 need to be reprocessed before they appear in search results. Click **Retry** on an existing document to extract text again and create chunks.
+
+Theme generation uses the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock generation so the Sprint 5 workflow can still be tested without spending API credits.
 
 ## Guardrails
 

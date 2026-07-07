@@ -68,3 +68,53 @@ export type AISettingsTestResult = {
   api_key_env_var: string | null;
   has_api_key: boolean;
 };
+
+export type ThemeEvidence = {
+  id: string;
+  theme_id: string;
+  document_id: string;
+  chunk_id: string;
+  quote: string;
+  reasoning: string;
+  relevance_score: number;
+  evidence_type: string;
+  document_name: string | null;
+  created_at: string;
+};
+
+export type Theme = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  confidence: number;
+  user_notes: string | null;
+  evidence_count: number;
+  created_by: string;
+  model: string | null;
+  created_at: string;
+  updated_at: string;
+  evidence: ThemeEvidence[];
+};
+
+export type ThemePayload = {
+  title: string;
+  description: string;
+  confidence: number;
+  user_notes?: string | null;
+};
+
+export type ThemeEvidencePayload = {
+  quote?: string;
+  reasoning?: string;
+  relevance_score?: number;
+  evidence_type?: string;
+};
+
+export type ThemeGenerateResponse = {
+  themes: Theme[];
+  provider: string;
+  model: string | null;
+  used_mock: boolean;
+  message: string;
+};

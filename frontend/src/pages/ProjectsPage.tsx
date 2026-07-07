@@ -1,7 +1,22 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Bot, Eye, FileSearch, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
+import {
+  Bot,
+  Eye,
+  FileSearch,
+  FileText,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Tags,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 
-import type { AISettingsPayload, Project, ProjectPayload, ResearchDocument } from "@/api/types";
+import type { AISettingsPayload, Project, ProjectPayload, ResearchDocument, Theme, ThemeEvidence, ThemeEvidencePayload, ThemePayload } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,6 +31,14 @@ import {
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useProjectSearch } from "@/hooks/useSearch";
 import { useAISettings, useTestAISettings, useUpdateAISettings } from "@/hooks/useSettings";
+import {
+  useDeleteEvidence,
+  useDeleteTheme,
+  useGenerateThemes,
+  useThemes,
+  useUpdateEvidence,
+  useUpdateTheme,
+} from "@/hooks/useThemes";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
 const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
@@ -303,6 +326,317 @@ function SearchPanel({ projectId }: { projectId: string }) {
   );
 }
 
+function ThemesPanel({ projectId }: { projectId: string }) {
+  const themes = useThemes(projectId);
+  const generateThemes = useGenerateThemes(projectId);
+  const updateTheme = useUpdateTheme(projectId);
+  const deleteTheme = useDeleteTheme(projectId);
+  const updateEvidence = useUpdateEvidence(projectId);
+  const deleteEvidence = useDeleteEvidence(projectId);
+
+  return (
+    <div className="grid gap-4 border-t border-border pt-5">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div className="grid gap-1">
+          <h3 className="font-semibold text-card-foreground">Evidence-backed themes</h3>
+          <p className="text-sm text-muted-foreground">Generate and review themes grounded in extracted chunks.</p>
+        </div>
+        <Button type="button" size="sm" disabled={generateThemes.isPending} onClick={() => generateThemes.mutate()}>
+          {generateThemes.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          Generate themes
+        </Button>
+      </div>
+
+      {generateThemes.data ? (
+        <p className="text-sm text-muted-foreground">
+          {generateThemes.data.message} {generateThemes.data.used_mock ? "Switch provider settings to OpenAI for live generation." : null}
+        </p>
+      ) : null}
+      {generateThemes.isError ? (
+        <p className="text-sm text-destructive">
+          Theme generation failed. Confirm documents are processed and AI settings are configured.
+        </p>
+      ) : null}
+      {themes.isLoading ? <p className="text-sm text-muted-foreground">Loading themes...</p> : null}
+      {themes.isError ? <p className="text-sm text-destructive">Could not load themes for this project.</p> : null}
+      {themes.data?.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+          No themes generated yet.
+        </div>
+      ) : null}
+
+      <div className="grid gap-3">
+        {themes.data?.map((theme) => (
+          <ThemeCard
+            key={theme.id}
+            theme={theme}
+            isUpdating={updateTheme.isPending}
+            isDeleting={deleteTheme.isPending}
+            isUpdatingEvidence={updateEvidence.isPending}
+            isDeletingEvidence={deleteEvidence.isPending}
+            onUpdate={(payload) => updateTheme.mutate({ themeId: theme.id, payload })}
+            onDelete={() => deleteTheme.mutate(theme.id)}
+            onUpdateEvidence={(evidenceId, payload) => updateEvidence.mutate({ evidenceId, payload })}
+            onDeleteEvidence={(evidenceId) => deleteEvidence.mutate(evidenceId)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThemeCard({
+  theme,
+  isUpdating,
+  isDeleting,
+  isUpdatingEvidence,
+  isDeletingEvidence,
+  onUpdate,
+  onDelete,
+  onUpdateEvidence,
+  onDeleteEvidence,
+}: {
+  theme: Theme;
+  isUpdating: boolean;
+  isDeleting: boolean;
+  isUpdatingEvidence: boolean;
+  isDeletingEvidence: boolean;
+  onUpdate: (payload: ThemePayload) => void;
+  onDelete: () => void;
+  onUpdateEvidence: (evidenceId: string, payload: ThemeEvidencePayload) => void;
+  onDeleteEvidence: (evidenceId: string) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState<ThemePayload>({
+    title: theme.title,
+    description: theme.description,
+    confidence: theme.confidence,
+    user_notes: theme.user_notes ?? "",
+  });
+
+  useEffect(() => {
+    setForm({
+      title: theme.title,
+      description: theme.description,
+      confidence: theme.confidence,
+      user_notes: theme.user_notes ?? "",
+    });
+  }, [theme]);
+
+  function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form.title.trim() || !form.description.trim()) return;
+    onUpdate({
+      title: form.title.trim(),
+      description: form.description.trim(),
+      confidence: form.confidence,
+      user_notes: form.user_notes?.trim() || null,
+    });
+    setIsEditing(false);
+  }
+
+  return (
+    <article className="rounded-md border border-border bg-background px-4 py-3">
+      {isEditing ? (
+        <form className="grid gap-3" onSubmit={handleSave}>
+          <Input
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+            placeholder="Theme title"
+          />
+          <Textarea
+            value={form.description}
+            onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+            placeholder="Theme description"
+          />
+          <Textarea
+            value={form.user_notes ?? ""}
+            onChange={(event) => setForm((current) => ({ ...current, user_notes: event.target.value }))}
+            placeholder="Researcher notes"
+          />
+          <div className="grid gap-2 sm:w-56">
+            <label className="text-sm font-medium text-foreground">Confidence</label>
+            <Input
+              type="number"
+              min="0"
+              max="1"
+              step="0.01"
+              value={form.confidence}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, confidence: Number(event.target.value) }))
+              }
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" disabled={isUpdating || !form.title.trim() || !form.description.trim()}>
+              Save theme
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="grid gap-3">
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Tags className="h-4 w-4 text-primary" />
+                <h4 className="font-medium text-foreground">{theme.title}</h4>
+                <span className="rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                  {theme.evidence_count} evidence
+                </span>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">{theme.description}</p>
+              {theme.user_notes ? <p className="text-sm leading-6 text-foreground">Notes: {theme.user_notes}</p> : null}
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>Confidence {theme.confidence.toFixed(2)}</span>
+                <span>Created by {theme.created_by}</span>
+                {theme.model ? <span>Model {theme.model}</span> : null}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button type="button" variant="ghost" size="sm" disabled={isDeleting} onClick={onDelete}>
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            {theme.evidence.map((evidence) => (
+              <EvidenceCard
+                key={evidence.id}
+                evidence={evidence}
+                isUpdating={isUpdatingEvidence}
+                isDeleting={isDeletingEvidence}
+                onUpdate={(payload) => onUpdateEvidence(evidence.id, payload)}
+                onDelete={() => onDeleteEvidence(evidence.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function EvidenceCard({
+  evidence,
+  isUpdating,
+  isDeleting,
+  onUpdate,
+  onDelete,
+}: {
+  evidence: ThemeEvidence;
+  isUpdating: boolean;
+  isDeleting: boolean;
+  onUpdate: (payload: ThemeEvidencePayload) => void;
+  onDelete: () => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState<ThemeEvidencePayload>({
+    quote: evidence.quote,
+    reasoning: evidence.reasoning,
+    relevance_score: evidence.relevance_score,
+    evidence_type: evidence.evidence_type,
+  });
+
+  useEffect(() => {
+    setForm({
+      quote: evidence.quote,
+      reasoning: evidence.reasoning,
+      relevance_score: evidence.relevance_score,
+      evidence_type: evidence.evidence_type,
+    });
+  }, [evidence]);
+
+  function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form.quote?.trim() || !form.reasoning?.trim()) return;
+    onUpdate({
+      quote: form.quote.trim(),
+      reasoning: form.reasoning.trim(),
+      relevance_score: form.relevance_score,
+      evidence_type: form.evidence_type?.trim() || "supporting",
+    });
+    setIsEditing(false);
+  }
+
+  return (
+    <div className="rounded-md border border-border px-3 py-3">
+      {isEditing ? (
+        <form className="grid gap-2" onSubmit={handleSave}>
+          <Textarea
+            value={form.quote ?? ""}
+            onChange={(event) => setForm((current) => ({ ...current, quote: event.target.value }))}
+            placeholder="Evidence quote"
+          />
+          <Textarea
+            value={form.reasoning ?? ""}
+            onChange={(event) => setForm((current) => ({ ...current, reasoning: event.target.value }))}
+            placeholder="Why this evidence supports the theme"
+          />
+          <div className="grid gap-2 sm:grid-cols-[160px_1fr]">
+            <Input
+              type="number"
+              min="0"
+              max="1"
+              step="0.01"
+              value={form.relevance_score ?? 0}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, relevance_score: Number(event.target.value) }))
+              }
+            />
+            <Input
+              value={form.evidence_type ?? ""}
+              onChange={(event) => setForm((current) => ({ ...current, evidence_type: event.target.value }))}
+              placeholder="supporting"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" disabled={isUpdating || !form.quote?.trim() || !form.reasoning?.trim()}>
+              Save evidence
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="grid gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <FileSearch className="h-4 w-4 text-primary" />
+            <span>{evidence.document_name ?? "Document"}</span>
+            <span>{evidence.evidence_type}</span>
+            <span>Relevance {evidence.relevance_score.toFixed(2)}</span>
+          </div>
+          <blockquote className="border-l-2 border-primary pl-3 text-sm leading-6 text-foreground">
+            {evidence.quote}
+          </blockquote>
+          <p className="text-sm leading-6 text-muted-foreground">{evidence.reasoning}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Pencil className="h-4 w-4" />
+              Edit evidence
+            </Button>
+            <Button type="button" variant="ghost" size="sm" disabled={isDeleting} onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+              Remove evidence
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AISettingsPanel() {
   const settings = useAISettings();
   const updateSettings = useUpdateAISettings();
@@ -505,6 +839,7 @@ function ProjectCard({ project }: { project: Project }) {
           </div>
           <DocumentPanel projectId={project.id} />
           <SearchPanel projectId={project.id} />
+          <ThemesPanel projectId={project.id} />
         </div>
       )}
     </article>
@@ -520,14 +855,14 @@ export function ProjectsPage() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 md:px-8">
         <header className="flex flex-col justify-between gap-5 border-b border-border pb-6 md:flex-row md:items-end">
           <div className="grid gap-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 2</p>
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 5</p>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">AI-Assisted UX Research Repository</h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create research projects, upload transcript files, and search extracted chunks before AI analysis begins.
+              Create projects, upload transcripts, search extracted chunks, and generate evidence-backed themes.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            Project CRUD + document upload + search
+            Project CRUD + documents + search + themes
           </div>
         </header>
 
@@ -568,7 +903,7 @@ export function ProjectsPage() {
             ) : null}
             {projects.data?.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
-                No projects yet. Create one to begin the Sprint 1 workflow.
+                No projects yet. Create one to begin the research workflow.
               </div>
             ) : null}
             <div className="grid gap-4">

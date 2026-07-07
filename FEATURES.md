@@ -9,6 +9,7 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Sprint 2 Document upload and text extraction - done
 - [x] Sprint 3 Chunking, mock embeddings, and search - done
 - [x] Sprint 4 AI provider settings - done
+- [x] Sprint 5 Evidence-aware theme generation - done
 
 ## Sprint 1 Details
 
@@ -53,13 +54,27 @@ This file tracks planned and completed features for the hackathon build.
 - [x] AI settings UI panel - done
 - [x] AI settings API smoke test - done
 
+## Sprint 5 Details
+
+- [x] Theme model and migration - done
+- [x] Evidence model and migration - done
+- [x] Theme generation service with LiteLLM live-provider path - done
+- [x] Deterministic mock theme generation fallback - done
+- [x] Structured JSON validation for generated themes - done
+- [x] Theme and evidence CRUD API - done
+- [x] Per-project theme generation UI - done
+- [x] Theme cards and evidence cards - done
+- [x] Theme editing - done
+- [x] Evidence edit/delete controls - done
+- [x] Sprint 5 backend/frontend smoke tests - done
+
 ## Planned MVP
 
-- [ ] Evidence-aware theme generation - planned
-- [ ] Theme review and editing - planned
+- [x] Evidence-aware theme generation - done
+- [x] Theme review and editing - done
 - [ ] RAG chat with citations - planned
 - [ ] Markdown, CSV, and JSON exports - planned
 
 ## Notes
 
-Sprint 4 intentionally excludes real model calls, real embedding providers, theme generation, RAG chat, and exports.
+Sprint 5 intentionally excludes real embedding providers, RAG chat, and exports.

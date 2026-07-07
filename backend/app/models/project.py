@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 if False:
     from app.models.chunk import Chunk
     from app.models.document import Document
+    from app.models.theme import Theme
 
 
 class Project(Base):
@@ -36,6 +37,11 @@ class Project(Base):
         passive_deletes=True,
     )
     chunks: Mapped[list["Chunk"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    themes: Mapped[list["Theme"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
         passive_deletes=True,

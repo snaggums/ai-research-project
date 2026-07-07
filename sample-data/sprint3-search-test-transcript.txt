@@ -1,0 +1,27 @@
+Moderator: Thanks for testing the research dashboard prototype today. What stood out as confusing?
+
+Participant: The dashboard looked polished, but I was confused by the navigation labels. I expected uploaded transcripts to be under Documents, but the menu called it Source Material. I paused because I was not sure whether that meant transcripts, notes, or something else.
+
+Moderator: What did you try next?
+
+Participant: I clicked through the project overview first. The project cards were helpful, but I wanted a clear next step after creating a project. A button that says Upload transcripts would have made the workflow easier to trust.
+
+Moderator: How did the document upload experience feel?
+
+Participant: Uploading the interview notes was straightforward. I liked seeing the processing status change to complete. The text preview helped me confirm that the file was actually read correctly.
+
+Moderator: Did anything about search surprise you?
+
+Participant: Searching for dashboard confusion returned the right interview excerpt. That made me feel like the system could help me find evidence quickly. I would want the result to show the document name, the chunk number, and a short relevance score.
+
+Moderator: What would make the evidence review stronger?
+
+Participant: I need clear citations. If the AI says users struggled with navigation labels, I want to see the exact quote and which transcript it came from. I do not want a broad theme unless I can inspect the supporting evidence.
+
+Moderator: How would you use exports?
+
+Participant: I would export a findings report after reviewing themes. Markdown is useful for a quick summary, CSV is useful for evidence quotes, and JSON is useful if another tool needs the structured project data.
+
+Moderator: What should be improved before this is shared with a team?
+
+Participant: The settings area should explain that API keys are stored in the local environment file, not in the app database. That would make me more comfortable testing OpenAI or another provider.
