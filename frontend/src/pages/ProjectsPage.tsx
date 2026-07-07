@@ -4,6 +4,7 @@ import {
   Eye,
   FileSearch,
   FileText,
+  MessageSquare,
   Loader2,
   Pencil,
   Plus,
@@ -16,7 +17,18 @@ import {
   X,
 } from "lucide-react";
 
-import type { AISettingsPayload, Project, ProjectPayload, ResearchDocument, Theme, ThemeEvidence, ThemeEvidencePayload, ThemePayload } from "@/api/types";
+import type {
+  AISettingsPayload,
+  ChatCitation,
+  ChatResponse,
+  Project,
+  ProjectPayload,
+  ResearchDocument,
+  Theme,
+  ThemeEvidence,
+  ThemeEvidencePayload,
+  ThemePayload,
+} from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -28,6 +40,7 @@ import {
   useRetryDocument,
   useUploadDocument,
 } from "@/hooks/useDocuments";
+import { useProjectChat } from "@/hooks/useChat";
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
 import { useProjectSearch } from "@/hooks/useSearch";
 import { useAISettings, useTestAISettings, useUpdateAISettings } from "@/hooks/useSettings";
@@ -43,6 +56,11 @@ import {
 const emptyForm: ProjectPayload = { name: "", description: "" };
 const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
 const embeddingProviders = ["mock", "openai", "ollama"];
+const suggestedQuestions = [
+  "What are the strongest usability issues in these transcripts?",
+  "What evidence supports navigation confusion?",
+  "What should the team improve before the next study?",
+];
 
 function roundScore(value: number | undefined) {
   return Number(Math.max(0, Math.min(1, value ?? 0)).toFixed(2));
@@ -389,6 +407,136 @@ function ThemesPanel({ projectId }: { projectId: string }) {
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+type ChatTurn = {
+  id: string;
+  question: string;
+  answer: string;
+  citations: ChatCitation[];
+  provider: string;
+  model: string | null;
+  used_mock: boolean;
+};
+
+function ChatPanel({ projectId }: { projectId: string }) {
+  const [question, setQuestion] = useState("");
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const chat = useProjectChat(projectId);
+
+  function askQuestion(nextQuestion: string) {
+    const cleanQuestion = nextQuestion.trim();
+    if (!cleanQuestion) return;
+    chat.mutate(
+      { question: cleanQuestion },
+      {
+        onSuccess: (response: ChatResponse) => {
+          setTurns((current) => [
+            ...current,
+            {
+              id: `${Date.now()}-${current.length}`,
+              question: response.question,
+              answer: response.answer,
+              citations: response.citations,
+              provider: response.provider,
+              model: response.model,
+              used_mock: response.used_mock,
+            },
+          ]);
+          setQuestion("");
+        },
+      },
+    );
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    askQuestion(question);
+  }
+
+  return (
+    <div className="grid gap-4 border-t border-border pt-5">
+      <div className="grid gap-1">
+        <h3 className="font-semibold text-card-foreground">Ask the project</h3>
+        <p className="text-sm text-muted-foreground">Session-only RAG chat with citations from retrieved chunks.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {suggestedQuestions.map((suggestion) => (
+          <Button
+            key={suggestion}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={chat.isPending}
+            onClick={() => askQuestion(suggestion)}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {suggestion}
+          </Button>
+        ))}
+      </div>
+
+      <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleSubmit}>
+        <Input
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder="Ask a cited question about this project..."
+        />
+        <Button type="submit" disabled={chat.isPending || !question.trim()}>
+          {chat.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+          Ask
+        </Button>
+      </form>
+
+      {chat.isError ? (
+        <p className="text-sm text-destructive">
+          {errorMessage(chat.error, "Chat failed. Confirm documents are processed and AI settings are configured.")}
+        </p>
+      ) : null}
+      {turns.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
+          No chat turns yet.
+        </div>
+      ) : null}
+
+      <div className="grid gap-3">
+        {turns.map((turn) => (
+          <article key={turn.id} className="rounded-md border border-border bg-background px-4 py-3">
+            <div className="mb-3 grid gap-2">
+              <p className="text-sm font-medium text-foreground">{turn.question}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{turn.answer}</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>{turn.used_mock ? "Mock answer" : `Provider ${turn.provider}`}</span>
+                {turn.model ? <span>Model {turn.model}</span> : null}
+                <span>{turn.citations.length} citations</span>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              {turn.citations.map((citation, index) => (
+                <CitationCard key={`${turn.id}-${citation.chunk_id}`} citation={citation} index={index + 1} />
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CitationCard({ citation, index }: { citation: ChatCitation; index: number }) {
+  return (
+    <div className="rounded-md border border-border px-3 py-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <FileSearch className="h-4 w-4 text-primary" />
+        <span>[{index}]</span>
+        <span>{citation.document_name}</span>
+        <span>Chunk {citation.chunk_index + 1}</span>
+        <span>Score {citation.score.toFixed(2)}</span>
+      </div>
+      <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{citation.text}</p>
     </div>
   );
 }
@@ -848,6 +996,7 @@ function ProjectCard({ project }: { project: Project }) {
           <DocumentPanel projectId={project.id} />
           <SearchPanel projectId={project.id} />
           <ThemesPanel projectId={project.id} />
+          <ChatPanel projectId={project.id} />
         </div>
       )}
     </article>
@@ -863,14 +1012,14 @@ export function ProjectsPage() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-5 py-8 md:px-8">
         <header className="flex flex-col justify-between gap-5 border-b border-border pb-6 md:flex-row md:items-end">
           <div className="grid gap-2">
-            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 5</p>
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">Sprint 6</p>
             <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">AI-Assisted UX Research Repository</h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-              Create projects, upload transcripts, search extracted chunks, and generate evidence-backed themes.
+              Create projects, upload transcripts, search extracted chunks, generate themes, and ask cited questions.
             </p>
           </div>
           <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            Project CRUD + documents + search + themes
+            Project CRUD + documents + search + themes + chat
           </div>
         </header>
 

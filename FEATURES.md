@@ -10,6 +10,7 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Sprint 3 Chunking, mock embeddings, and search - done
 - [x] Sprint 4 AI provider settings - done
 - [x] Sprint 5 Evidence-aware theme generation - done
+- [x] Sprint 6 Session-only RAG chat with citations - done
 
 ## Sprint 1 Details
 
@@ -68,13 +69,25 @@ This file tracks planned and completed features for the hackathon build.
 - [x] Evidence edit/delete controls - done
 - [x] Sprint 5 backend/frontend smoke tests - done
 
+## Sprint 6 Details
+
+- [x] Project chat API endpoint - done
+- [x] Retrieval from existing project chunk search - done
+- [x] Mock RAG answer path - done
+- [x] LiteLLM live-provider chat path - done
+- [x] Citation payloads for retrieved chunks - done
+- [x] Per-project chat UI panel - done
+- [x] Suggested questions - done
+- [x] Session-only message history - done
+- [x] Sprint 6 backend/frontend smoke tests - done
+
 ## Planned MVP
 
 - [x] Evidence-aware theme generation - done
 - [x] Theme review and editing - done
-- [ ] RAG chat with citations - planned
+- [x] RAG chat with citations - done
 - [ ] Markdown, CSV, and JSON exports - planned
 
 ## Notes
 
-Sprint 5 intentionally excludes real embedding providers, RAG chat, and exports.
+Sprint 6 intentionally keeps chat history session-only and excludes real embedding providers and exports.

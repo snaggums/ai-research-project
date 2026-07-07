@@ -118,3 +118,22 @@ export type ThemeGenerateResponse = {
   used_mock: boolean;
   message: string;
 };
+
+export type ChatCitation = {
+  chunk_id: string;
+  document_id: string;
+  document_name: string;
+  chunk_index: number;
+  text: string;
+  score: number;
+};
+
+export type ChatResponse = {
+  question: string;
+  answer: string;
+  citations: ChatCitation[];
+  provider: string;
+  model: string | null;
+  used_mock: boolean;
+  message: string;
+};

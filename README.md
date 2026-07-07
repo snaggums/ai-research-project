@@ -10,7 +10,7 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
-Sprint 5 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, and evidence-backed theme generation:
+Sprint 6 implements Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, evidence-backed theme generation, and session-only RAG chat:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
 - FastAPI backend scaffold
@@ -28,6 +28,7 @@ Sprint 5 implements Project CRUD, document upload/text extraction, chunking, moc
 - Evidence-backed theme and evidence models
 - Theme generation API using LiteLLM for live providers and mock generation for local testing
 - Theme review, edit, delete, and evidence edit/delete API
+- Session-only project chat API with retrieved chunk citations
 - React/Vite frontend scaffold
 - TailwindCSS and shadcn-compatible UI foundation
 - Project list, create, edit, and delete UI
@@ -36,8 +37,9 @@ Sprint 5 implements Project CRUD, document upload/text extraction, chunking, moc
 - AI settings panel with provider/model/base URL and key environment status
 - Per-project theme generation and evidence review UI
 - Theme editing and evidence edit/delete controls
+- Per-project chat panel with suggested questions and citations
 
-Real embedding providers, RAG chat, and exports are intentionally out of scope for Sprint 5.
+Real embedding providers, persisted chat history, and exports are intentionally out of scope for Sprint 6.
 
 ## Prerequisites
 
@@ -127,6 +129,12 @@ PATCH  http://localhost:8000/api/evidence/{evidence_id}
 DELETE http://localhost:8000/api/evidence/{evidence_id}
 ```
 
+Chat API example:
+
+```text
+POST http://localhost:8000/api/projects/{project_id}/chat
+```
+
 ## Run Frontend
 
 ```powershell
@@ -141,7 +149,7 @@ Frontend dev server:
 http://localhost:5173
 ```
 
-## Sprint 5 UI
+## Sprint 6 UI
 
 From the home page you can:
 
@@ -157,12 +165,14 @@ From the home page you can:
 - Review theme cards with source quotes and reasoning.
 - Edit theme title, description, confidence, and researcher notes.
 - Edit or remove weak evidence.
+- Ask session-only questions about the project and review cited chunks.
+- Use suggested questions to smoke test the chat workflow.
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
 
 Documents uploaded before Sprint 3 need to be reprocessed before they appear in search results. Click **Retry** on an existing document to extract text again and create chunks.
 
-Theme generation uses the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock generation so the Sprint 5 workflow can still be tested without spending API credits.
+Theme generation and chat use the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock behavior so the Sprint 6 workflow can still be tested without spending API credits.
 
 ## Guardrails
 
