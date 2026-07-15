@@ -1,0 +1,19 @@
+name: qual-ai-e2e
+
+services:
+  postgres-e2e:
+    image: pgvector/pgvector:pg16
+    container_name: qual-ai-postgres-e2e
+    environment:
+      POSTGRES_USER: qual_ai_e2e
+      POSTGRES_PASSWORD: qual_ai_e2e
+      POSTGRES_DB: qual_ai_e2e
+    ports:
+      - "5434:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qual_ai_e2e -d qual_ai_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

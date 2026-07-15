@@ -1,0 +1,149 @@
+import * as React from "react";
+import { Filter, Plus } from "lucide-react";
+
+import type { SessionFilters } from "@/api/types";
+import { EmptyState, EntityCollection, PageHeader, SectionNavigation, SharedRouteState } from "@/components/application";
+import { SessionCollectionItem } from "@/components/research/session-collection-item";
+import { SessionForm, type SessionFormProps } from "@/components/research/session-form";
+import { SessionParticipantGroup } from "@/components/research/session-participant-group";
+import { SessionSummary } from "@/components/research/session-summary";
+import { Avatar } from "@/components/ui/avatar";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
+import { Dialog } from "@/components/ui/dialog";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField, type SelectOption } from "@/components/ui/select";
+import type { ParticipantSummary, SessionSummary as SessionSummaryValue } from "@/domain/types";
+import { sessionTypeLabels, workflowStatusLabel } from "@/components/research/session-presentation";
+import { emptySessionFilters } from "./session-view-data";
+
+const typeOptions: SelectOption[] = [{ value: "", label: "All session types" }, ...Object.entries(sessionTypeLabels).map(([value, label]) => ({ value, label }))];
+const transcriptOptions: SelectOption[] = [
+  { value: "", label: "All transcript statuses" }, { value: "none", label: "No transcript" }, { value: "uploaded", label: "Uploaded" },
+  { value: "processing", label: "Processing" }, { value: "complete", label: "Ready" }, { value: "failed", label: "Failed" },
+];
+const analysisOptions: SelectOption[] = [
+  { value: "", label: "All analysis statuses" }, { value: "not-generated", label: "Not generated" }, { value: "generating", label: "Generating" },
+  { value: "ai-generated", label: "AI generated" }, { value: "researcher-reviewed", label: "Researcher reviewed" }, { value: "approved", label: "Approved" }, { value: "failed", label: "Failed" },
+];
+
+function ProjectSections({ projectId }: { projectId: string }) {
+  const root = `/projects/${projectId}`;
+  return <SectionNavigation activeId="sessions" items={[{ id: "overview", label: "Overview", href: `${root}/overview` }, { id: "participants", label: "Participants", href: `${root}/participants` }, { id: "sessions", label: "Sessions", href: `${root}/sessions` }]} label="Project sections" />;
+}
+
+function FilterFields({ filters, onChange, recordOptions, commonComponentOptions }: { filters: SessionFilters; onChange: (filters: SessionFilters) => void; recordOptions: SelectOption[]; commonComponentOptions: SelectOption[] }) {
+  const set = (key: keyof SessionFilters, value: string) => onChange({ ...filters, [key]: value });
+  return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <SelectField label="Session type" onValueChange={(value) => set("type", value)} options={typeOptions} value={filters.type ?? ""} />
+    <SelectField label="Transcript status" onValueChange={(value) => set("transcriptStatus", value)} options={transcriptOptions} value={filters.transcriptStatus ?? ""} />
+    <SelectField label="Analysis status" onValueChange={(value) => set("analysisStatus", value)} options={analysisOptions} value={filters.analysisStatus ?? ""} />
+    <DateField label="Date" onChange={(event) => set("date", event.currentTarget.value)} optional value={filters.date ?? ""} />
+    <SelectField label="Related Record" onValueChange={(value) => set("recordId", value)} options={[{ value: "", label: "All Records" }, ...recordOptions]} value={filters.recordId ?? ""} />
+    <SelectField label="Related Common Component" onValueChange={(value) => set("commonComponentId", value)} options={[{ value: "", label: "All Common Components" }, ...commonComponentOptions]} value={filters.commonComponentId ?? ""} />
+  </div>;
+}
+
+export interface SessionsCollectionViewProps {
+  commonComponentOptions: SelectOption[];
+  filters: SessionFilters;
+  onFiltersChange: (filters: SessionFilters) => void;
+  onRetry?: () => void;
+  projectId: string;
+  projectName: string;
+  recordOptions: SelectOption[];
+  sessions: SessionSummaryValue[];
+  state?: "ready" | "loading" | "empty" | "no-results" | "error" | "not-found";
+}
+
+export function SessionsCollectionView({ commonComponentOptions, filters, onFiltersChange, onRetry, projectId, projectName, recordOptions, sessions, state = "ready" }: SessionsCollectionViewProps) {
+  const root = `/projects/${projectId}`;
+  const activeFilters = Object.values(filters).some((value) => Boolean(value));
+  const clearFilters = () => onFiltersChange(emptySessionFilters);
+  const filterFields = <FilterFields commonComponentOptions={commonComponentOptions} filters={filters} onChange={onFiltersChange} recordOptions={recordOptions} />;
+  return <div className="grid gap-6">
+    <PageHeader actions={<Button asChild size="small"><a href={`${root}/sessions/new`}><Plus aria-hidden="true" className="h-4 w-4" />New session</a></Button>} breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `${root}/overview`, label: projectName }, { label: "Sessions" }]} description="Organize interviews, usability tests, and working sessions in this project." title="Sessions" />
+    <ProjectSections projectId={projectId} />
+    {state === "not-found" ? <SharedRouteState returnHref="/projects" state="not-found" /> : <EntityCollection
+      actions={<div className="flex w-full gap-2 sm:w-auto"><div className="min-w-0 flex-1 sm:w-[22rem]"><SearchField aria-label="Search sessions and transcripts" onChange={(event) => onFiltersChange({ ...filters, search: event.currentTarget.value })} placeholder="Search sessions and transcripts" value={filters.search ?? ""} /></div><div className="md:hidden"><Dialog description="Narrow the Sessions in this Project." showActions={false} size="large" title="Filters" trigger={<Button size="small" variant="gray-subtle"><Filter aria-hidden="true" className="h-4 w-4" />Filters</Button>}>{filterFields}</Dialog></div></div>}
+      controls={<div className="hidden md:block">{filterFields}</div>}
+      countLabel={state === "loading" ? "Loading sessions..." : `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`}
+      countPosition="below"
+      state={state}
+      stateContent={state === "empty" ? <EmptyState description="Create the first Session to organize participants, transcripts, and analysis." primaryAction={<Button asChild size="small"><a href={`${root}/sessions/new`}>New session</a></Button>} title="No sessions yet" /> : state === "no-results" ? <EmptyState description="Try changing the search or clearing the current filters." primaryAction={<Button onClick={clearFilters} size="small" variant="gray-subtle">Clear filters</Button>} title="No matching sessions" /> : state === "error" ? <div className="mx-auto grid max-w-xl gap-3 py-16"><Alert message="Check your connection and try again. Existing Project data has not been changed." size="large" title="Sessions could not be loaded" tone="error" />{onRetry ? <Button className="mx-auto" onClick={onRetry} size="small">Retry</Button> : null}</div> : undefined}
+      title="All sessions"
+    >
+      <div className="grid gap-4">{sessions.map((session) => <SessionCollectionItem href={`${root}/sessions/${session.id}/overview`} key={session.id} session={session} />)}</div>
+      {activeFilters && sessions.length && state === "ready" ? <Button className="mt-4" onClick={clearFilters} size="small" variant="text">Clear filters</Button> : null}
+    </EntityCollection>}
+  </div>;
+}
+
+const sessionTabs = (root: string) => [
+  { id: "overview", label: "Overview", href: `${root}/overview` }, { id: "participants", label: "Participants", href: `${root}/participants` },
+  { id: "transcript", label: "Transcript", href: `${root}/transcript` }, { id: "themes", label: "Themes", href: `${root}/themes` },
+  { id: "report", label: "Session Report", href: `${root}/report` }, { id: "ask", label: "Ask this session", href: `${root}/ask` },
+];
+
+function tone(status: string): NonNullable<BadgeProps["tone"]> {
+  if (["complete", "approved", "researcher-reviewed"].includes(status)) return "success";
+  if (status === "failed") return "error";
+  if (["processing", "generating", "uploaded"].includes(status)) return "warning";
+  if (status === "ai-generated") return "brand";
+  return "neutral";
+}
+
+function SessionProcessingSummary({ session }: { session: SessionSummaryValue }) {
+  const transcript = session.transcriptStatus === "none" ? "No transcript" : session.transcriptStatus === "complete" ? "Ready" : session.transcriptStatus[0].toUpperCase() + session.transcriptStatus.slice(1);
+  const items = [{ label: "Transcript", value: transcript, status: session.transcriptStatus }, { label: "Themes", value: workflowStatusLabel(session.themeStatus), status: session.themeStatus }, { label: "Session Report", value: workflowStatusLabel(session.reportStatus), status: session.reportStatus }];
+  return <section className="rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5"><h2 className="text-base font-semibold">Processing status</h2><div className="mt-4 grid gap-3">{items.map((item) => <div className="flex items-center justify-between gap-3" key={item.label}><span className="text-sm text-[var(--air-color-text-secondary)]">{item.label}</span><Badge showIcon={false} tone={tone(item.status)}>{item.value}</Badge></div>)}</div></section>;
+}
+
+function initials(participant: ParticipantSummary) { return `${participant.firstName.at(0) ?? ""}${participant.lastName.at(0) ?? ""}`.toUpperCase(); }
+function fullName(participant: ParticipantSummary) { return `${participant.firstName} ${participant.lastName}`.trim(); }
+
+function SessionParticipants({ onEdit, participants }: { onEdit?: () => void; participants: ParticipantSummary[] }) {
+  return <section aria-labelledby="session-participants-heading" className="overflow-hidden rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)]">
+    <header className="flex flex-wrap items-center gap-3 p-5"><h2 className="text-xl font-semibold" id="session-participants-heading">Session participants</h2><span className="text-sm text-[var(--air-color-text-secondary)]">{participants.length} participants</span>{onEdit ? <Button className="ml-auto" onClick={onEdit} size="small" variant="gray-subtle">Edit participants</Button> : null}</header>
+    {!participants.length ? <EmptyState className="border-0" description="Assign Project participants to this Session." title="No participants assigned" /> : <>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[48rem] text-left text-sm"><thead className="bg-[var(--air-color-bg-subtle)]"><tr><th className="p-4 font-medium">Participant</th><th className="p-4 font-medium">Role</th><th className="p-4 font-medium">Organization</th><th className="p-4 font-medium">Notes</th></tr></thead><tbody>{participants.map((participant) => <tr className="border-t border-[var(--air-color-border-default)]" key={participant.id}><th className="p-4 font-medium"><span className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" />{fullName(participant)}</span></th><td className="p-4">{participant.role ?? "Not provided"}</td><td className="p-4">{participant.organization ?? "Not provided"}</td><td className="max-w-xs truncate p-4 text-[var(--air-color-text-secondary)]">{participant.researcherNotes ?? "No notes"}</td></tr>)}</tbody></table></div>
+      <div className="grid divide-y divide-[var(--air-color-border-default)] md:hidden">{participants.map((participant) => <article className="grid gap-3 p-4" key={participant.id}><div className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" /><h3 className="font-semibold">{fullName(participant)}</h3></div><dl className="grid gap-2 text-sm"><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Role</dt><dd>{participant.role ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Organization</dt><dd>{participant.organization ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Notes</dt><dd>{participant.researcherNotes ?? "No notes"}</dd></div></dl></article>)}</div>
+    </>}
+  </section>;
+}
+
+export interface SessionDetailViewProps {
+  activeTab: "overview" | "participants" | "transcript" | "themes" | "report" | "ask";
+  onEditParticipants?: () => void;
+  onRetry?: () => void;
+  projectId: string;
+  projectName: string;
+  routeState?: "ready" | "loading" | "error" | "not-found";
+  session?: SessionSummaryValue;
+  transcriptContent?: React.ReactNode;
+  workspaceContent?: React.ReactNode;
+}
+
+export function SessionDetailView({ activeTab, onEditParticipants, onRetry, projectId, projectName, routeState = "ready", session, transcriptContent, workspaceContent }: SessionDetailViewProps) {
+  const root = session ? `/projects/${projectId}/sessions/${session.id}` : `/projects/${projectId}/sessions`;
+  if (routeState === "loading") return <SharedRouteState state="loading" />;
+  if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
+  if (routeState === "not-found" || !session) return <SharedRouteState returnHref={`/projects/${projectId}/sessions`} state="not-found" />;
+  const descriptions = {
+    overview: "Review Session details, relationships, participants, and analysis readiness.",
+    participants: "Review and manage the people who participated in this Session.",
+    transcript: "Upload, process, review, and search transcript source material for this Session.",
+    themes: "Generate, review, and approve evidence-backed themes from this Session.",
+    report: "Review the structured requirements, decisions, actions, questions, and insights from this Session.",
+    ask: "Ask grounded questions using only this Session’s transcript and evidence.",
+  };
+  const content = activeTab === "overview" ? <div className="grid gap-4 lg:grid-cols-2"><SessionParticipantGroup onEditParticipants={onEditParticipants} participants={session.participants} /><SessionProcessingSummary session={session} /></div> : activeTab === "participants" ? <SessionParticipants onEdit={onEditParticipants} participants={session.participants} /> : activeTab === "transcript" ? transcriptContent : workspaceContent;
+  return <div className="grid gap-6"><PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { label: session.title }]} description={descriptions[activeTab]} title={session.title} /><SessionSummary session={session} /><SectionNavigation activeId={activeTab} items={sessionTabs(root)} label="Session sections" />{content}</div>;
+}
+
+export interface SessionFormViewProps extends SessionFormProps { projectId: string; projectName: string; }
+export function SessionFormView({ projectId, projectName, mode, ...props }: SessionFormViewProps) {
+  return <div className="grid gap-6"><PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { label: mode === "create" ? "New session" : "Edit session" }]} description={mode === "create" ? "Create a Session within this Project." : "Update Session details and participant assignments."} title={mode === "create" ? "New session" : "Edit session"} /><SessionForm mode={mode} {...props} /></div>;
+}

@@ -10,6 +10,8 @@ if False:
     from app.models.chunk import Chunk
     from app.models.document import Document
     from app.models.theme import Theme
+    from app.models.participant import Participant
+    from app.models.research_session import ResearchSession
 
 
 class Project(Base):
@@ -45,4 +47,15 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    participants: Mapped[list["Participant"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    sessions: Mapped[list["ResearchSession"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        foreign_keys="ResearchSession.project_id",
     )

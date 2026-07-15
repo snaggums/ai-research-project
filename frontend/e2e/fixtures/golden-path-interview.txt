@@ -1,0 +1,12 @@
+Moderator: Tell me about finding your way around the research repository.
+
+Participant: The dashboard navigation was confusing at first. I could not find where to upload a transcript, and I expected the upload action to be in the main menu.
+
+Moderator: What helped you move forward?
+
+Participant: Once I found the project card, the workflow was much faster. Clear labels and evidence quotes helped me trust the generated themes.
+
+Moderator: What would you change before sharing findings?
+
+Participant: I need an export that includes the source quotes so the team can verify every insight. A short onboarding hint would also help first-time researchers.
+

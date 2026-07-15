@@ -159,6 +159,137 @@ Frontend dev server:
 http://localhost:5173
 ```
 
+## Run Backend API Integration Tests
+
+Start Docker Desktop and wait until Docker reports that it is running. Then open
+PowerShell and move to the project root:
+
+```powershell
+cd "C:\Users\snagg\Desktop\Sky\30 Days AI Project\ai-assisted-ux-research-repository"
+```
+
+The integration suite uses a dedicated PostgreSQL/pgvector test database on port
+`5433`; it does not use or clear the development database on port `5432`.
+
+Install the test dependencies once:
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+py -m pip install -r requirements-dev.txt
+cd ..
+```
+
+Start the test database and run the tests:
+
+```powershell
+docker compose -f docker-compose.test.yml up -d postgres-test
+cd backend
+.\.venv\Scripts\Activate.ps1
+pytest
+```
+
+Replay the complete V1-to-V2 migration contract against the isolated test
+database (this resets only the `qual_ai_test` database on port `5433`):
+
+```powershell
+.\.venv\Scripts\python.exe scripts\verify_v1_migration.py
+```
+
+The verifier upgrades a seeded V1 schema, runs the V2 backfill twice, and
+checks that Project, Document, Chunk, Theme, and ThemeEvidence IDs, counts, and
+ownership remain intact without duplicate imported Sessions.
+
+To include a terminal coverage report, run `pytest --cov=app --cov-report=term-missing`.
+When finished, return to the project root and stop the test database with:
+
+```powershell
+cd ..
+docker compose -f docker-compose.test.yml down
+```
+
+## Run Frontend Component Tests
+
+Frontend component tests use Vitest, React Testing Library, and MSW. They mock
+backend HTTP responses and do not require Docker or a running backend.
+
+From PowerShell, move to the project root and then the frontend directory:
+
+```powershell
+cd "C:\Users\snagg\Desktop\Sky\30 Days AI Project\ai-assisted-ux-research-repository"
+cd frontend
+```
+
+Install dependencies after the initial setup or whenever `package.json` changes:
+
+```powershell
+npm install
+```
+
+Run the component tests once:
+
+```powershell
+npm run test:run
+```
+
+Use `npm test` for watch mode while editing tests. To generate terminal and HTML
+coverage reports, run `npm run test:coverage`; the HTML report is written to
+`frontend/coverage/`.
+
+## Run the Playwright End-to-End Workflow
+
+The Playwright golden path uses an isolated PostgreSQL/pgvector database on port
+`5434`, a backend on port `8001`, and a frontend on port `5174`. It automatically
+starts and stops those test services and does not use the development database.
+
+Start Docker Desktop and wait until Docker reports that it is running. Then open
+PowerShell and move to the frontend directory:
+
+```powershell
+cd "C:\Users\snagg\Desktop\Sky\30 Days AI Project\ai-assisted-ux-research-repository"
+cd frontend
+```
+
+Install dependencies and the Chromium test browser once:
+
+```powershell
+npm install
+npx playwright install chromium
+```
+
+Run the golden path in headless Chromium:
+
+```powershell
+npm run test:e2e
+```
+
+Use `npm run test:e2e:headed` to watch the browser. On failure, Playwright retains
+screenshots, video, and a trace under `frontend/test-results/`; the HTML report is
+written to `frontend/playwright-report/`.
+
+## Run All Quality Gates
+
+Start Docker Desktop and wait until Docker reports that it is running. Then open
+PowerShell, move to the project root, and run the quality-gate script:
+
+```powershell
+cd "C:\Users\snagg\Desktop\Sky\30 Days AI Project\ai-assisted-ux-research-repository"
+.\scripts\quality-gates.ps1
+```
+
+The script runs, in order:
+
+1. Backend API integration tests with a 50% coverage floor.
+2. Frontend ESLint checks.
+3. The frontend production build.
+4. Vitest component tests with statement/line, branch, and function coverage floors.
+5. The Playwright golden path.
+
+The API and E2E databases are isolated and are stopped automatically, including
+when a test fails. GitHub Actions runs the same gates for pull requests, pushes
+to `main`, and manual workflow dispatches. Coverage reports and Playwright failure
+artifacts are retained by the workflow for diagnosis.
+
 ## Sprint 7 UI
 
 From the home page you can:

@@ -1,0 +1,19 @@
+name: qual-ai-api-tests
+
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    container_name: qual-ai-postgres-test
+    environment:
+      POSTGRES_USER: qual_ai_test
+      POSTGRES_PASSWORD: qual_ai_test
+      POSTGRES_DB: qual_ai_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qual_ai_test -d qual_ai_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 15

@@ -1,0 +1,182 @@
+:root {
+  color-scheme: light;
+
+  /* Canonical Sky AIR primitives */
+  --air-color-white: #ffffff;
+  --air-color-black: #000000;
+  --air-color-slate-50: #f8fafc;
+  --air-color-slate-100: #f1f5f9;
+  --air-color-slate-200: #e2e8f0;
+  --air-color-slate-300: #cbd5e1;
+  --air-color-slate-400: #94a3b8;
+  --air-color-slate-500: #64748b;
+  --air-color-slate-600: #475569;
+  --air-color-slate-700: #334155;
+  --air-color-slate-800: #1e293b;
+  --air-color-slate-900: #0f172a;
+  --air-color-air-blue-50: #eff6ff;
+  --air-color-air-blue-100: #dbeafe;
+  --air-color-air-blue-500: #0068d1;
+  --air-color-air-blue-700: #00448c;
+  --air-color-air-blue-800: #00366f;
+  --air-color-air-blue-900: #002a57;
+  --air-color-interaction-50: #ecfeff;
+  --air-color-interaction-100: #cffafe;
+  --air-color-interaction-400: #00c2f3;
+  --air-color-interaction-700: #007a99;
+
+  /* Canonical Sky AIR semantic colors */
+  --air-color-bg-canvas: var(--air-color-slate-50);
+  --air-color-bg-surface: var(--air-color-white);
+  --air-color-bg-subtle: var(--air-color-slate-100);
+  --air-color-bg-active: var(--air-color-slate-200);
+  --air-color-bg-selected: var(--air-color-interaction-100);
+  --air-color-bg-brand: var(--air-color-air-blue-700);
+  --air-color-bg-brand-hover: var(--air-color-air-blue-800);
+  --air-color-bg-brand-pressed: var(--air-color-air-blue-900);
+  --air-color-bg-disabled: var(--air-color-slate-100);
+
+  --air-color-text-primary: var(--air-color-slate-800);
+  --air-color-text-secondary: var(--air-color-slate-500);
+  --air-color-text-muted: var(--air-color-slate-400);
+  --air-color-text-disabled: var(--air-color-slate-400);
+  --air-color-text-inverse: var(--air-color-white);
+  --air-color-text-brand: var(--air-color-air-blue-700);
+  --air-color-text-link: var(--air-color-air-blue-700);
+  --air-color-text-success: #166534;
+  --air-color-text-warning: #92400e;
+  --air-color-text-error: #991b1b;
+
+  --air-color-icon-primary: var(--air-color-slate-800);
+  --air-color-icon-secondary: var(--air-color-slate-500);
+  --air-color-icon-muted: var(--air-color-slate-400);
+  --air-color-icon-inverse: var(--air-color-white);
+  --air-color-icon-brand: var(--air-color-air-blue-700);
+  --air-color-icon-success: #15803d;
+  --air-color-icon-warning: #b45309;
+  --air-color-icon-error: #b91c1c;
+
+  --air-color-border-default: var(--air-color-slate-200);
+  --air-color-border-strong: var(--air-color-slate-300);
+  --air-color-border-control: var(--air-color-slate-500);
+  --air-color-border-focus: var(--air-color-interaction-700);
+  --air-color-border-brand: var(--air-color-air-blue-700);
+  --air-color-border-brand-hover: var(--air-color-air-blue-800);
+  --air-color-border-error: #b91c1c;
+
+  --air-color-action-destructive-default: #b91c1c;
+  --air-color-action-destructive-hover: #991b1b;
+  --air-color-action-destructive-foreground: var(--air-color-white);
+
+  --air-color-interaction-accent: var(--air-color-interaction-400);
+  --air-color-interaction-accent-subtle: var(--air-color-interaction-100);
+  --air-color-interaction-focus: var(--air-color-interaction-700);
+  --air-color-interaction-progress: var(--air-color-interaction-400);
+
+  --air-color-status-success-bg: #f0fdf4;
+  --air-color-status-success-border: #dcfce7;
+  --air-color-status-success-text: #166534;
+  --air-color-status-warning-bg: #fffbeb;
+  --air-color-status-warning-border: #fef3c7;
+  --air-color-status-warning-text: #92400e;
+  --air-color-status-error-bg: #fef2f2;
+  --air-color-status-error-border: #fee2e2;
+  --air-color-status-error-text: #991b1b;
+  --air-color-status-information-bg: #eff6ff;
+  --air-color-status-information-border: #dbeafe;
+  --air-color-status-information-text: #00448c;
+
+  /* Temporary semantic extensions retained until their Figma roles are formalized. */
+  --air-color-bg-selected-hover: #a5f3fc;
+  --air-color-bg-selected-active: #67e8f9;
+  --air-color-bg-inverse: var(--air-color-slate-900);
+  --air-color-bg-danger-subtle: var(--air-color-status-error-bg);
+  --air-color-control-disabled: var(--air-color-border-control);
+  --air-color-control-disabled-surface: var(--air-color-slate-200);
+
+  /* Canonical dimensions */
+  --air-spacing-0: 0;
+  --air-spacing-3xs: 0.125rem;
+  --air-spacing-xs: 0.25rem;
+  --air-spacing-sm: 0.5rem;
+  --air-spacing-compact: 0.75rem;
+  --air-spacing-md: 1rem;
+  --air-spacing-lg: 1.5rem;
+  --air-spacing-xl: 2rem;
+  --air-spacing-2xl: 3rem;
+  --air-radius-none: 0;
+  --air-radius-sm: 0.25rem;
+  --air-radius-md: 0.5rem;
+  --air-radius-lg: 0.75rem;
+  --air-radius-xl: 1rem;
+  --air-radius-full: 9999px;
+  --air-stroke-default: 1px;
+  --air-stroke-focus: 2px;
+  --air-opacity-disabled: 0.5;
+  --air-size-control-sm: 2rem;
+  --air-size-control-compact: 2.25rem;
+  --air-size-control-md: 2.5rem;
+  --air-size-control-lg: 3rem;
+  --air-size-icon-sm: 1rem;
+  --air-size-icon-md: 1.25rem;
+  --air-size-icon-lg: 1.5rem;
+  --air-size-touch-target-min: 2.75rem;
+  --air-shadow-overlay: 0 8px 24px rgb(15 23 42 / 0.12);
+
+  /* Compatibility aliases for existing application consumers. */
+  --color-bg-canvas: var(--air-color-bg-canvas);
+  --color-bg-surface: var(--air-color-bg-surface);
+  --color-bg-subtle: var(--air-color-bg-subtle);
+  --color-bg-active: var(--air-color-bg-active);
+  --color-bg-selected: var(--air-color-bg-selected);
+  --color-bg-selected-hover: var(--air-color-bg-selected-hover);
+  --color-bg-selected-active: var(--air-color-bg-selected-active);
+  --color-bg-disabled: var(--air-color-bg-disabled);
+  --color-bg-danger-subtle: var(--air-color-bg-danger-subtle);
+  --color-bg-brand: var(--air-color-bg-brand);
+  --color-bg-brand-hover: var(--air-color-bg-brand-hover);
+  --color-bg-brand-active: var(--air-color-bg-brand-pressed);
+  --color-bg-inverse: var(--air-color-bg-inverse);
+  --color-text-primary: var(--air-color-text-primary);
+  --color-text-secondary: var(--air-color-text-secondary);
+  --color-text-disabled: var(--air-color-text-disabled);
+  --color-text-inverse: var(--air-color-text-inverse);
+  --color-text-brand: var(--air-color-text-brand);
+  --color-text-danger: var(--air-color-text-error);
+  --color-border-default: var(--air-color-border-default);
+  --color-border-strong: var(--air-color-border-strong);
+  --color-border-control: var(--air-color-border-control);
+  --color-border-danger: var(--air-color-border-error);
+  --color-border-brand-hover: var(--air-color-border-brand-hover);
+  --color-interaction-accent: var(--air-color-interaction-accent);
+  --color-interaction-accent-subtle: var(--air-color-interaction-accent-subtle);
+  --color-interaction-progress: var(--air-color-interaction-progress);
+  --color-interaction-focus: var(--air-color-interaction-focus);
+  --color-icon-error: var(--air-color-icon-error);
+  --color-control-disabled: var(--air-color-control-disabled);
+  --color-control-disabled-surface: var(--air-color-control-disabled-surface);
+  --color-status-success-bg: var(--air-color-status-success-bg);
+  --color-status-success-border: var(--air-color-status-success-border);
+  --color-status-success-text: var(--air-color-status-success-text);
+  --color-status-success-icon: var(--air-color-icon-success);
+  --color-status-warning-bg: var(--air-color-status-warning-bg);
+  --color-status-warning-border: var(--air-color-status-warning-border);
+  --color-status-warning-text: var(--air-color-status-warning-text);
+  --color-status-warning-icon: var(--air-color-icon-warning);
+  --color-status-error-bg: var(--air-color-status-error-bg);
+  --color-status-error-border: var(--air-color-status-error-border);
+  --color-status-error-text: var(--air-color-status-error-text);
+  --color-status-information-bg: var(--air-color-status-information-bg);
+  --color-status-information-border: var(--air-color-status-information-border);
+  --color-status-information-text: var(--air-color-status-information-text);
+  --shadow-overlay: var(--air-shadow-overlay);
+  --spacing-3xs: var(--air-spacing-3xs);
+  --spacing-2xs: var(--air-spacing-xs);
+  --spacing-xs: var(--air-spacing-sm);
+  --spacing-sm: var(--air-spacing-compact);
+  --spacing-md: var(--air-spacing-md);
+  --spacing-lg: var(--air-spacing-lg);
+  --radius-sm: var(--air-radius-sm);
+  --radius-md: var(--air-radius-md);
+  --radius-lg: var(--air-radius-lg);
+}
