@@ -30,6 +30,27 @@ describe("SessionCollectionItem", () => {
     expect(screen.getByText("Record 1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open session" })).toHaveAttribute("href", "#session");
   });
+
+  it("delegates the separate Delete session action", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn();
+    render(<SessionCollectionItem href="#session" onDelete={onDelete} session={sessions[0]} />);
+    await user.click(screen.getByRole("button", { name: "Delete session" }));
+    expect(onDelete).toHaveBeenCalledWith(sessions[0]);
+  });
+
+  it("places a separate Edit session action before Delete session", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<SessionCollectionItem href="#session" onDelete={onDelete} onEdit={onEdit} session={sessions[0]} />);
+    const edit = screen.getByRole("button", { name: "Edit session" });
+    const remove = screen.getByRole("button", { name: "Delete session" });
+    expect(edit.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(edit);
+    expect(onEdit).toHaveBeenCalledWith(sessions[0]);
+    expect(onDelete).not.toHaveBeenCalled();
+  });
 });
 
 describe("SessionForm", () => {
@@ -47,25 +68,54 @@ describe("SessionForm", () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<SessionForm mode="create" onSubmit={onSubmit} participants={participantOptions} />);
+    expect(screen.getByRole("combobox", { name: /Record/ })).toHaveTextContent("Select a record");
     await user.type(screen.getByRole("textbox", { name: /Session title/ }), "  Checkout interview  ");
     await user.click(screen.getByRole("combobox", { name: /Session type/ }));
     await user.click(screen.getByRole("option", { name: "Interview" }));
     await user.click(screen.getByRole("combobox", { name: "Participants" }));
     await user.click(screen.getByRole("option", { name: /Alex Morgan/ }));
     await user.click(screen.getByRole("button", { name: "Create session" }));
-    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Checkout interview", type: "interview", participantIds: [participants[0].id] }), expect.anything());
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Checkout interview", type: "interview", recordId: "", participantIds: [participants[0].id] }), expect.anything());
+  });
+
+  it("allows a Session to be assigned to one fixed Record", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<SessionForm mode="create" onSubmit={onSubmit} participants={participantOptions} />);
+    await user.type(screen.getByRole("textbox", { name: /Session title/ }), "Navigation interview");
+    await user.click(screen.getByRole("combobox", { name: /Session type/ }));
+    await user.click(screen.getByRole("option", { name: "Interview" }));
+    await user.click(screen.getByRole("combobox", { name: /Record/ }));
+    await user.click(screen.getByRole("option", { name: "Record 2" }));
+    await user.click(screen.getByRole("button", { name: "Create session" }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ recordId: "record-2" }), expect.anything());
+  });
+
+  it("allows an assigned Record to be cleared", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<SessionForm mode="create" onSubmit={onSubmit} participants={participantOptions} />);
+    await user.type(screen.getByRole("textbox", { name: /Session title/ }), "Unassigned interview");
+    await user.click(screen.getByRole("combobox", { name: /Session type/ }));
+    await user.click(screen.getByRole("option", { name: "Interview" }));
+    await user.click(screen.getByRole("combobox", { name: /Record/ }));
+    await user.click(screen.getByRole("option", { name: "Record 2" }));
+    await user.click(screen.getByRole("combobox", { name: /Record/ }));
+    await user.click(screen.getByRole("option", { name: "Select a record" }));
+    await user.click(screen.getByRole("button", { name: "Create session" }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ recordId: "" }), expect.anything());
   });
 });
 
 describe("SessionParticipantGroup", () => {
-  it("keeps the approved compact behavior and delegates editing", async () => {
+  it("keeps the approved compact behavior and delegates adding", async () => {
     const user = userEvent.setup();
-    const onEditParticipants = vi.fn();
-    render(<SessionParticipantGroup onEditParticipants={onEditParticipants} participants={participants} />);
+    const onAddParticipant = vi.fn();
+    render(<SessionParticipantGroup onAddParticipant={onAddParticipant} participants={participants} />);
     expect(screen.getByText("Alex Morgan, Jordan Lee, plus 1 more")).toBeInTheDocument();
     expect(screen.getByText("Roles and organizations available on Participants tab.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Edit participants" }));
-    expect(onEditParticipants).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Add participant" }));
+    expect(onAddParticipant).toHaveBeenCalledOnce();
   });
 });
 

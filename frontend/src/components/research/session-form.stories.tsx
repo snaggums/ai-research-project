@@ -5,7 +5,7 @@ import { SessionForm } from "./session-form";
 import { participants, sessions } from "@/mocks/fixtures/domain";
 
 const participantOptions = participants.map(({ id, firstName, lastName, referenceId }) => ({ id, firstName, lastName, referenceId }));
-const editValues = { title: sessions[0].title, type: sessions[0].type, date: "2026-07-08", time: "10:00", description: "Interview about the checkout workflow.", participantIds: sessions[0].participants.map(({ id }) => id) };
+const editValues = { title: sessions[0].title, type: sessions[0].type, date: "2026-07-08", time: "10:00", description: "Interview about the checkout workflow.", recordId: "record-1" as const, participantIds: sessions[0].participants.map(({ id }) => id) };
 const meta = { title: "Research Objects/Session/Session Form", component: SessionForm, tags: ["autodocs"], decorators: [(Story) => <div className="mx-auto max-w-4xl p-6"><Story /></div>], args: { mode: "create", onSubmit: () => undefined, participants: participantOptions } } satisfies Meta<typeof SessionForm>;
 export default meta;
 type Story = StoryObj<typeof meta>;

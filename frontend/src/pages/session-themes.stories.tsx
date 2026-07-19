@@ -9,7 +9,7 @@ import { SessionDetailView } from "./session-views";
 import { SessionThemesWorkspaceView, type SessionThemesWorkspaceViewProps } from "./synthesis-views";
 
 function StoryPage(props: SessionThemesWorkspaceViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="themes" projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<SessionThemesWorkspaceView {...props} />} /></ApplicationShell></div>;
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="themes" onEditSession={() => undefined} projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<SessionThemesWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const themes = sessionThemeFixtures.map(toSessionTheme);
 const meta = { title: "Page Templates/Sessions/Themes Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { onGenerate: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test", themes } } satisfies Meta<typeof StoryPage>;

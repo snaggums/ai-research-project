@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { SessionFilters } from "@/api/types";
 import { toSessionSummary } from "@/adapters/sessions";
 import { ApplicationShell } from "@/components/application";
-import { sessionApiFixtures, sessionCommonComponentOptions, sessionRecordOptions } from "@/mocks/fixtures/sessions";
+import { sessionApiFixtures, sessionRecordOptions } from "@/mocks/fixtures/sessions";
 import { emptySessionFilters } from "./session-view-data";
 import { SessionsCollectionView, type SessionsCollectionViewProps } from "./session-views";
 
@@ -13,7 +13,7 @@ function StoryPage(props: Omit<SessionsCollectionViewProps, "filters" | "onFilte
   return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: props.projectName }}><SessionsCollectionView {...props} filters={filters} onFiltersChange={setFilters} /></ApplicationShell></div>;
 }
 
-const meta = { title: "Page Templates/Sessions/Sessions Collection", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { commonComponentOptions: sessionCommonComponentOptions, projectId: "alpha-project", projectName: "Alpha Project", recordOptions: sessionRecordOptions, sessions: sessionApiFixtures.map(toSessionSummary), state: "ready" } } satisfies Meta<typeof StoryPage>;
+const meta = { title: "Page Templates/Sessions/Sessions Collection", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { onDeleteSession: () => undefined, onEditSession: () => undefined, projectId: "alpha-project", projectName: "Alpha Project", recordOptions: sessionRecordOptions, sessions: sessionApiFixtures.map(toSessionSummary), state: "ready" } } satisfies Meta<typeof StoryPage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Populated: Story = {};

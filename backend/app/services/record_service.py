@@ -1,0 +1,569 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import json
+from uuid import uuid4
+
+from app.models.document import Document
+from app.models.record import (
+    ProductRecord,
+    RecordSynthesisEvidence,
+    RecordSynthesisItem,
+    RecordSynthesisItemSource,
+    RecordSynthesisRun,
+    RecordSynthesisSource,
+    SessionRecord,
+)
+from app.models.research_session import ResearchSession
+from app.models.session_report import SessionReport, SessionReportEvidence, SessionReportItem
+from app.schemas.record import (
+    GeneratedRecordSynthesisPayload,
+    RecordCatalogRead,
+    RecordSynthesisEligibilityRead,
+    RecordSynthesisEvidenceRead,
+    RecordSynthesisExcludedSessionRead,
+    RecordSynthesisItemRead,
+    RecordSynthesisRead,
+    RecordSynthesisSourceSessionRead,
+)
+from app.schemas.research_session import SessionRead
+from app.services import ai_settings_service, research_session_service, theme_service, transcript_service
+from pydantic import ValidationError
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, selectinload
+
+
+MINIMUM_ELIGIBLE_SESSIONS = 2
+ELIGIBLE_REPORT_STATUSES = {"researcher-reviewed", "approved"}
+ELIGIBLE_ITEM_TYPES = {"requirement", "decision", "action-item"}
+RECORD_SYNTHESIS_PROMPT_VERSION = "record-synthesis-v1"
+
+
+@dataclass(frozen=True)
+class GeneratedRecordItem:
+    item_type: str
+    title: str
+    summary: str
+    source_report_item_ids: tuple[str, ...]
+
+
+def list_records(db: Session) -> list[RecordCatalogRead]:
+    return [_record_to_read(db, record) for record in db.scalars(select(ProductRecord).order_by(ProductRecord.position)).all()]
+
+
+def get_record(db: Session, record_id: str) -> ProductRecord | None:
+    return db.get(ProductRecord, record_id)
+
+
+def get_record_read(db: Session, record_id: str) -> RecordCatalogRead | None:
+    record = get_record(db, record_id)
+    return _record_to_read(db, record) if record else None
+
+
+def list_record_sessions(db: Session, record_id: str) -> list[SessionRead]:
+    sessions = db.scalars(
+        research_session_service.loaded_select()
+        .join(SessionRecord, SessionRecord.session_id == ResearchSession.id)
+        .where(SessionRecord.record_id == record_id)
+        .order_by(ResearchSession.updated_at.desc())
+    ).unique().all()
+    return [research_session_service.session_to_read(db, session) for session in sessions]
+
+
+def assign_session_record(db: Session, research_session: ResearchSession, record_id: str | None) -> SessionRead:
+    research_session_service.replace_record_assignment(db, research_session, [record_id] if record_id else [], [])
+    db.add(research_session)
+    db.commit()
+    loaded = research_session_service.get_session(db, research_session.project_id, research_session.id) or research_session
+    return research_session_service.session_to_read(db, loaded)
+
+
+def generate_synthesis(db: Session, record_id: str, client_request_key: str | None) -> RecordSynthesisRead:
+    record = get_record(db, record_id)
+    if record is None:
+        raise LookupError("Record not found")
+
+    request_key = client_request_key or str(uuid4())
+    existing = db.scalar(
+        _run_select().where(
+            RecordSynthesisRun.record_id == record_id,
+            RecordSynthesisRun.client_request_key == request_key,
+        )
+    )
+    if existing is not None:
+        return run_to_read(existing)
+
+    source_pairs = _eligible_source_reports(db, record_id)
+    if len(source_pairs) < MINIMUM_ELIGIBLE_SESSIONS:
+        raise ValueError(
+            f"At least {MINIMUM_ELIGIBLE_SESSIONS} eligible Session Reports are required. "
+            f"This Record currently has {len(source_pairs)}."
+        )
+
+    settings = ai_settings_service.get_or_create_settings(db)
+    used_mock = theme_service._should_use_mock(settings)
+    run = RecordSynthesisRun(
+        record_id=record_id,
+        status="processing",
+        client_request_key=request_key,
+        source_session_count=len(source_pairs),
+        source_report_revision_count=len(source_pairs),
+        provider="mock" if used_mock else settings.provider,
+        model=settings.model,
+        prompt_version=RECORD_SYNTHESIS_PROMPT_VERSION,
+    )
+    run.sources = [
+        RecordSynthesisSource(
+            session_id=research_session.id,
+            report_id=report.id,
+            report_updated_at=report.updated_at,
+        )
+        for research_session, report in source_pairs
+    ]
+    db.add(run)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        replay = db.scalar(
+            _run_select().where(
+                RecordSynthesisRun.record_id == record_id,
+                RecordSynthesisRun.client_request_key == request_key,
+            )
+        )
+        if replay is None:
+            raise
+        return run_to_read(replay)
+
+    try:
+        generated = (
+            _generate_mock_items(source_pairs)
+            if used_mock
+            else _generate_with_litellm(settings, record.name, source_pairs)
+        )
+        persisted_run = db.get(RecordSynthesisRun, run.id)
+        if persisted_run is None:
+            raise RuntimeError("Record synthesis run could not be reloaded.")
+        _persist_generated_items(db, persisted_run, source_pairs, generated)
+        persisted_run.status = "complete"
+        persisted_run.completed_at = datetime.now(timezone.utc)
+        persisted_run.error_message = None
+        db.add(persisted_run)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        failed_run = db.get(RecordSynthesisRun, run.id)
+        if failed_run is None:
+            raise
+        failed_run.status = "failed"
+        failed_run.error_message = _generation_error(exc)
+        failed_run.completed_at = datetime.now(timezone.utc)
+        db.add(failed_run)
+        db.commit()
+
+    loaded = db.scalar(_run_select().where(RecordSynthesisRun.id == run.id))
+    if loaded is None:
+        raise RuntimeError("Record synthesis result could not be loaded.")
+    return run_to_read(loaded)
+
+
+def get_eligibility(db: Session, record_id: str) -> RecordSynthesisEligibilityRead:
+    record = get_record(db, record_id)
+    if record is None:
+        raise LookupError("Record not found")
+    sessions = _record_sessions_with_reports(db, record_id)
+    included: list[RecordSynthesisSourceSessionRead] = []
+    excluded: list[RecordSynthesisExcludedSessionRead] = []
+    for research_session in sessions:
+        latest = max(research_session.reports, key=lambda report: (report.updated_at, report.created_at), default=None)
+        reason = _ineligibility_reason(latest)
+        if reason:
+            excluded.append(RecordSynthesisExcludedSessionRead(id=research_session.id, title=research_session.title, reason=reason))
+        else:
+            included.append(RecordSynthesisSourceSessionRead(
+                id=research_session.id,
+                title=research_session.title,
+                report_id=latest.id,
+                report_status=latest.status,
+            ))
+    return RecordSynthesisEligibilityRead(
+        record_id=record_id,
+        description=f"All eligible Sessions related to {record.name} are included automatically.",
+        minimum_eligible_sessions=MINIMUM_ELIGIBLE_SESSIONS,
+        included_sessions=included,
+        excluded_sessions=excluded,
+    )
+
+
+def get_latest_synthesis(db: Session, record_id: str) -> RecordSynthesisRead | None:
+    run = db.scalar(_run_select().where(RecordSynthesisRun.record_id == record_id).order_by(RecordSynthesisRun.created_at.desc()))
+    return run_to_read(run) if run else None
+
+
+def update_synthesis_item(db: Session, record_id: str, item_id: str, item_status: str) -> RecordSynthesisItemRead | None:
+    item = db.scalar(
+        select(RecordSynthesisItem)
+        .options(selectinload(RecordSynthesisItem.evidence))
+        .join(RecordSynthesisRun, RecordSynthesisRun.id == RecordSynthesisItem.run_id)
+        .where(RecordSynthesisRun.record_id == record_id, RecordSynthesisItem.id == item_id)
+    )
+    if item is None:
+        return None
+    item.status = item_status
+    item.researcher_updated_at = datetime.now(timezone.utc)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item_to_read(item)
+
+
+def get_synthesis_evidence(db: Session, record_id: str, item_id: str, evidence_id: str) -> RecordSynthesisEvidenceRead | None:
+    evidence = db.scalar(
+        select(RecordSynthesisEvidence)
+        .options(
+            selectinload(RecordSynthesisEvidence.item),
+            selectinload(RecordSynthesisEvidence.document),
+        )
+        .join(RecordSynthesisItem, RecordSynthesisItem.id == RecordSynthesisEvidence.item_id)
+        .join(RecordSynthesisRun, RecordSynthesisRun.id == RecordSynthesisItem.run_id)
+        .where(
+            RecordSynthesisRun.record_id == record_id,
+            RecordSynthesisItem.id == item_id,
+            RecordSynthesisEvidence.id == evidence_id,
+        )
+    )
+    if evidence is None or evidence.chunk_id is None:
+        return None
+    document = evidence.document
+    if document.project_id != evidence.project_id or document.session_id != evidence.session_id:
+        return None
+    research_session = db.scalar(
+        select(ResearchSession).where(
+            ResearchSession.id == evidence.session_id,
+            ResearchSession.project_id == evidence.project_id,
+        )
+    )
+    if research_session is None:
+        return None
+    owns_record = db.scalar(
+        select(SessionRecord).where(
+            SessionRecord.session_id == evidence.session_id,
+            SessionRecord.record_id == record_id,
+        )
+    )
+    if owns_record is None:
+        return None
+    context = transcript_service.get_context(db, document, research_session, evidence.chunk_id)
+    if context is None:
+        return None
+    return RecordSynthesisEvidenceRead(
+        id=evidence.id,
+        record_id=record_id,
+        item_id=evidence.item_id,
+        item_title=evidence.item.title,
+        project_id=evidence.project_id,
+        session_id=evidence.session_id,
+        session_title=research_session.title,
+        context=context,
+    )
+
+
+def run_to_read(run: RecordSynthesisRun) -> RecordSynthesisRead:
+    status = "processing" if run.status in {"queued", "processing"} else run.status
+    return RecordSynthesisRead(
+        id=run.id,
+        record_id=run.record_id,
+        status=status,
+        generated_at=run.completed_at,
+        source_session_count=run.source_session_count,
+        source_report_revision_count=run.source_report_revision_count,
+        provider=run.provider,
+        model=run.model,
+        prompt_version=run.prompt_version,
+        items=[item_to_read(item) for item in run.items],
+        error_message=run.error_message,
+    )
+
+
+def item_to_read(item: RecordSynthesisItem) -> RecordSynthesisItemRead:
+    return RecordSynthesisItemRead(
+        id=item.id,
+        type=item.item_type,
+        status=item.status,
+        title=item.title,
+        summary=item.summary,
+        evidence_preview=item.evidence_preview,
+        source_session_count=item.source_session_count,
+        source_report_item_count=item.source_report_item_count,
+        provenance=item.provenance,
+        evidence_ids=[evidence.id for evidence in item.evidence],
+    )
+
+
+def _record_to_read(db: Session, record: ProductRecord) -> RecordCatalogRead:
+    eligibility = get_eligibility(db, record.id)
+    related_count = db.query(SessionRecord).filter(SessionRecord.record_id == record.id).count()
+    latest = db.scalar(select(RecordSynthesisRun).where(RecordSynthesisRun.record_id == record.id).order_by(RecordSynthesisRun.created_at.desc()))
+    latest_at = latest.completed_at if latest and latest.status == "complete" else None
+    if len(eligibility.included_sessions) < MINIMUM_ELIGIBLE_SESSIONS:
+        readiness = "needs-data"
+    elif latest_at is not None:
+        latest_report_update = db.scalar(
+            select(SessionReport.updated_at)
+            .where(SessionReport.id.in_([source.report_id for source in eligibility.included_sessions]))
+            .order_by(SessionReport.updated_at.desc())
+            .limit(1)
+        )
+        readiness = "up-to-date" if latest_report_update is None or latest_at >= latest_report_update else "ready"
+    else:
+        readiness = "ready"
+    return RecordCatalogRead(
+        id=record.id,
+        name=record.name,
+        description=record.description,
+        related_session_count=related_count,
+        eligible_session_count=len(eligibility.included_sessions),
+        readiness=readiness,
+        latest_synthesis_at=latest_at,
+    )
+
+
+def _ineligibility_reason(report: SessionReport | None) -> str | None:
+    if report is None:
+        return "Session Report has not been generated"
+    if report.status not in ELIGIBLE_REPORT_STATUSES:
+        return f"Session Report is {report.status.replace('-', ' ').title()}"
+    eligible_items = [
+        item
+        for item in report.items
+        if item.item_type in ELIGIBLE_ITEM_TYPES and any(evidence.chunk_id for evidence in item.evidence)
+    ]
+    if not eligible_items:
+        return "Session Report has no evidence-linked Requirements, Decisions, or Action Items"
+    return None
+
+
+def _run_select():
+    return select(RecordSynthesisRun).options(
+        selectinload(RecordSynthesisRun.items).selectinload(RecordSynthesisItem.evidence)
+    )
+
+
+def _record_sessions_with_reports(db: Session, record_id: str) -> list[ResearchSession]:
+    return db.scalars(
+        select(ResearchSession)
+        .options(
+            selectinload(ResearchSession.reports)
+            .selectinload(SessionReport.items)
+            .selectinload(SessionReportItem.evidence)
+        )
+        .join(SessionRecord, SessionRecord.session_id == ResearchSession.id)
+        .where(SessionRecord.record_id == record_id)
+        .order_by(ResearchSession.updated_at.desc())
+    ).unique().all()
+
+
+def _eligible_source_reports(db: Session, record_id: str) -> list[tuple[ResearchSession, SessionReport]]:
+    sources: list[tuple[ResearchSession, SessionReport]] = []
+    for research_session in _record_sessions_with_reports(db, record_id):
+        latest = max(research_session.reports, key=lambda report: (report.updated_at, report.created_at), default=None)
+        if latest is not None and _ineligibility_reason(latest) is None:
+            sources.append((research_session, latest))
+    return sources
+
+
+def _generate_mock_items(source_pairs: list[tuple[ResearchSession, SessionReport]]) -> list[GeneratedRecordItem]:
+    buckets: dict[tuple[str, str], list[SessionReportItem]] = {}
+    for _research_session, report in source_pairs:
+        for item in report.items:
+            if item.item_type not in ELIGIBLE_ITEM_TYPES or not any(evidence.chunk_id for evidence in item.evidence):
+                continue
+            key = (item.item_type, " ".join(item.title.lower().split()))
+            buckets.setdefault(key, []).append(item)
+
+    generated: list[GeneratedRecordItem] = []
+    for (_item_type, _normalized_title), source_items in buckets.items():
+        summaries = list(dict.fromkeys(item.summary.strip() for item in source_items if item.summary.strip()))
+        summary = summaries[0]
+        if len(summaries) > 1:
+            summary = f"{summary.rstrip('.')} Across related Sessions, researchers also found: {summaries[1]}"
+        generated.append(
+            GeneratedRecordItem(
+                item_type=source_items[0].item_type,
+                title=source_items[0].title,
+                summary=summary,
+                source_report_item_ids=tuple(item.id for item in source_items),
+            )
+        )
+    if not generated:
+        raise ValueError("Eligible Session Reports did not contain transcript-linked synthesis items.")
+    return generated
+
+
+def _generate_with_litellm(settings, record_name: str, source_pairs: list[tuple[ResearchSession, SessionReport]]) -> list[GeneratedRecordItem]:
+    try:
+        from litellm import completion
+    except ImportError as exc:
+        raise ValueError("Install backend requirements before using live Record synthesis.") from exc
+
+    source_items = [
+        {
+            "report_item_id": item.id,
+            "session_id": research_session.id,
+            "session_title": research_session.title,
+            "type": item.item_type,
+            "title": item.title,
+            "summary": item.summary,
+            "evidence": [
+                {
+                    "chunk_id": evidence.chunk_id,
+                    "speaker": evidence.speaker,
+                    "location": evidence.location,
+                    "excerpt": evidence.excerpt[:1000],
+                }
+                for evidence in item.evidence
+                if evidence.chunk_id
+            ],
+        }
+        for research_session, report in source_pairs
+        for item in report.items
+        if item.item_type in ELIGIBLE_ITEM_TYPES and any(evidence.chunk_id for evidence in item.evidence)
+    ]
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You synthesize reviewed UX research reports. Consolidate only supported Requirements, Decisions, "
+                "and Action Items. Do not invent facts or source IDs. Each output must cite one or more supplied "
+                "report_item_id values, and cited source item types must match the output type."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Synthesize {record_name} as JSON with this shape: "
+                '{"items":[{"type":"requirement|decision|action-item","title":"...","summary":"...",'
+                '"source_report_item_ids":["..."]}]}. Merge duplicates across Sessions while retaining distinct '
+                f"findings. Source Session Report items: {json.dumps(source_items)}"
+            ),
+        },
+    ]
+    try:
+        response = completion(
+            model=settings.model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            api_key=theme_service._api_key_for_provider(settings.provider),
+            api_base=settings.base_url,
+        )
+    except Exception as exc:
+        raise ValueError(
+            f"Live Record synthesis failed for provider '{settings.provider}' and model '{settings.model}'. "
+            f"Provider error: {theme_service._clean_provider_error(exc)}"
+        ) from exc
+
+    raw = response.choices[0].message.content
+    try:
+        payload = GeneratedRecordSynthesisPayload.model_validate_json(raw)
+    except (ValidationError, ValueError) as exc:
+        raise ValueError("The AI provider did not return valid Record synthesis JSON.") from exc
+    return [
+        GeneratedRecordItem(
+            item_type=item.type,
+            title=item.title.strip(),
+            summary=item.summary.strip(),
+            source_report_item_ids=tuple(dict.fromkeys(item.source_report_item_ids)),
+        )
+        for item in payload.items
+    ]
+
+
+def _persist_generated_items(
+    db: Session,
+    run: RecordSynthesisRun,
+    source_pairs: list[tuple[ResearchSession, SessionReport]],
+    generated: list[GeneratedRecordItem],
+) -> None:
+    item_map = {
+        item.id: (item, research_session, report)
+        for research_session, report in source_pairs
+        for item in report.items
+        if item.item_type in ELIGIBLE_ITEM_TYPES
+    }
+    persisted_count = 0
+    for position, generated_item in enumerate(generated):
+        selected = [
+            item_map[item_id]
+            for item_id in generated_item.source_report_item_ids
+            if item_id in item_map and item_map[item_id][0].item_type == generated_item.item_type
+        ]
+        if not selected:
+            continue
+        selected = list({item.id: (item, research_session, report) for item, research_session, report in selected}.values())
+        usable_evidence = [
+            (evidence, research_session, report, source_item)
+            for source_item, research_session, report in selected
+            for evidence in source_item.evidence
+            if evidence.chunk_id
+        ]
+        if not usable_evidence:
+            continue
+        synthesis_item = RecordSynthesisItem(
+            item_type=generated_item.item_type,
+            title=generated_item.title,
+            summary=generated_item.summary,
+            evidence_preview=usable_evidence[0][0].excerpt,
+            source_session_count=len({research_session.id for _item, research_session, _report in selected}),
+            source_report_item_count=len(selected),
+            provenance=(
+                f"{run.provider or 'unknown'} / {run.model or 'unknown'} / "
+                f"{run.prompt_version or RECORD_SYNTHESIS_PROMPT_VERSION}"
+            ),
+            position=position,
+        )
+        synthesis_item.source_items = [
+            RecordSynthesisItemSource(report_item_id=source_item.id)
+            for source_item, _research_session, _report in selected
+        ]
+        seen_evidence: set[tuple[str, str]] = set()
+        for evidence, research_session, report, source_item in usable_evidence:
+            key = (evidence.document_id, evidence.chunk_id or evidence.id)
+            if key in seen_evidence:
+                continue
+            seen_evidence.add(key)
+            synthesis_item.evidence.append(
+                _copy_evidence(evidence, source_item, research_session, report)
+            )
+        run.items.append(synthesis_item)
+        persisted_count += 1
+    if not persisted_count:
+        raise ValueError("Record synthesis did not retain any valid evidence-linked items.")
+    db.add(run)
+    db.flush()
+
+
+def _copy_evidence(
+    evidence: SessionReportEvidence,
+    source_item: SessionReportItem,
+    research_session: ResearchSession,
+    report: SessionReport,
+) -> RecordSynthesisEvidence:
+    return RecordSynthesisEvidence(
+        source_report_item_id=source_item.id,
+        project_id=report.project_id,
+        session_id=research_session.id,
+        document_id=evidence.document_id,
+        chunk_id=evidence.chunk_id,
+        excerpt=evidence.excerpt,
+        speaker=evidence.speaker,
+        location=evidence.location,
+        relevance=evidence.relevance,
+    )
+
+
+def _generation_error(exc: Exception) -> str:
+    message = " ".join(str(exc).split())
+    return message[:1000] if message else "AIR could not complete this Record synthesis."

@@ -1,6 +1,4 @@
-import * as React from "react";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { alphaProject, checkoutResearchProject } from "@/mocks/fixtures/domain";
@@ -9,25 +7,15 @@ import { mockAISettingsValues } from "@/mocks/fixtures/settings";
 import { ProjectOverviewView, ProjectsIndexView, SettingsView } from "@/pages/project-views";
 
 describe("ProjectsIndexView", () => {
-  it("filters projects and provides a no-results state", async () => {
-    const user = userEvent.setup();
-    function Example() {
-      const [search, setSearch] = React.useState("");
-      return (
-        <ProjectsIndexView
-          onSearchChange={setSearch}
-          projects={[alphaProject, checkoutResearchProject]}
-          search={search}
-        />
-      );
-    }
-    render(<Example />);
-    await user.type(screen.getByRole("searchbox", { name: "Search projects" }), "does not exist");
-    expect(screen.getByRole("heading", { name: "No matching results" })).toBeInTheDocument();
+  it("shows all projects without the deferred global search control", () => {
+    render(<ProjectsIndexView projects={[alphaProject, checkoutResearchProject]} />);
+    expect(screen.getByText(alphaProject.name)).toBeInTheDocument();
+    expect(screen.getByText(checkoutResearchProject.name)).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Search projects" })).not.toBeInTheDocument();
   });
 
   it("renders the explicit empty state", () => {
-    render(<ProjectsIndexView onSearchChange={() => undefined} projects={[]} search="" state="empty" />);
+    render(<ProjectsIndexView projects={[]} state="empty" />);
     expect(screen.getByRole("heading", { name: "No projects yet" })).toBeInTheDocument();
   });
 });

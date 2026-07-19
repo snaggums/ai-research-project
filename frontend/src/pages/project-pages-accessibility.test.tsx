@@ -12,9 +12,7 @@ describe("Project and settings page accessibility", () => {
     const { container } = render(
       <ApplicationShell context="workspace">
         <ProjectsIndexView
-          onSearchChange={() => undefined}
           projects={[checkoutResearchProject, alphaProject]}
-          search=""
         />
       </ApplicationShell>,
     );
@@ -45,4 +43,3 @@ describe("Project and settings page accessibility", () => {
     expect((await axe.run(container, { rules: { "color-contrast": { enabled: false } } })).violations).toEqual([]);
   });
 });
-

@@ -12,6 +12,8 @@ import { TextareaField } from "@/components/ui/textarea";
 import type { SessionType } from "@/domain/types";
 import { cn } from "@/lib/utils";
 import { ParticipantPicker, type ParticipantOption } from "./participant-picker";
+import { RecordField } from "./record-field";
+import { fixedRecordOptions } from "./record-options";
 import { sessionTypeLabels } from "./session-presentation";
 
 const sessionTypes = ["interview", "usability-test", "focus-group", "working-session", "design-critique", "other"] as const;
@@ -21,6 +23,7 @@ const sessionFormSchema = z.object({
   date: z.string(),
   time: z.string(),
   description: z.string().trim(),
+  recordId: z.enum(["", ...fixedRecordOptions.map((option) => option.value)] as [string, ...string[]]),
   participantIds: z.array(z.string()),
 });
 
@@ -32,6 +35,7 @@ const emptyValues: SessionFormValues = {
   date: "",
   time: "",
   description: "",
+  recordId: "",
   participantIds: [],
 };
 
@@ -59,7 +63,10 @@ export function SessionForm({ className, defaultValues = emptyValues, isSubmitti
       {showHeader ? <header><h2 className="text-xl font-semibold">{create ? "Add session" : "Edit session"}</h2><p className="mt-1 text-sm leading-5 text-[var(--air-color-text-secondary)]">{create ? "Create a Session within this Project. Title and Session type are required." : "Update the Session details and participant assignments."}</p></header> : null}
       {submitError ? <Alert message={submitError} size="large" title={create ? "Session could not be added" : "Session could not be saved"} tone="error" /> : null}
       <InputField disabled={pending} error={errors.title?.message} label="Session title" placeholder="Enter a session title" required {...register("title")} />
-      <Controller control={control} name="type" render={({ field }) => <SelectField disabled={pending} error={errors.type?.message} label="Session type" onValueChange={field.onChange} options={sessionTypes.map((value) => ({ label: sessionTypeLabels[value], value }))} placeholder="Select a session type" required value={field.value} />} />
+      <div className="grid gap-4 md:grid-cols-2">
+        <Controller control={control} name="type" render={({ field }) => <SelectField disabled={pending} error={errors.type?.message} label="Session type" onValueChange={field.onChange} options={sessionTypes.map((value) => ({ label: sessionTypeLabels[value], value }))} placeholder="Select a session type" required value={field.value} />} />
+        <Controller control={control} name="recordId" render={({ field }) => <RecordField disabled={pending} onValueChange={field.onChange} value={field.value} />} />
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
         <DateField disabled={pending} label="Date" optional {...register("date")} />
         <InputField disabled={pending} label="Time" optional type="time" {...register("time")} />

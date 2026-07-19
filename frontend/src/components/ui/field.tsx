@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const Field = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("grid gap-2", className)} {...props} />
+    <div ref={ref} className={cn("grid content-start gap-2", className)} {...props} />
   ),
 );
 Field.displayName = "Field";

@@ -9,7 +9,7 @@ import { SessionDetailView } from "./session-views";
 import { SessionReportWorkspaceView, type SessionReportWorkspaceViewProps } from "./synthesis-views";
 
 function StoryPage(props: SessionReportWorkspaceViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: "alpha-project", name: "Alpha Project" }}><SessionDetailView activeTab="report" projectId="alpha-project" projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<SessionReportWorkspaceView {...props} />} /></ApplicationShell></div>;
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: "alpha-project", name: "Alpha Project" }}><SessionDetailView activeTab="report" onEditSession={() => undefined} projectId="alpha-project" projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<SessionReportWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const report = toSessionReport(sessionReportFixture);
 const meta = { title: "Page Templates/Sessions/Session Report Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { onGenerate: () => undefined, report } } satisfies Meta<typeof StoryPage>;

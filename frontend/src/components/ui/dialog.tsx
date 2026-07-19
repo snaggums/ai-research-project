@@ -15,6 +15,7 @@ export interface DialogProps {
   description: React.ReactNode;
   dismissible?: boolean;
   feedback?: React.ReactNode;
+  intent?: "default" | "destructive";
   onCancel?: () => void;
   onOpenChange?: (open: boolean) => void;
   onPrimary?: () => void;
@@ -36,6 +37,7 @@ function Dialog({
   description,
   dismissible = true,
   feedback,
+  intent = "default",
   onCancel,
   onOpenChange,
   onPrimary,
@@ -113,6 +115,7 @@ function Dialog({
                 onPrimary={() => completeAction(onPrimary)}
                 onSecondary={() => completeAction(onSecondary)}
                 primaryLabel={primaryLabel}
+                primaryVariant={intent === "destructive" ? "danger" : "brand"}
                 secondaryLabel={secondaryLabel}
                 size={size}
               />

@@ -42,6 +42,24 @@ describe("ApplicationShell", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("complementary", { name: "Mobile navigation panel" })).not.toBeInTheDocument();
   });
+
+  it("shows Record links only in the active Records section and marks one Record current", () => {
+    render(
+      <ApplicationShell
+        activeGlobalItem="records"
+        activeGlobalSubItem="record-2"
+        context="workspace"
+      >
+        <div>Record content</div>
+      </ApplicationShell>,
+    );
+
+    const navigation = screen.getByRole("navigation", { name: "Global navigation" });
+    expect(screen.getByRole("list", { name: "Records list" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Records" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Record 2" })).toHaveAttribute("aria-current", "page");
+    expect(navigation).not.toHaveTextContent("Alpha Project");
+  });
 });
 
 describe("DropdownMenu", () => {

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.document import Document
     from app.models.participant import Participant
     from app.models.project import Project
+    from app.models.record import SessionRecord
     from app.models.session_report import SessionReport
     from app.models.theme import Theme
 
@@ -40,6 +41,7 @@ class ResearchSession(Base):
     primary_transcript: Mapped["Document | None"] = relationship(foreign_keys=[primary_transcript_document_id], post_update=True)
     participant_memberships: Mapped[list["SessionParticipant"]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
     relationships: Mapped[list["SessionRelationship"]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
+    record_assignments: Mapped[list["SessionRecord"]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
     themes: Mapped[list["Theme"]] = relationship(back_populates="session", foreign_keys="Theme.session_id")
     reports: Mapped[list["SessionReport"]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
     conversations: Mapped[list["Conversation"]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)

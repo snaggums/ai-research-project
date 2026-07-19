@@ -120,6 +120,29 @@
     outline: none !important;
   }
 
+  .air-record-list-item:has(.air-record-list-item-link:hover),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-hover) {
+    background: var(--air-color-bg-subtle);
+  }
+
+  .air-record-list-item:has(.air-record-list-item-link:active),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-active) {
+    background: var(--air-color-bg-active);
+  }
+
+  .air-record-list-item:has(.air-record-list-item-link:focus-visible),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-focus-visible) {
+    border-color: transparent;
+    box-shadow:
+      0 0 0 2px var(--air-color-bg-canvas),
+      0 0 0 4px var(--air-color-interaction-focus);
+  }
+
+  .air-record-list-item-link:focus-visible,
+  .air-record-list-item-link.pseudo-focus-visible {
+    outline: none !important;
+  }
+
   .air-project-card:has(.air-project-card-link:focus-visible),
   .air-project-card:has(.air-project-card-link.pseudo-focus-visible) {
     box-shadow:

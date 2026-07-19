@@ -1,7 +1,7 @@
 # AIR V2 Route Map
 
-Status: Proposed for approval  
-Scope: V2 information architecture with Sprint 8 routes identified
+Status: Approved through the Record Synthesis MVP architecture checkpoint
+Scope: V2 information architecture with Sprint 8 and Record Synthesis MVP routes identified
 
 ## 1. Routing principles
 
@@ -17,13 +17,14 @@ Scope: V2 information architecture with Sprint 8 routes identified
 - Native browser Back and Forward behavior must work.
 - A route must not become available until its sprint is implemented and tested.
 - Future routes are reserved in the architecture but remain absent from active
-  navigation in Sprint 8.
+  navigation until their approved delivery scope.
 
 ## 2. Route tree
 
 Legend:
 
 - **S8** - implemented in Sprint 8.
+- **MVP** - approved for the Record Synthesis MVP.
 - **Future** - reserved for the named later sprint; not reachable in Sprint 8.
 - **Existing** - retained capability relocated into V2 navigation.
 
@@ -60,16 +61,11 @@ Legend:
 |       +-- chat                                 Compatibility/reserved
 |           +-- :conversationId                  Future
 |
++-- records                                      MVP workspace destination
+|   +-- :recordId                                MVP
+|       +-- synthesis                            MVP
+|
 +-- product-knowledge                            Future
-|   +-- records                                  Future
-|   |   +-- :recordId                            Future
-|   |       +-- requirements                     Future
-|   |       +-- decision-log                     Future
-|   |       +-- action-items                     Future
-|   |       +-- chat                             Future
-|   |       +-- related-research                 Future
-|   |       +-- reporting                        Future
-|   |       +-- data-dictionary-terms            Future
 |   +-- common-components                        Future
 |   |   +-- :commonComponentId                   Future
 |   |       +-- requirements                     Future
@@ -173,8 +169,8 @@ Primary content:
 
 - page header with New session;
 - Search sessions and transcripts;
-- filters for session type, transcript status, analysis status, date, related
-  Record, and related Common Component;
+- filters for session type, transcript status, analysis status, date, and
+  selected Record;
 - detailed Session collection including transcript, theme, Session Report,
   relationship, and last-updated metadata;
 - loading, empty, no-results, failure, and retry states.
@@ -185,8 +181,7 @@ Purpose: provide a tabbed workspace for one Session.
 
 Primary content:
 
-- header metadata for title, type, date, moderator, duration, Records, and
-  Common Components;
+- header metadata for title, type, date, duration, and selected Record;
 - tabs for Overview, Participants, Transcript, Themes, Session Report, and Ask
   this session;
 - transcript upload, processing, viewing, retry, delete, and Search this
@@ -221,6 +216,44 @@ The Document must belong to the route's Session and Project.
 Purpose: retain the existing provider configuration outside any Project. This
 is a workspace-level setting and must not be nested below `/projects/:projectId`.
 
+### 3.11 `/records`
+
+Purpose: display the fixed workspace-level Record catalog.
+
+Primary content:
+
+- Record 1, Record 2, and Record 3;
+- related Session count;
+- synthesis readiness and latest synthesis timestamp;
+- Open record action; and
+- loading, empty, failure, and retry states.
+
+Records are read-only in the MVP. This route is available from workspace-level
+navigation and remains reachable while a Project is active.
+
+### 3.12 `/records/:recordId`
+
+Purpose: orient the researcher to one Record and its automatically related
+research scope.
+
+Primary content:
+
+- Record summary and readiness;
+- all related Sessions;
+- eligible and excluded Session explanations;
+- latest Requirements, Decisions, and Action Items; and
+- Generate or regenerate synthesis action.
+
+The service layer returns Not Found for identifiers outside the fixed catalog.
+
+### 3.13 `/records/:recordId/synthesis`
+
+Purpose: generate and review the latest Record synthesis.
+
+Required states are insufficient data, processing, results, and recoverable
+failure. Generation automatically uses all eligible related Sessions; the MVP
+does not expose a Session picker or manual synthesis group.
+
 ## 4. Application layouts
 
 ### 4.1 Workspace layout
@@ -235,8 +268,9 @@ Shared across all routes:
 - main content landmark;
 - global error boundary.
 
-Workspace navigation exposes Projects and Settings. Product Knowledge is
-not displayed as a disabled destination before it is implemented.
+Workspace navigation exposes Projects, Records, and Settings. Records is the
+narrow MVP entry into Product Knowledge. The broader Product Knowledge
+destination is not displayed as a disabled destination before implementation.
 
 ### 4.2 Project layout
 
@@ -281,6 +315,9 @@ Section Navigation. Session workspace tabs remain within Session detail.
 | `/projects/:projectId/sessions` | Sessions | Projects / {Project name} / Sessions |
 | `/projects/:projectId/sessions/:sessionId` | Session detail | Projects / {Project name} / Sessions / {Session title} |
 | `/projects/:projectId/sessions/:sessionId/documents/:documentId` | Transcript detail | Projects / {Project name} / Sessions / {Session title} / {Filename} |
+| `/records` | Records | Records |
+| `/records/:recordId` | Record detail | Records / {Record name} |
+| `/records/:recordId/synthesis` | Record synthesis | Records / {Record name} / Synthesis |
 
 Breadcrumb links use client-side navigation and must not leave the Storybook or
 application shell context when exercised in component examples.
@@ -327,6 +364,10 @@ The public API follows the same ownership model:
 /api/studies/{study_id}/sessions/{session_id}/participants
 /api/studies/{study_id}/sessions/{session_id}/documents
 /api/documents/{document_id}
+/api/records
+/api/records/{record_id}
+/api/records/{record_id}/sessions
+/api/records/{record_id}/synthesis
 ```
 
 Nested creation and collection endpoints express ownership. Direct entity
@@ -347,3 +388,6 @@ Design page templates after Research Object component approval in this order:
 8. Transcript detail.
 9. Shared route-state documentation.
 10. Settings.
+11. Records collection.
+12. Record detail and synthesis.
+13. Record synthesis evidence detail using the approved transcript-context pattern.

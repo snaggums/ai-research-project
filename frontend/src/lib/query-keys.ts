@@ -23,5 +23,12 @@ export const queryKeys = {
     ["projects", projectId, "sessions", sessionId, "report"] as const,
   sessionConversations: (projectId: EntityId, sessionId: EntityId) =>
     ["projects", projectId, "sessions", sessionId, "conversations"] as const,
+  records: () => ["records"] as const,
+  record: (recordId: EntityId) => ["records", recordId] as const,
+  recordSessions: (recordId: EntityId) => ["records", recordId, "sessions"] as const,
+  recordSynthesisEligibility: (recordId: EntityId) => ["records", recordId, "synthesis", "eligibility"] as const,
+  recordSynthesis: (recordId: EntityId) => ["records", recordId, "synthesis", "latest"] as const,
+  recordSynthesisEvidence: (recordId: EntityId, itemId: EntityId, evidenceId: EntityId) =>
+    ["records", recordId, "synthesis", "items", itemId, "evidence", evidenceId] as const,
   aiSettings: () => ["settings", "ai"] as const,
 };

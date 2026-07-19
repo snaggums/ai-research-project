@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { ApplicationShell } from "@/components/application";
@@ -12,12 +11,11 @@ const projects = [
   { ...alphaProject, id: "onboarding-project", name: "Onboarding research", description: "Evaluate the first-run product experience." },
 ];
 
-function ProjectsIndexStory(props: Omit<ProjectsIndexViewProps, "onSearchChange" | "search">) {
-  const [search, setSearch] = React.useState("");
+function ProjectsIndexStory(props: ProjectsIndexViewProps) {
   return (
     <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}>
       <ApplicationShell context="workspace">
-        <ProjectsIndexView {...props} onSearchChange={setSearch} search={search} />
+        <ProjectsIndexView {...props} />
       </ApplicationShell>
     </div>
   );

@@ -15,7 +15,7 @@ describe("Session components accessibility", () => {
       <SessionListItem href="#one" onEdit={() => undefined} session={sessions[0]} />
       <SessionCollectionItem href="#two" session={sessions[1]} />
       <SessionForm mode="create" onSubmit={() => undefined} participants={participantOptions} />
-      <SessionParticipantGroup onEditParticipants={() => undefined} participants={participants} />
+      <SessionParticipantGroup onAddParticipant={() => undefined} participants={participants} />
       <SessionSummary session={sessions[0]} />
     </main>);
     const result = await axe.run(container, { rules: { "color-contrast": { enabled: false }, region: { enabled: false } } });

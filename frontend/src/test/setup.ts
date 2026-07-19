@@ -7,6 +7,7 @@ import { resetParticipantStore } from "@/mocks/handlers/participants";
 import { resetSessionStore } from "@/mocks/handlers/sessions";
 import { resetTranscriptStore } from "@/mocks/handlers/transcripts";
 import { resetSynthesisStore } from "@/mocks/handlers/synthesis";
+import { resetRecordStore } from "@/mocks/handlers/records";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -17,6 +18,7 @@ afterEach(() => {
   resetSessionStore();
   resetTranscriptStore();
   resetSynthesisStore();
+  resetRecordStore();
 });
 
 afterAll(() => server.close());

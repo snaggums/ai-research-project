@@ -10,7 +10,7 @@ import { SessionDetailView } from "./session-views";
 import { SessionTranscriptWorkspaceView, type SessionTranscriptWorkspaceViewProps } from "./transcript-views";
 
 function StoryPage(props: SessionTranscriptWorkspaceViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="transcript" projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} transcriptContent={<SessionTranscriptWorkspaceView {...props} />} /></ApplicationShell></div>;
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="transcript" onEditSession={() => undefined} projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} transcriptContent={<SessionTranscriptWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const documents = [toTranscriptDocumentDetail(transcriptApiFixtures[0])];
 const meta = { title: "Page Templates/Sessions/Transcript Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { documents, onDelete: () => undefined, onRetry: () => undefined, onSearch: () => undefined, onSetPrimary: () => undefined, onUpload: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test" } } satisfies Meta<typeof StoryPage>;

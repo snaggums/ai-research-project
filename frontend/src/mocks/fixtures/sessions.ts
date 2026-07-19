@@ -2,8 +2,9 @@ import type { Session } from "@/api/types";
 import { participantApiFixtures } from "./participants";
 
 const records = [
-  { id: "record-1", name: "Checkout experience" },
-  { id: "record-2", name: "Navigation model" },
+  { id: "record-1", name: "Record 1" },
+  { id: "record-2", name: "Record 2" },
+  { id: "record-3", name: "Record 3" },
 ];
 const commonComponents = [
   { id: "component-payment", name: "Payment form" },
@@ -41,7 +42,7 @@ export const sessionApiFixtures: Session[] = [
     starts_at: "2026-07-12T15:00:00.000Z", duration_minutes: 60, description: "Synthesize findings and identify follow-up work.",
     participants: participantApiFixtures.slice(0, 2), participant_ids: participantApiFixtures.slice(0, 2).map(({ id }) => id),
     document_count: 1, transcript_names: ["synthesis-working-session.txt"], transcript_status: "failed", has_primary_transcript: false,
-    theme_status: "generating", report_status: "not-generated", related_records: records, related_common_components: commonComponents,
+    theme_status: "generating", report_status: "not-generated", related_records: [records[1]], related_common_components: commonComponents,
     created_at: "2026-07-03T12:00:00Z", updated_at: "2026-07-14T09:15:00Z",
   },
 ];

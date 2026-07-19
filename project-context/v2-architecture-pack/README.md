@@ -2,9 +2,12 @@
 
 Status: Architecture, Figma Research Objects, Figma Page Templates, the
 React/Storybook contract map, and implementation scopes I1-I8 are approved.
-Sprint 8 is ready for review before Sprint 9.  
-Version: 1.4  
-Implementation boundary: Sprint 8 only
+Sprint 8 is approved; the Record Synthesis MVP scope, architecture checkpoint,
+and 1.5-week delivery plan are approved. The Day 6 additive Record persistence
+and migration checkpoint and the Day 7 Record generation/end-to-end integration
+checkpoint are implemented and verified. Day 8 final QA and handoff are next.
+Version: 1.9
+Implementation boundary: Record Synthesis MVP
 
 This pack translates the AIR V2 Functional Specification and the approved V2
 clarifications into implementation artifacts. Figma remains the visual source
@@ -26,6 +29,12 @@ Each implementation scope still requires its own approval.
 5. [React and Storybook Component Contract Map](./05_REACT_STORYBOOK_COMPONENT_CONTRACT_MAP.md)
    - current-code audit, Figma-to-React contracts, backend dependencies, and
    implementation approval scopes.
+6. [Sprint 9 Record Synthesis MVP Scope](./06_SPRINT_9_RECORD_SYNTHESIS_MVP_SCOPE.md)
+   - approved Record-centered direction, source eligibility, minimum Figma and
+   implementation contracts, API boundaries, and hard deferrals.
+7. [Record Synthesis MVP 1.5-Week Delivery Roadmap](./07_MVP_1_5_WEEK_DELIVERY_ROADMAP.md)
+   - the eight-working-day delivery plan, approval gates, definition of done,
+   risks, and post-MVP backlog.
 
 ## Approved direction
 
@@ -44,6 +53,12 @@ Each implementation scope still requires its own approval.
 - Product Knowledge is cross-Project; Common Components exist independently of
   Projects.
 - Sessions may relate explicitly to Records and Common Components.
+- The Record Synthesis MVP exposes exactly one Record and one Primary Transcript
+  per Session while preserving the extensible canonical model.
+- Record synthesis automatically uses all eligible related Sessions and produces
+  Requirements, Decisions, and Action Items with source lineage.
+- Record 1, Record 2, and Record 3 are fixed read-only MVP objects; Common
+  Components and manual synthesis groups are deferred.
 - Requirements, Decision Log entries, and Action Items belong to or relate to at
   least one Record or Common Component.
 - Relationships replace Research Impact Links; tags remain optional secondary
@@ -91,4 +106,6 @@ Sprint 8 vertical slice
 4. Normalize the approved components in Storybook and React.
 5. Implement the Sprint 8 vertical slice and migration.
 6. Run parity, accessibility, migration, API, component, and end-to-end checks.
-7. Stop for review before beginning Sprint 9.
+7. Stop for review before beginning the Record Synthesis MVP.
+8. Approve the Record Synthesis architecture, Figma, Storybook, frontend,
+   backend, migration, and final acceptance checkpoints in sequence.

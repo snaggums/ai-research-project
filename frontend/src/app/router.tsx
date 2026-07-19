@@ -28,6 +28,12 @@ import {
   SessionsCollectionRoute,
   TranscriptContextRoute,
 } from "@/routes/project-routes";
+import {
+  RecordDetailRoute,
+  RecordEvidenceDetailRoute,
+  RecordsCollectionRoute,
+  RecordSynthesisRoute,
+} from "@/routes/record-routes";
 
 export const appRoutes = [
   { path: "/", element: <RootRedirect /> },
@@ -38,6 +44,10 @@ export const appRoutes = [
       { path: "/projects", element: <ProjectsIndexRoute /> },
       { path: "/projects/new", element: <CreateProjectRoute /> },
       { path: "/projects/:projectId/edit", element: <EditProjectRoute /> },
+      { path: "/records", element: <RecordsCollectionRoute /> },
+      { path: "/records/:recordId", element: <RecordDetailRoute /> },
+      { path: "/records/:recordId/synthesis", element: <RecordSynthesisRoute /> },
+      { path: "/records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordEvidenceDetailRoute /> },
       { path: "/settings/profile", element: <SettingsProfileRoute /> },
       { path: "/settings/ai", element: <SettingsAIRoute /> },
     ],
@@ -56,8 +66,8 @@ export const appRoutes = [
       { path: "sessions/new", element: <SessionCreateRoute /> },
       { path: "sessions/:sessionId", element: <Navigate replace to="overview" /> },
       { path: "sessions/:sessionId/edit", element: <SessionEditRoute /> },
-      { path: "sessions/:sessionId/overview", element: <SessionDetailRoute /> },
-      { path: "sessions/:sessionId/participants", element: <SessionDetailRoute /> },
+      { path: "sessions/:sessionId/overview", element: <SessionDetailRoute activeTab="overview" /> },
+      { path: "sessions/:sessionId/participants", element: <SessionDetailRoute activeTab="participants" /> },
       { path: "sessions/:sessionId/transcript", element: <SessionTranscriptRoute /> },
       { path: "sessions/:sessionId/themes", element: <SessionThemesRoute /> },
       { path: "sessions/:sessionId/report", element: <SessionReportRoute /> },

@@ -68,7 +68,11 @@ def _run_migrations() -> None:
 def _clear_database() -> None:
     # TRUNCATE ... CASCADE does not require dependency ordering and avoids the
     # intentional Session <-> primary transcript foreign-key cycle.
-    table_names = ", ".join(f'"{table.name}"' for table in Base.metadata.tables.values())
+    # The three fixed Records are migration-seeded reference data and must remain
+    # available between tests. All dependent tables are still truncated.
+    table_names = ", ".join(
+        f'"{table.name}"' for table in Base.metadata.tables.values() if table.name != "records"
+    )
     if not table_names:
         return
     with test_engine.begin() as connection:

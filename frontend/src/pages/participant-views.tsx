@@ -26,6 +26,7 @@ function ProjectSections({ activeId, projectId }: { activeId: "participants"; pr
         { id: "overview", label: "Overview", href: `${root}/overview` },
         { id: "participants", label: "Participants", href: `${root}/participants` },
         { id: "sessions", label: "Sessions", href: `${root}/sessions` },
+        { id: "ask", label: "Ask this project", href: `${root}/ask` },
       ]}
       label="Project sections"
     />

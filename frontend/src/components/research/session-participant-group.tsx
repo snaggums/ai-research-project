@@ -10,13 +10,13 @@ import { cn } from "@/lib/utils";
 import { participantInitials, participantName } from "./session-presentation";
 
 export interface SessionParticipantGroupProps extends React.HTMLAttributes<HTMLElement> {
-  onEditParticipants?: () => void;
+  onAddParticipant?: () => void;
   onRetry?: () => void;
   participants: ParticipantSummary[];
   state?: "ready" | "loading" | "error";
 }
 
-export function SessionParticipantGroup({ className, onEditParticipants, onRetry, participants, state = "ready", ...props }: SessionParticipantGroupProps) {
+export function SessionParticipantGroup({ className, onAddParticipant, onRetry, participants, state = "ready", ...props }: SessionParticipantGroupProps) {
   const empty = state === "ready" && participants.length === 0;
   const visibleNames = participants.slice(0, 2).map(participantName);
   const remainingNames = Math.max(0, participants.length - visibleNames.length);
@@ -25,7 +25,7 @@ export function SessionParticipantGroup({ className, onEditParticipants, onRetry
     : visibleNames.join(", ");
   return (
     <section className={cn("rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5", className)} aria-labelledby="session-participants-title" {...props}>
-      <header className="flex flex-wrap items-center gap-3"><h3 className="text-base font-semibold" id="session-participants-title">Participants</h3>{state === "ready" ? <Badge showIcon={false}>{participants.length}</Badge> : null}<div className="ml-auto">{onEditParticipants ? <Button onClick={onEditParticipants} size="small" variant="gray-subtle">{empty ? "Add participants" : "Edit participants"}</Button> : null}</div></header>
+      <header className="flex flex-wrap items-center gap-3"><h3 className="text-base font-semibold" id="session-participants-title">Participants</h3>{state === "ready" ? <Badge showIcon={false}>{participants.length}</Badge> : null}<div className="ml-auto">{onAddParticipant ? <Button onClick={onAddParticipant} size="small" variant="gray-subtle">Add participant</Button> : null}</div></header>
       {state === "loading" ? <div className="mt-5 flex items-center gap-3 text-sm text-[var(--air-color-text-secondary)]"><Spinner label="Loading participants" size="small" />Loading participants</div> : null}
       {state === "error" ? <Alert className="mt-5" message={onRetry ? <Button onClick={onRetry} size="small" variant="gray-subtle">Try again</Button> : undefined} size={onRetry ? "large" : "small"} title="Participants could not be loaded" tone="error" /> : null}
       {empty ? <p className="mt-5 text-sm text-[var(--air-color-text-secondary)]">No participants are assigned to this Session.</p> : null}

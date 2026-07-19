@@ -6,10 +6,9 @@ export function toProjectSummary(project: Project): ProjectSummary {
     id: project.id,
     name: project.name,
     description: project.description ?? undefined,
-    participantCount: 0,
-    sessionCount: 0,
-    readyTranscriptCount: 0,
+    participantCount: project.participant_count ?? 0,
+    sessionCount: project.session_count ?? 0,
+    readyTranscriptCount: project.ready_transcript_count ?? 0,
     updatedAt: project.updated_at,
   };
 }
-

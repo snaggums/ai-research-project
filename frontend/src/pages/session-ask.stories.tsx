@@ -18,7 +18,7 @@ const answeredTransport: SessionConversation = {
 };
 
 function StoryPage(props: AskThisSessionWorkspaceViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="ask" projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<AskThisSessionWorkspaceView {...props} />} /></ApplicationShell></div>;
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="ask" onEditSession={() => undefined} projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<AskThisSessionWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const meta = { title: "Page Templates/Sessions/Ask This Session Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { conversation: toSessionConversation(sessionConversationFixture), onAsk: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test", suggestedQuestions: suggestedSessionQuestions } } satisfies Meta<typeof StoryPage>;
 export default meta;

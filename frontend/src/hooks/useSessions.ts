@@ -16,7 +16,7 @@ export function useSession(projectId: string, sessionId: string) {
 
 export function useCreateSession(projectId: string) {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (payload: SessionPayload) => createSession(projectId, payload), onSuccess: (session) => { client.setQueryData(queryKeys.session(projectId, session.id), session); return client.invalidateQueries({ queryKey: collectionKey(projectId) }); } });
+  return useMutation({ mutationFn: (payload: SessionPayload) => createSession(projectId, payload), onSuccess: (session) => { client.setQueryData(queryKeys.session(projectId, session.id), session); void client.invalidateQueries({ queryKey: queryKeys.projects() }); return client.invalidateQueries({ queryKey: collectionKey(projectId) }); } });
 }
 
 export function useUpdateSession(projectId: string, sessionId: string) {
@@ -26,5 +26,5 @@ export function useUpdateSession(projectId: string, sessionId: string) {
 
 export function useDeleteSession(projectId: string) {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (sessionId: string) => deleteSession(projectId, sessionId), onSuccess: (_data, sessionId) => { client.removeQueries({ queryKey: queryKeys.session(projectId, sessionId) }); return client.invalidateQueries({ queryKey: collectionKey(projectId) }); } });
+  return useMutation({ mutationFn: (sessionId: string) => deleteSession(projectId, sessionId), onSuccess: (_data, sessionId) => { client.removeQueries({ queryKey: queryKeys.session(projectId, sessionId) }); void client.invalidateQueries({ queryKey: queryKeys.projects() }); return client.invalidateQueries({ queryKey: collectionKey(projectId) }); } });
 }

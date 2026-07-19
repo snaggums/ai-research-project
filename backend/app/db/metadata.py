@@ -2,6 +2,7 @@ from app.db.base import Base
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.project import Project
+from app.models.record import ProductRecord, RecordSynthesisEvidence, RecordSynthesisItem, RecordSynthesisItemSource, RecordSynthesisRun, RecordSynthesisSource, SessionRecord
 from app.models.settings import AISettings
 from app.models.theme import Theme
 from app.models.theme_evidence import ThemeEvidence
@@ -13,6 +14,8 @@ from app.models.conversation import Conversation, ConversationMessage, MessageCi
 __all__ = [
     "AISettings", "Base", "Chunk", "Conversation", "ConversationMessage",
     "Document", "MessageCitation", "Participant", "ParticipantRecord", "Project",
+    "ProductRecord", "RecordSynthesisEvidence", "RecordSynthesisItem",
+    "RecordSynthesisItemSource", "RecordSynthesisRun", "RecordSynthesisSource",
     "ResearchSession", "SessionParticipant", "SessionRelationship", "SessionReport",
-    "SessionReportEvidence", "SessionReportItem", "Theme", "ThemeEvidence",
+    "SessionRecord", "SessionReportEvidence", "SessionReportItem", "Theme", "ThemeEvidence",
 ]

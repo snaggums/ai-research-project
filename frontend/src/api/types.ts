@@ -2,6 +2,9 @@ export type Project = {
   id: string;
   name: string;
   description: string | null;
+  participant_count: number;
+  session_count: number;
+  ready_transcript_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -354,4 +357,73 @@ export type SessionConversation = {
 export type AskSessionResponse = {
   conversation: SessionConversation;
   answer: SessionConversationTurn;
+};
+
+export type RecordCatalogItem = {
+  id: string;
+  name: string;
+  description: string;
+  related_session_count: number;
+  eligible_session_count: number;
+  readiness: "ready" | "needs-data" | "up-to-date";
+  latest_synthesis_at: string | null;
+};
+
+export type RecordSynthesisSourceSession = {
+  id: string;
+  title: string;
+  report_id: string;
+  report_status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded";
+};
+
+export type RecordSynthesisExcludedSession = {
+  id: string;
+  title: string;
+  reason: string;
+};
+
+export type RecordSynthesisEligibility = {
+  record_id: string;
+  description: string;
+  minimum_eligible_sessions: number;
+  included_sessions: RecordSynthesisSourceSession[];
+  excluded_sessions: RecordSynthesisExcludedSession[];
+};
+
+export type RecordSynthesisItem = {
+  id: string;
+  type: "requirement" | "decision" | "action-item";
+  status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded";
+  title: string;
+  summary: string;
+  evidence_preview: string;
+  source_session_count: number;
+  source_report_item_count: number;
+  provenance: string;
+  evidence_ids: string[];
+};
+
+export type RecordSynthesis = {
+  id: string;
+  record_id: string;
+  status: "not-generated" | "processing" | "complete" | "failed";
+  generated_at: string | null;
+  source_session_count: number;
+  source_report_revision_count: number;
+  provider: string | null;
+  model: string | null;
+  prompt_version: string | null;
+  items: RecordSynthesisItem[];
+  error_message: string | null;
+};
+
+export type RecordSynthesisEvidence = {
+  id: string;
+  record_id: string;
+  item_id: string;
+  item_title: string;
+  project_id: string;
+  session_id: string;
+  session_title: string;
+  context: TranscriptContext;
 };

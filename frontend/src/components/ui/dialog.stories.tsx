@@ -37,4 +37,12 @@ export const NonDismissible: Story = { args: { dismissible: false } };
 export const NonDismissibleThreeButtons: Story = {
   args: { dismissible: false, secondaryLabel: "Save and close" },
 };
+export const Destructive: Story = {
+  args: {
+    description: "Delete this Session and its transcript, themes, and Session Report? Any Record synthesis generated from this Session will also be removed.",
+    intent: "destructive",
+    primaryLabel: "Delete session",
+    title: "Delete session?",
+  },
+};
 export const WithoutActions: Story = { args: { showActions: false } };

@@ -1,9 +1,9 @@
 # AIR V2 Domain Map
 
 Status: Approved canonical domain model for AIR V2  
-Version: 1.3  
-Replaces: AIR Domain Map v1.2  
-Scope: Canonical V2 domain direction with a Sprint 8 implementation boundary
+Version: 1.4
+Replaces: AIR Domain Map v1.3
+Scope: Canonical V2 domain direction with Sprint 8 and Record Synthesis MVP boundaries
 
 ## 1. Canonical domain map
 
@@ -161,6 +161,26 @@ approved research outcomes may update Product Knowledge.
 Product Knowledge is not implemented in Sprint 8; the boundary is recorded now
 to prevent Project objects from absorbing cross-Project responsibilities.
 
+#### Record Synthesis MVP boundary
+
+The controlled Record Synthesis MVP implements the first narrow Product
+Knowledge workflow without changing the long-term domain model:
+
+- the workspace contains three seeded, read-only Records with stable IDs
+  `record-1`, `record-2`, and `record-3` and display names `Record 1`,
+  `Record 2`, and `Record 3`;
+- the MVP interface assigns each Session to exactly one Record through a
+  single-select field, while the persistence model may remain extensible;
+- a Record synthesis automatically includes every eligible related Session;
+- eligibility requires the latest Researcher Reviewed or Approved Session
+  Report with evidence-linked Requirements, Decisions, or Action Items;
+- generation requires at least two eligible Sessions; and
+- Common Components remain part of the canonical architecture but are omitted
+  from the MVP interface and synthesis scope without deleting stored data.
+
+The fixed catalog and single-Record interface are delivery constraints, not a
+redefinition of Record ownership or the future Relationship model.
+
 ### 2.3 Relationship rules
 
 Records and Common Components are connected through explicit Relationships,
@@ -289,6 +309,37 @@ The Session Report is implemented with persisted revisions, ordered report
 items, source evidence, and the AI Generated → Researcher Reviewed → Approved →
 Superseded lifecycle.
 
+### 3.7 Record Synthesis Run
+
+A Record Synthesis Run is an immutable generation request and source snapshot.
+It records:
+
+| Field | Type | Requirement |
+| --- | --- | --- |
+| `id` | UUID | Stable run identifier. |
+| `record_id` | text ID | One of the fixed MVP Record IDs. |
+| `status` | enum | Queued, processing, complete, or failed. |
+| `session_ids` | ordered list of UUIDs | Exact eligible Session scope used by the run. |
+| `session_report_revision_ids` | ordered list of UUIDs | Exact reviewed/approved source revisions. |
+| `provider` | text | Generation provenance. |
+| `model` | text | Generation provenance. |
+| `prompt_version` | text | Reproducible prompt contract. |
+| `created_at` | timestamp | Audit field. |
+| `completed_at` | timestamp or null | Audit field. |
+| `error_detail` | text or null | Recoverable failure detail. |
+
+Completed runs are never silently updated when a source Session Report changes.
+Regeneration creates a new run and preserves prior source snapshots.
+
+### 3.8 Record Synthesis Item
+
+The MVP produces Requirement, Decision, and Action Item synthesis items only.
+Each item belongs to one Record Synthesis Run and retains links to every source
+Session Report item and supporting transcript evidence used to produce it.
+Items use the canonical AI Generated, Researcher Reviewed, Approved, and
+Superseded lifecycle. Equivalent source items may be consolidated only when all
+source links remain intact.
+
 ## 4. Research artifact lineage
 
 The following is the target lineage model for later V2 sprints:
@@ -330,7 +381,10 @@ The promotion workflow is:
 Transcript
   -> Session Report
       -> Researcher Review
-          -> Record/Common Component Requirements, Decision Log, and Action Items
+          -> Record Synthesis Run
+              -> Requirement / Decision / Action Item
+                  -> source Session Report items
+                      -> transcript evidence
 ```
 
 Session Report content remains session-scoped research until the researcher
@@ -461,6 +515,28 @@ The migration must pass all of the following:
 - Product Knowledge implementation;
 - Project-wide Ask implementation;
 - authentication, external integrations, audio/video, OCR, XLSX, and dark mode.
+
+### Record Synthesis MVP includes
+
+- the fixed Record 1, Record 2, and Record 3 catalog;
+- one Record selection per Session in the interface;
+- one Primary Transcript per Session in the interface;
+- automatic synthesis across all eligible Sessions related to a Record;
+- Requirements, Decisions, and Action Items with source lineage;
+- persisted run snapshots and item review/approval status; and
+- workspace-level Records collection, detail, synthesis, and evidence-context
+  routes.
+
+### Record Synthesis MVP excludes
+
+- custom Record creation, editing, or deletion;
+- multiple Record selection per Session in the interface;
+- multiple-transcript management in the interface;
+- Common Component fields, filters, summaries, and synthesis;
+- manual synthesis groups or Session selection;
+- cross-Record or arbitrary Project synthesis;
+- manual Themes, manual transcript coding, and AI-assisted code review; and
+- authentication, public access with real research data, and managed secrets.
 
 ## 9. V3 follow-ups
 

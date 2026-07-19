@@ -29,8 +29,7 @@ export function SessionSummary({ className, layout = "responsive", session, show
       {showRelationships ? (
         <SummarySection title="Relationships">
           <MetadataList layout="stacked" items={[
-            { label: "Related Records", value: referenceNames(session.relatedRecords) },
-            { label: "Common Components", value: referenceNames(session.relatedCommonComponents) },
+            { label: "Record", value: referenceNames(session.relatedRecords) },
           ]} />
         </SummarySection>
       ) : null}

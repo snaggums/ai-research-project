@@ -10,9 +10,7 @@ function CreateEditProjectStory(props: ProjectFormProps) {
     <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}>
       <ApplicationShell context="workspace">
         <ProjectsIndexView
-          onSearchChange={() => undefined}
           projects={[checkoutResearchProject, alphaProject]}
-          search=""
         />
         <ProjectFormDialogView {...props} />
       </ApplicationShell>

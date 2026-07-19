@@ -69,6 +69,23 @@ describe("ParticipantForm", () => {
       researcherNotes: "Mobile checkout research.",
     }, expect.anything());
   });
+
+  it("keeps neighboring fields aligned when Record chips increase the field height", async () => {
+    const user = userEvent.setup();
+    render(<ParticipantForm mode="create" onSubmit={() => undefined} recordOptions={recordOptions} />);
+
+    const emailLabel = screen.getByText("Email address");
+    const emailField = emailLabel.parentElement;
+    const fieldGrid = emailField?.parentElement;
+    expect(emailField).toHaveClass("content-start");
+    expect(fieldGrid).toHaveClass("items-start");
+
+    await user.click(screen.getByRole("button", { name: "Record" }));
+    await user.click(screen.getByRole("option", { name: "Record 1" }));
+    expect(screen.getByRole("button", { name: "Remove Record 1" })).toBeInTheDocument();
+    expect(emailField).toHaveClass("content-start");
+    expect(fieldGrid).toHaveClass("items-start");
+  });
 });
 
 describe("ParticipantPicker", () => {
@@ -103,4 +120,3 @@ describe("ParticipantPicker", () => {
     expect(screen.getByRole("status")).toHaveTextContent("No participants found");
   });
 });
-

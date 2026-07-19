@@ -10,6 +10,18 @@ The project context from the starter package is stored under `project-context/`.
 
 ## Current Status
 
+The current Record Synthesis MVP branch also includes the approved fixed Record
+catalog and frontend workflow plus an additive backend persistence checkpoint:
+three seeded Records, normalized Session-Record assignments, persisted synthesis
+runs/items/source provenance, eligibility and latest-run APIs, and a replay-safe
+backfill of recognized provisional Record relationships. Record generation now
+supports deterministic mock and configured live providers, idempotent requests,
+automatic eligible-Session scope, item review/approval, and transcript evidence
+context through the real backend. Final QA is complete locally: the backend and
+frontend suites, lint, production and Storybook builds, isolated Playwright
+workflows, and V1-to-V2 migration replay all pass. This branch is ready for MVP
+review and acceptance.
+
 Sprint 7 completes the initial MVP with Project CRUD, document upload/text extraction, chunking, mock embeddings, local search, AI provider settings, evidence-backed theme generation, session-only RAG chat, and findings exports:
 
 - Docker Compose configuration for PostgreSQL with pgvector image
@@ -289,6 +301,33 @@ The API and E2E databases are isolated and are stopped automatically, including
 when a test fails. GitHub Actions runs the same gates for pull requests, pushes
 to `main`, and manual workflow dispatches. Coverage reports and Playwright failure
 artifacts are retained by the workflow for diagnosis.
+
+## Record Synthesis MVP Acceptance Check
+
+Use only synthetic research data. For a deterministic review without API costs,
+configure AI provider settings as follows:
+
+- Provider: `mock`
+- Model: `mock-chat`
+- Embedding provider: `mock`
+- Embedding model: `mock-hash-64`
+
+Then verify the MVP workflow:
+
+1. Create or open a Project.
+2. Create at least two Sessions assigned to the same Record.
+3. Upload one primary transcript to each Session and wait for processing to finish.
+4. Generate each Session Report, review its evidence, and approve the report.
+5. Open **Records** in the left navigation and select that Record.
+6. Confirm the eligible Sessions are included and any excluded Session explains why.
+7. Generate Record Synthesis and review Requirements, Decisions, and Action Items.
+8. Mark synthesis items reviewed or approved and confirm those states persist after refresh.
+9. Open an evidence citation and confirm it resolves to the correct transcript context.
+10. Revise a source Session Report, regenerate synthesis, and confirm the latest eligible evidence is used.
+
+The automated Playwright workflow covers the primary Record synthesis path. This
+manual check is the final product-level acceptance pass for labels, layout, and
+reviewer judgment.
 
 ## Sprint 7 UI
 

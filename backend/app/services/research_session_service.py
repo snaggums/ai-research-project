@@ -1,24 +1,26 @@
 from datetime import date
+from pathlib import Path
 
 from app.models.document import Document
 from app.models.participant import Participant
+from app.models.record import ProductRecord, RecordSynthesisRun, RecordSynthesisSource, SessionRecord
 from app.models.research_session import ResearchSession, SessionParticipant, SessionRelationship
 from app.models.session_report import SessionReport
 from app.models.theme import Theme
 from app.schemas.research_session import SessionCreate, SessionFilters, SessionRead, SessionReference, SessionUpdate
 from app.services.participant_service import participant_to_read
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 
 def list_sessions(db: Session, project_id: str, filters: SessionFilters) -> list[SessionRead]:
-    statement = _loaded_select().where(ResearchSession.project_id == project_id).order_by(ResearchSession.updated_at.desc())
+    statement = loaded_select().where(ResearchSession.project_id == project_id).order_by(ResearchSession.updated_at.desc())
     sessions = [session_to_read(db, item) for item in db.scalars(statement).unique().all()]
     return [item for item in sessions if _matches(item, filters)]
 
 
 def get_session(db: Session, project_id: str, session_id: str) -> ResearchSession | None:
-    return db.scalar(_loaded_select().where(ResearchSession.id == session_id, ResearchSession.project_id == project_id))
+    return db.scalar(loaded_select().where(ResearchSession.id == session_id, ResearchSession.project_id == project_id))
 
 
 def create_session(db: Session, project_id: str, payload: SessionCreate) -> SessionRead:
@@ -33,7 +35,7 @@ def create_session(db: Session, project_id: str, payload: SessionCreate) -> Sess
     db.add(research_session)
     db.flush()
     _replace_participants(db, research_session, payload.participant_ids)
-    _replace_relationships(research_session, "record", payload.related_record_ids, payload.related_records)
+    replace_record_assignment(db, research_session, payload.related_record_ids, payload.related_records)
     _replace_relationships(research_session, "common-component", payload.related_common_component_ids, payload.related_common_components)
     db.commit()
     return session_to_read(db, get_session(db, project_id, research_session.id) or research_session)
@@ -53,7 +55,7 @@ def update_session(db: Session, research_session: ResearchSession, payload: Sess
     if values.get("participant_ids") is not None:
         _replace_participants(db, research_session, values["participant_ids"])
     if values.get("related_record_ids") is not None or values.get("related_records") is not None:
-        _replace_relationships(research_session, "record", values.get("related_record_ids") or [], values.get("related_records") or [])
+        replace_record_assignment(db, research_session, values.get("related_record_ids") or [], values.get("related_records") or [])
     if values.get("related_common_component_ids") is not None or values.get("related_common_components") is not None:
         _replace_relationships(research_session, "common-component", values.get("related_common_component_ids") or [], values.get("related_common_components") or [])
     db.add(research_session)
@@ -62,17 +64,27 @@ def update_session(db: Session, research_session: ResearchSession, payload: Sess
 
 
 def delete_session(db: Session, research_session: ResearchSession) -> None:
-    if research_session.documents:
-        raise ValueError("Delete the Session transcripts before deleting this Session.")
-    db.delete(research_session)
+    file_paths = [Path(document.file_path) for document in research_session.documents]
+    affected_runs = select(RecordSynthesisSource.run_id).where(
+        RecordSynthesisSource.session_id == research_session.id
+    )
+    db.execute(delete(RecordSynthesisRun).where(RecordSynthesisRun.id.in_(affected_runs)))
+    research_session.primary_transcript_document_id = None
+    db.add(research_session)
+    db.flush()
+    db.execute(delete(ResearchSession).where(ResearchSession.id == research_session.id))
     db.commit()
+    for file_path in file_paths:
+        if file_path.exists():
+            file_path.unlink()
 
 
-def _loaded_select():
+def loaded_select():
     return select(ResearchSession).options(
         selectinload(ResearchSession.documents),
         selectinload(ResearchSession.participant_memberships).selectinload(SessionParticipant.participant).selectinload(Participant.record_memberships),
         selectinload(ResearchSession.relationships),
+        selectinload(ResearchSession.record_assignments).selectinload(SessionRecord.record),
         selectinload(ResearchSession.themes),
         selectinload(ResearchSession.reports),
     )
@@ -88,6 +100,32 @@ def _replace_participants(db: Session, research_session: ResearchSession, partic
         SessionParticipant(session_id=research_session.id, participant_id=participant_id)
         for participant_id in unique_ids
     ]
+
+
+def replace_record_assignment(db: Session, research_session: ResearchSession, target_ids: list[str], references: list[SessionReference]) -> None:
+    reference_ids = [reference.id for reference in references]
+    unique_ids = list(dict.fromkeys(value.strip() for value in [*target_ids, *reference_ids] if value and value.strip()))
+    if len(unique_ids) > 1:
+        raise ValueError("Select one Record for this Session.")
+    if unique_ids:
+        record = db.get(ProductRecord, unique_ids[0])
+        if record is None:
+            raise ValueError("Select Record 1, Record 2, or Record 3.")
+        research_session.record_assignments = [SessionRecord(session_id=research_session.id, record_id=record.id)]
+        legacy_reference = SessionRelationship(
+            session_id=research_session.id,
+            target_type="record",
+            target_id=record.id,
+            target_name=record.name,
+        )
+        research_session.relationships = [
+            value for value in research_session.relationships if value.target_type != "record"
+        ] + [legacy_reference]
+    else:
+        research_session.record_assignments = []
+        research_session.relationships = [
+            value for value in research_session.relationships if value.target_type != "record"
+        ]
 
 
 def _replace_relationships(research_session: ResearchSession, target_type: str, target_ids: list[str], references: list[SessionReference]) -> None:
@@ -126,7 +164,7 @@ def session_to_read(db: Session, research_session: ResearchSession) -> SessionRe
         has_primary_transcript=primary is not None,
         theme_status=themes[0].status if themes else "not-generated",
         report_status=reports[0].status if reports else "not-generated",
-        related_records=[SessionReference(id=value.target_id, name=value.target_name) for value in research_session.relationships if value.target_type == "record"],
+        related_records=[SessionReference(id=value.record_id, name=value.record.name) for value in research_session.record_assignments],
         related_common_components=[SessionReference(id=value.target_id, name=value.target_name) for value in research_session.relationships if value.target_type == "common-component"],
         created_at=research_session.created_at,
         updated_at=research_session.updated_at,

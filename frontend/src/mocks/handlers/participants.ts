@@ -19,6 +19,10 @@ function projectParticipants(projectId: string) {
   return participantStore.filter((participant) => participant.project_id === projectId);
 }
 
+export function mockParticipantsById(ids: string[]) {
+  return participantStore.filter((participant) => ids.includes(participant.id));
+}
+
 export const participantHandlers = [
   http.get(`${PARTICIPANTS_API_BASE_URL}/projects/:projectId/participants`, ({ params, request }) => {
     const projectId = String(params.projectId);

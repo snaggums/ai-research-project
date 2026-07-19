@@ -7,8 +7,9 @@ import type {
 } from "@/domain/types";
 
 export const recordReferences: ProductReference[] = [
-  { id: "record-checkout", name: "Record 1" },
-  { id: "record-navigation", name: "Record 2" },
+  { id: "record-1", name: "Record 1" },
+  { id: "record-2", name: "Record 2" },
+  { id: "record-3", name: "Record 3" },
 ];
 
 export const commonComponentReferences: ProductReference[] = [

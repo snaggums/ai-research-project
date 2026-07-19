@@ -182,3 +182,67 @@ test("application shell remains aligned and usable at desktop, tablet, and mobil
     await deleteProject(request, project.id);
   }
 });
+
+test("researcher generates and reviews Record synthesis from eligible Sessions", async ({ page, request }) => {
+  const project = await createProject(request, `Record Synthesis Project ${Date.now()}`);
+  const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "golden-path-interview.txt");
+  const transcript = await readFile(fixturePath);
+
+  try {
+    const settings = await request.put(`${apiBaseUrl}/settings/ai`, {
+      data: {
+        provider: "mock",
+        model: "mock-chat",
+        base_url: null,
+        embedding_provider: "mock",
+        embedding_model: "mock-hash-64",
+      },
+    });
+    expect(settings.ok()).toBeTruthy();
+
+    for (const title of ["Record checkout interview", "Record checkout usability test"]) {
+      const sessionResponse = await request.post(`${apiBaseUrl}/projects/${project.id}/sessions`, {
+        data: {
+          title,
+          type: "usability-test",
+          participant_ids: [],
+          related_record_ids: ["record-1"],
+        },
+      });
+      expect(sessionResponse.ok()).toBeTruthy();
+      const researchSession = (await sessionResponse.json()) as { id: string };
+      const root = `${apiBaseUrl}/projects/${project.id}/sessions/${researchSession.id}`;
+      const upload = await request.post(`${root}/documents`, {
+        multipart: {
+          file: {
+            name: `${title.toLowerCase().replaceAll(" ", "-")}.txt`,
+            mimeType: "text/plain",
+            buffer: transcript,
+          },
+        },
+      });
+      expect(upload.ok()).toBeTruthy();
+      expect((await request.post(`${root}/themes/generate`)).ok()).toBeTruthy();
+      expect((await request.post(`${root}/report/generate`)).ok()).toBeTruthy();
+      expect((await request.patch(`${root}/report`, { data: { status: "approved" } })).ok()).toBeTruthy();
+    }
+
+    await page.goto("/records/record-1/synthesis");
+    await expect(page.getByRole("heading", { level: 1, name: "Record 1 synthesis" })).toBeVisible();
+    await page.getByRole("button", { name: "Generate synthesis" }).click();
+    await expect(page.getByRole("heading", { name: "Requirements" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Decisions" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Action Items" })).toBeVisible();
+
+    const firstReviewButton = page.getByRole("button", { name: "Mark reviewed" }).first();
+    const firstItemTitle = await firstReviewButton.locator("xpath=ancestor::article").getByRole("heading").innerText();
+    await firstReviewButton.click();
+    const firstItem = page.locator("article").filter({ has: page.getByRole("heading", { name: firstItemTitle }) });
+    await expect(firstItem.getByText("Researcher Reviewed", { exact: true })).toBeVisible();
+    await firstItem.getByRole("button", { name: "Open evidence" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeVisible();
+    await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
+  } finally {
+    await deleteProject(request, project.id);
+  }
+});

@@ -13,6 +13,9 @@ const project: Project = {
   id: "00000000-0000-0000-0000-000000000010",
   name: "Checkout usability study",
   description: "Research on the checkout experience",
+  participant_count: 0,
+  session_count: 0,
+  ready_transcript_count: 0,
   created_at: "2026-07-10T12:00:00Z",
   updated_at: "2026-07-10T12:00:00Z",
 };

@@ -47,6 +47,39 @@ def test_list_projects(client: TestClient) -> None:
     assert {project["id"] for project in projects} == {first["id"], second["id"]}
 
 
+def test_project_summary_counts_participants_and_sessions(client: TestClient) -> None:
+    project = create_project(client, name="Counted project")
+    for first_name in ("Alex", "Jordan"):
+        response = client.post(
+            f"/api/projects/{project['id']}/participants",
+            json={"first_name": first_name, "last_name": "Morgan", "record_ids": []},
+        )
+        assert response.status_code == 201
+    session = client.post(
+        f"/api/projects/{project['id']}/sessions",
+        json={
+            "title": "Counted session",
+            "type": "interview",
+            "participant_ids": [],
+            "related_record_ids": ["record-1"],
+        },
+    )
+    assert session.status_code == 201
+
+    summary = client.get(f"/api/projects/{project['id']}")
+
+    assert summary.status_code == 200
+    assert summary.json()["participant_count"] == 2
+    assert summary.json()["session_count"] == 1
+    assert summary.json()["ready_transcript_count"] == 0
+
+    listed = client.get("/api/projects")
+    listed_project = next(value for value in listed.json() if value["id"] == project["id"])
+    assert listed_project["participant_count"] == 2
+    assert listed_project["session_count"] == 1
+    assert listed_project["ready_transcript_count"] == 0
+
+
 def test_update_project(client: TestClient) -> None:
     project = create_project(client)
 
@@ -93,4 +126,3 @@ def test_create_project_validates_payload(client: TestClient, payload: dict) -> 
     response = client.post("/api/projects", json=payload)
 
     assert response.status_code == 422
-

@@ -11,7 +11,6 @@ import { EntityCollection, EmptyState, PageHeader, SectionNavigation } from "@/c
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { SearchField } from "@/components/ui/search-field";
 import type { ProjectSummary as ProjectSummaryModel } from "@/domain/types";
 
 export interface ProjectsIndexViewProps {
@@ -19,8 +18,6 @@ export interface ProjectsIndexViewProps {
   onEditProject?: (project: ProjectSummaryModel) => void;
   onRetry?: () => void;
   projects: ProjectSummaryModel[];
-  search: string;
-  onSearchChange: (value: string) => void;
   state?: "ready" | "loading" | "empty" | "error";
 }
 
@@ -29,15 +26,8 @@ export function ProjectsIndexView({
   onEditProject,
   onRetry,
   projects,
-  search,
-  onSearchChange,
   state = "ready",
 }: ProjectsIndexViewProps) {
-  const filtered = projects.filter((project) =>
-    `${project.name} ${project.description ?? ""}`.toLowerCase().includes(search.toLowerCase()),
-  );
-  const collectionState = state === "ready" && search && !filtered.length ? "no-results" : state;
-
   return (
     <div className="grid gap-8">
       <PageHeader
@@ -52,18 +42,8 @@ export function ProjectsIndexView({
       <EntityCollection
         countLabel={state === "loading"
           ? "Loading projects…"
-          : `${search ? filtered.length : projects.length} ${(search ? filtered.length : projects.length) === 1 ? "project" : "projects"}`}
-        controls={(
-          <div className="ml-auto w-full sm:max-w-xs">
-            <SearchField
-              aria-label="Search projects"
-              onChange={(event) => onSearchChange(event.currentTarget.value)}
-              placeholder="Search projects"
-              value={search}
-            />
-          </div>
-        )}
-        state={collectionState}
+          : `${projects.length} ${projects.length === 1 ? "project" : "projects"}`}
+        state={state}
         stateContent={state === "empty" ? (
           <EmptyState
             description="Create your first project to organize participants, sessions, and transcripts."
@@ -79,7 +59,7 @@ export function ProjectsIndexView({
         title="All projects"
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((project) => (
+          {projects.map((project) => (
             <ProjectCard
               href={`/projects/${project.id}/overview`}
               key={project.id}
@@ -104,7 +84,7 @@ export function ProjectOverviewView({ project, steps }: ProjectOverviewViewProps
   return (
     <div className="grid gap-6">
       <PageHeader
-        actions={<Button asChild size="small" variant="gray-subtle"><a href={`${root}/edit`}>Edit project</a></Button>}
+        actions={<Button asChild size="small" variant="gray-subtle"><a href={`${root}/edit?returnTo=${encodeURIComponent(`${root}/overview`)}`}>Edit project</a></Button>}
         breadcrumbs={[
           { href: "/projects", label: "Projects" },
           { href: `${root}/overview`, label: project.name },

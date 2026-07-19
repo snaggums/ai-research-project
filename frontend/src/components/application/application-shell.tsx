@@ -23,6 +23,7 @@ export type NavigationItem<T extends string = string> = {
   label: string;
   href: string;
   icon?: LucideIcon;
+  children?: NavigationItem[];
 };
 
 export interface GlobalHeaderProps extends React.HTMLAttributes<HTMLElement> {
@@ -108,6 +109,7 @@ export function GlobalHeader({
 
 export interface NavigationProps<T extends string = string>
   extends React.HTMLAttributes<HTMLElement> {
+  activeChildId?: string;
   activeId?: T;
   items: NavigationItem<T>[];
   label: string;
@@ -115,6 +117,7 @@ export interface NavigationProps<T extends string = string>
 }
 
 export function Navigation<T extends string>({
+  activeChildId,
   activeId,
   className,
   items,
@@ -123,34 +126,64 @@ export function Navigation<T extends string>({
   ...props
 }: NavigationProps<T>) {
   return (
-    <nav aria-label={label} className={cn("grid gap-1", className)} {...props}>
-      {items.map((item) => {
-        const Icon = item.icon;
-        const active = item.id === activeId;
-        return (
-          <a
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex min-h-11 items-center gap-3 rounded-[var(--air-radius-md)] px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--air-color-interaction-focus)] focus-visible:ring-offset-2",
-              active
-                ? "bg-[var(--air-color-bg-selected)] text-[var(--air-color-text-primary)]"
-                : "text-[var(--air-color-text-secondary)] hover:bg-[var(--air-color-bg-subtle)] hover:text-[var(--air-color-text-primary)]",
-            )}
-            href={item.href}
-            key={item.id}
-            onClick={onNavigate}
-          >
-            {Icon ? <Icon aria-hidden="true" className="h-5 w-5 shrink-0" /> : null}
-            {item.label}
-          </a>
-        );
-      })}
+    <nav aria-label={label} className={className} {...props}>
+      <ul className="grid gap-1">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const activeChild = item.children?.some((child) => child.id === activeChildId) ?? false;
+          const active = item.id === activeId;
+          const sectionActive = active || activeChild;
+          return (
+            <li key={item.id}>
+              <a
+                aria-current={active && !activeChild ? "page" : undefined}
+                className={cn(
+                  "flex min-h-11 items-center gap-3 rounded-[var(--air-radius-md)] px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--air-color-interaction-focus)] focus-visible:ring-offset-2",
+                  sectionActive
+                    ? "bg-[var(--air-color-bg-selected)] text-[var(--air-color-text-primary)]"
+                    : "text-[var(--air-color-text-secondary)] hover:bg-[var(--air-color-bg-subtle)] hover:text-[var(--air-color-text-primary)]",
+                )}
+                href={item.href}
+                onClick={onNavigate}
+              >
+                {Icon ? <Icon aria-hidden="true" className="h-5 w-5 shrink-0" /> : null}
+                {item.label}
+              </a>
+              {sectionActive && item.children?.length ? (
+                <ul aria-label={`${item.label} list`} className="ml-6 mt-1 grid gap-1">
+                  {item.children.map((child) => {
+                    const childActive = child.id === activeChildId;
+                    return (
+                      <li key={child.id}>
+                        <a
+                          aria-current={childActive ? "page" : undefined}
+                          className={cn(
+                            "flex min-h-11 items-center rounded-[var(--air-radius-md)] px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--air-color-interaction-focus)] focus-visible:ring-offset-2",
+                            childActive
+                              ? "bg-[var(--air-color-bg-selected)] text-[var(--air-color-text-primary)]"
+                              : "text-[var(--air-color-text-secondary)] hover:bg-[var(--air-color-bg-subtle)] hover:text-[var(--air-color-text-primary)]",
+                          )}
+                          href={child.href}
+                          onClick={onNavigate}
+                        >
+                          {child.label}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
 
 export interface ApplicationShellProps {
-  activeGlobalItem?: "projects" | null;
+  activeGlobalItem?: "projects" | "records" | null;
+  activeGlobalSubItem?: string;
   activeProjectItem?: ProjectNavigationItem;
   children: React.ReactNode;
   context: "workspace" | "project";
@@ -160,6 +193,7 @@ export interface ApplicationShellProps {
 
 export function ApplicationShell({
   activeGlobalItem = "projects",
+  activeGlobalSubItem,
   activeProjectItem,
   children,
   context,
@@ -225,6 +259,7 @@ export function ApplicationShell({
               </div>
             ) : null}
             <Navigation
+              activeChildId={context === "workspace" ? activeGlobalSubItem : undefined}
               activeId={activeId}
               items={navItems}
               label={context === "project" ? "Project navigation" : "Global navigation"}
@@ -245,6 +280,7 @@ export function ApplicationShell({
             </div>
           ) : null}
           <Navigation
+            activeChildId={context === "workspace" ? activeGlobalSubItem : undefined}
             activeId={activeId}
             items={navItems}
             label={context === "project" ? "Project navigation" : "Global navigation"}

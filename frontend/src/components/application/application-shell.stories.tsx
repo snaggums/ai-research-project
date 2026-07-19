@@ -25,6 +25,10 @@ const meta = {
       control: "select",
       options: ["overview", "participants", "sessions", "ask-project"],
     },
+    activeGlobalSubItem: {
+      control: "select",
+      options: [undefined, "record-1", "record-2", "record-3"],
+    },
     context: { control: "inline-radio", options: ["workspace", "project"] },
   },
 } satisfies Meta<typeof ApplicationShell>;
@@ -68,6 +72,24 @@ export const Workspace: Story = {
   render: (args) => (
     <ApplicationShell {...args}>
       <PageHeader description="Create and organize UX research projects." title="Projects" />
+    </ApplicationShell>
+  ),
+};
+
+export const WorkspaceRecords: Story = {
+  args: {
+    activeGlobalItem: "records",
+    activeGlobalSubItem: "record-1",
+    context: "workspace",
+    project: undefined,
+    activeProjectItem: undefined,
+  },
+  render: (args) => (
+    <ApplicationShell {...args}>
+      <PageHeader
+        description="Review record-level research synthesis across related sessions."
+        title="Record 1"
+      />
     </ApplicationShell>
   ),
 };

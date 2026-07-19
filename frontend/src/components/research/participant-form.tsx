@@ -99,7 +99,7 @@ export function ParticipantForm({
         />
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid items-start gap-4 md:grid-cols-2">
         <InputField
           autoComplete="given-name"
           disabled={pending}
@@ -180,4 +180,3 @@ export function ParticipantForm({
     </form>
   );
 }
-

@@ -2,13 +2,13 @@ import axe from "axe-core";
 import { render } from "@testing-library/react";
 
 import { toSessionSummary } from "@/adapters/sessions";
-import { sessionApiFixtures, sessionCommonComponentOptions, sessionRecordOptions } from "@/mocks/fixtures/sessions";
+import { sessionApiFixtures, sessionRecordOptions } from "@/mocks/fixtures/sessions";
 import { emptySessionFilters } from "./session-view-data";
 import { SessionDetailView, SessionsCollectionView } from "./session-views";
 
 describe("Session page accessibility", () => {
   it("has no automated violations in the Sessions Collection", async () => {
-    const { container } = render(<SessionsCollectionView commonComponentOptions={sessionCommonComponentOptions} filters={emptySessionFilters} onFiltersChange={() => undefined} projectId="alpha-project" projectName="Alpha Project" recordOptions={sessionRecordOptions} sessions={sessionApiFixtures.map(toSessionSummary)} />);
+    const { container } = render(<SessionsCollectionView filters={emptySessionFilters} onFiltersChange={() => undefined} projectId="alpha-project" projectName="Alpha Project" recordOptions={sessionRecordOptions} sessions={sessionApiFixtures.map(toSessionSummary)} />);
     const result = await axe.run(container, { rules: { "color-contrast": { enabled: false }, region: { enabled: false } } });
     expect(result.violations).toEqual([]);
   });

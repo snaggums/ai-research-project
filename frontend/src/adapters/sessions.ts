@@ -31,6 +31,7 @@ export function toSessionFormValues(session: Session): SessionFormValues {
     date: startsAt ? startsAt.toISOString().slice(0, 10) : "",
     time: startsAt ? startsAt.toISOString().slice(11, 16) : "",
     description: session.description ?? "",
+    recordId: session.related_records[0]?.id ?? "",
     participantIds: session.participant_ids,
   };
 }
@@ -45,5 +46,6 @@ export function toSessionPayload(values: SessionFormValues): SessionPayload {
     starts_at: startsAt,
     description: values.description || null,
     participant_ids: values.participantIds,
+    related_record_ids: values.recordId ? [values.recordId] : [],
   };
 }

@@ -21,6 +21,68 @@ export type ProductReference = {
   name: string;
 };
 
+export type RecordReadiness = "ready" | "needs-data" | "up-to-date";
+
+export type RecordSummary = {
+  id: EntityId;
+  name: string;
+  description: string;
+  relatedSessionCount: number;
+  eligibleSessionCount: number;
+  readiness: RecordReadiness;
+  latestSynthesisAt?: string;
+};
+
+export type RecordSynthesisSourceSession = {
+  id: EntityId;
+  title: string;
+  reportId: EntityId;
+  reportStatus: SessionReportStatus;
+};
+
+export type RecordSynthesisExcludedSession = {
+  id: EntityId;
+  title: string;
+  reason: string;
+};
+
+export type RecordSynthesisScope = {
+  recordId: EntityId;
+  description: string;
+  minimumEligibleSessions: number;
+  includedSessions: RecordSynthesisSourceSession[];
+  excludedSessions: RecordSynthesisExcludedSession[];
+};
+
+export type RecordSynthesisItemType = "requirement" | "decision" | "action-item";
+
+export type RecordSynthesisItem = {
+  id: EntityId;
+  type: RecordSynthesisItemType;
+  status: LifecycleStatus;
+  title: string;
+  summary: string;
+  evidencePreview: string;
+  sourceSessionCount: number;
+  sourceReportItemCount: number;
+  provenance: string;
+  evidenceIds: EntityId[];
+};
+
+export type RecordSynthesis = {
+  id: EntityId;
+  recordId: EntityId;
+  status: "not-generated" | "processing" | "complete" | "failed";
+  generatedAt?: string;
+  sourceSessionCount: number;
+  sourceReportRevisionCount: number;
+  provider?: string;
+  model?: string;
+  promptVersion?: string;
+  items: RecordSynthesisItem[];
+  errorMessage?: string;
+};
+
 export type ProjectSummary = {
   id: EntityId;
   name: string;

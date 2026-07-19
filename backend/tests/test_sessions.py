@@ -1,5 +1,11 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.models.document import Document
 
 pytestmark = pytest.mark.integration
 
@@ -38,7 +44,7 @@ def test_session_crud_memberships_relationships_and_filters(client: TestClient) 
     assert created.status_code == 201
     session = created.json()
     assert session["participant_ids"] == [participant["id"]]
-    assert session["related_records"] == [{"id": "record-1", "name": "Checkout experience"}]
+    assert session["related_records"] == [{"id": "record-1", "name": "Record 1"}]
     assert session["transcript_status"] == "none"
 
     filtered = client.get(
@@ -55,6 +61,10 @@ def test_session_crud_memberships_relationships_and_filters(client: TestClient) 
     assert updated.status_code == 200
     assert updated.json()["title"] == "Updated checkout session"
     assert updated.json()["participant_ids"] == []
+    persisted = client.get(f"/api/projects/{project['id']}/sessions/{session['id']}")
+    assert persisted.status_code == 200
+    assert persisted.json()["title"] == "Updated checkout session"
+    assert persisted.json()["participant_ids"] == []
     assert client.delete(f"/api/projects/{project['id']}/sessions/{session['id']}").status_code == 204
 
 
@@ -70,7 +80,7 @@ def test_session_rejects_cross_project_participants(client: TestClient) -> None:
     assert response.json() == {"detail": "Every Session participant must belong to this Project."}
 
 
-def test_session_transcript_contract_enforces_nested_ownership(client: TestClient) -> None:
+def test_session_transcript_contract_enforces_nested_ownership(client: TestClient, db_session: Session) -> None:
     project = _project(client)
     created = client.post(
         f"/api/projects/{project['id']}/sessions",
@@ -84,6 +94,10 @@ def test_session_transcript_contract_enforces_nested_ownership(client: TestClien
     document = upload.json()
     assert document["session_id"] == created["id"]
     assert document["is_primary"] is True
+    stored_document = db_session.get(Document, document["id"])
+    assert stored_document is not None
+    stored_file = Path(stored_document.file_path)
+    assert stored_file.exists()
 
     listed = client.get(f"/api/projects/{project['id']}/sessions/{created['id']}/documents")
     assert listed.status_code == 200
@@ -111,3 +125,9 @@ def test_session_transcript_contract_enforces_nested_ownership(client: TestClien
 
     other_project = _project(client, "Other Project")
     assert client.get(f"/api/projects/{other_project['id']}/sessions/{created['id']}/documents").status_code == 404
+
+    deleted = client.delete(f"/api/projects/{project['id']}/sessions/{created['id']}")
+    assert deleted.status_code == 204
+    assert db_session.scalar(select(func.count()).select_from(Document).where(Document.session_id == created["id"])) == 0
+    assert not stored_file.exists()
+    assert client.get(f"/api/projects/{project['id']}/sessions/{created['id']}").status_code == 404
