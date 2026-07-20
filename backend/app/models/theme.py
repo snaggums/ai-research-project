@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if False:
     from app.models.project import Project
+    from app.models.research_session import ResearchSession
     from app.models.theme_evidence import ThemeEvidence
 
 
@@ -21,6 +22,13 @@ class Theme(Base):
         nullable=False,
         index=True,
     )
+    session_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="ai-generated", server_default="ai-generated")
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5, server_default="0.5")
@@ -43,6 +51,7 @@ class Theme(Base):
     )
 
     project: Mapped["Project"] = relationship(back_populates="themes")
+    session: Mapped["ResearchSession | None"] = relationship(back_populates="themes", foreign_keys=[session_id])
     evidence: Mapped[list["ThemeEvidence"]] = relationship(
         back_populates="theme",
         cascade="all, delete-orphan",

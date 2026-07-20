@@ -2,6 +2,9 @@ export type Project = {
   id: string;
   name: string;
   description: string | null;
+  participant_count: number;
+  session_count: number;
+  ready_transcript_count: number;
   created_at: string;
   updated_at: string;
 };
@@ -9,6 +12,79 @@ export type Project = {
 export type ProjectPayload = {
   name: string;
   description?: string | null;
+};
+
+export type Participant = {
+  id: string;
+  project_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  organization: string | null;
+  role: string | null;
+  record_ids: string[];
+  researcher_notes: string | null;
+  session_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ParticipantPayload = {
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  organization?: string | null;
+  role?: string | null;
+  record_ids: string[];
+  researcher_notes?: string | null;
+};
+
+export type SessionReference = {
+  id: string;
+  name: string;
+};
+
+export type Session = {
+  id: string;
+  project_id: string;
+  title: string;
+  type: "interview" | "usability-test" | "focus-group" | "working-session" | "design-critique" | "other";
+  starts_at: string | null;
+  duration_minutes: number | null;
+  description: string | null;
+  participants: Participant[];
+  participant_ids: string[];
+  document_count: number;
+  transcript_names: string[];
+  transcript_status: "none" | "uploaded" | "processing" | "complete" | "failed";
+  has_primary_transcript: boolean;
+  theme_status: "not-generated" | "generating" | "ai-generated" | "researcher-reviewed" | "approved" | "superseded" | "failed";
+  report_status: "not-generated" | "generating" | "ai-generated" | "researcher-reviewed" | "approved" | "superseded" | "failed";
+  related_records: SessionReference[];
+  related_common_components: SessionReference[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type SessionPayload = {
+  title: string;
+  type: Session["type"];
+  starts_at?: string | null;
+  duration_minutes?: number | null;
+  description?: string | null;
+  participant_ids: string[];
+  related_record_ids?: string[];
+  related_common_component_ids?: string[];
+};
+
+export type SessionFilters = {
+  search?: string;
+  type?: Session["type"] | "";
+  transcriptStatus?: Session["transcript_status"] | "";
+  analysisStatus?: Session["theme_status"] | "";
+  date?: string;
+  recordId?: string;
+  commonComponentId?: string;
 };
 
 export type ResearchDocument = {
@@ -24,6 +100,52 @@ export type ResearchDocument = {
 
 export type ResearchDocumentDetail = ResearchDocument & {
   content: string | null;
+};
+
+export type TranscriptBlock = {
+  id: string;
+  speaker: string;
+  location: string;
+  text: string;
+};
+
+export type TranscriptDocument = {
+  id: string;
+  project_id: string;
+  session_id: string;
+  filename: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  status: "uploaded" | "processing" | "complete" | "failed";
+  is_primary: boolean;
+  uploaded_at: string;
+  processed_at: string | null;
+  error_message: string | null;
+  blocks: TranscriptBlock[];
+  source_url: string | null;
+  download_url: string | null;
+};
+
+export type TranscriptSearchResult = {
+  id: string;
+  document_id: string;
+  speaker: string;
+  location: string;
+  excerpt: string;
+  relevance: number;
+  block_index: number;
+};
+
+export type TranscriptSearchResponse = {
+  query: string;
+  results: TranscriptSearchResult[];
+};
+
+export type TranscriptContext = {
+  document: TranscriptDocument;
+  result: TranscriptSearchResult;
+  passages: TranscriptBlock[];
+  focused_passage_id: string;
 };
 
 export type SearchResult = {
@@ -136,4 +258,175 @@ export type ChatResponse = {
   model: string | null;
   used_mock: boolean;
   message: string;
+};
+
+export type SessionThemeEvidence = {
+  id: string;
+  document_id: string;
+  document_name: string;
+  speaker: string;
+  location: string;
+  excerpt: string;
+  relevance: number;
+  context_result_id: string;
+};
+
+export type SessionTheme = {
+  id: string;
+  project_id: string;
+  session_id: string;
+  name: string;
+  summary: string;
+  status: "ai-generated" | "researcher-reviewed" | "approved" | "rejected";
+  confidence: number;
+  source_label: string;
+  evidence: SessionThemeEvidence[];
+};
+
+export type SessionThemePayload = Partial<Pick<SessionTheme, "name" | "summary" | "status">>;
+
+export type SessionThemeGenerateResponse = {
+  themes: SessionTheme[];
+  message: string;
+};
+
+export type SessionReportItem = {
+  id: string;
+  type: "requirement" | "decision" | "action-item" | "open-question" | "key-insight";
+  title: string;
+  summary: string;
+  provenance: string;
+  evidence: SessionThemeEvidence[];
+};
+
+export type SessionReportParticipant = {
+  id: string;
+  name: string;
+  role: string | null;
+  organization: string | null;
+  notes: string | null;
+};
+
+export type SessionReport = {
+  id: string;
+  project_id: string;
+  session_id: string;
+  status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded";
+  session_title: string;
+  session_type: string;
+  session_date: string;
+  duration_minutes: number | null;
+  participants: SessionReportParticipant[];
+  executive_summary: string;
+  items: SessionReportItem[];
+  detailed_notes: string;
+  generated_at: string;
+};
+
+export type SessionReportPayload = Partial<Pick<SessionReport, "status" | "executive_summary" | "detailed_notes">>;
+export type SessionReportItemPayload = Partial<Pick<SessionReportItem, "title" | "summary">>;
+
+export type SessionReportGenerateResponse = {
+  report: SessionReport;
+  message: string;
+};
+
+export type SessionCitation = {
+  id: string;
+  document_id: string;
+  document_name: string;
+  speaker: string;
+  location: string;
+  excerpt: string;
+  context_result_id: string;
+};
+
+export type SessionConversationTurn = {
+  id: string;
+  role: "researcher" | "assistant";
+  content: string;
+  citations: SessionCitation[];
+  created_at: string;
+};
+
+export type SessionConversation = {
+  id: string;
+  project_id: string;
+  session_id: string;
+  status: "saved" | "archived" | "deleted";
+  turns: SessionConversationTurn[];
+};
+
+export type AskSessionResponse = {
+  conversation: SessionConversation;
+  answer: SessionConversationTurn;
+};
+
+export type RecordCatalogItem = {
+  id: string;
+  name: string;
+  description: string;
+  related_session_count: number;
+  eligible_session_count: number;
+  readiness: "ready" | "needs-data" | "up-to-date";
+  latest_synthesis_at: string | null;
+};
+
+export type RecordSynthesisSourceSession = {
+  id: string;
+  title: string;
+  report_id: string;
+  report_status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded";
+};
+
+export type RecordSynthesisExcludedSession = {
+  id: string;
+  title: string;
+  reason: string;
+};
+
+export type RecordSynthesisEligibility = {
+  record_id: string;
+  description: string;
+  minimum_eligible_sessions: number;
+  included_sessions: RecordSynthesisSourceSession[];
+  excluded_sessions: RecordSynthesisExcludedSession[];
+};
+
+export type RecordSynthesisItem = {
+  id: string;
+  type: "requirement" | "decision" | "action-item";
+  status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded";
+  title: string;
+  summary: string;
+  evidence_preview: string;
+  source_session_count: number;
+  source_report_item_count: number;
+  provenance: string;
+  evidence_ids: string[];
+};
+
+export type RecordSynthesis = {
+  id: string;
+  record_id: string;
+  status: "not-generated" | "processing" | "complete" | "failed";
+  generated_at: string | null;
+  source_session_count: number;
+  source_report_revision_count: number;
+  provider: string | null;
+  model: string | null;
+  prompt_version: string | null;
+  items: RecordSynthesisItem[];
+  error_message: string | null;
+};
+
+export type RecordSynthesisEvidence = {
+  id: string;
+  record_id: string;
+  item_id: string;
+  item_title: string;
+  project_id: string;
+  session_id: string;
+  session_title: string;
+  context: TranscriptContext;
 };

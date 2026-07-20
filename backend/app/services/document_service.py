@@ -8,9 +8,11 @@ from app.db.session import SessionLocal
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.project import Project
+from app.models.research_session import ResearchSession
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import embed_text
 from app.services.parsing_service import SUPPORTED_EXTENSIONS, extract_text
+from app.services.v1_migration_service import get_or_create_import_session
 from fastapi import UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -25,7 +27,7 @@ def get_document(db: Session, document_id: str) -> Document | None:
     return db.get(Document, document_id)
 
 
-def create_uploaded_document(db: Session, project: Project, upload: UploadFile) -> Document:
+def create_uploaded_document(db: Session, project: Project, upload: UploadFile, research_session: ResearchSession | None = None) -> Document:
     original_filename = upload.filename or "upload"
     extension = Path(original_filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
@@ -41,18 +43,36 @@ def create_uploaded_document(db: Session, project: Project, upload: UploadFile) 
     with file_path.open("wb") as destination:
         copyfileobj(upload.file, destination)
 
+    owning_session = research_session or get_or_create_import_session(db, project.id)
+
     document = Document(
         id=document_id,
         project_id=project.id,
+        session_id=owning_session.id,
+        document_type="transcript",
         filename=original_filename,
         file_path=str(file_path),
         mime_type=upload.content_type,
+        size_bytes=file_path.stat().st_size,
         status="uploaded",
     )
     db.add(document)
+    db.flush()
+    if owning_session.primary_transcript_document_id is None:
+        owning_session.primary_transcript_document_id = document.id
+        db.add(owning_session)
     db.commit()
     db.refresh(document)
     return document
+
+
+def list_session_documents(db: Session, project_id: str, session_id: str) -> list[Document]:
+    statement = select(Document).where(Document.project_id == project_id, Document.session_id == session_id).order_by(Document.uploaded_at.desc())
+    return list(db.scalars(statement).all())
+
+
+def get_session_document(db: Session, project_id: str, session_id: str, document_id: str) -> Document | None:
+    return db.scalar(select(Document).where(Document.id == document_id, Document.project_id == project_id, Document.session_id == session_id))
 
 
 def process_document(document_id: str) -> None:

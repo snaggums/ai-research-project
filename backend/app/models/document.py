@@ -2,13 +2,14 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.db.base import Base
-from sqlalchemy import DateTime, ForeignKey, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if False:
     from app.models.chunk import Chunk
     from app.models.project import Project
+    from app.models.research_session import ResearchSession
 
 
 class Document(Base):
@@ -21,9 +22,17 @@ class Document(Base):
         nullable=False,
         index=True,
     )
+    session_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    document_type: Mapped[str] = mapped_column(Text, nullable=False, default="transcript", server_default="transcript")
     filename: Mapped[str] = mapped_column(Text, nullable=False)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     mime_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="uploaded", server_default="uploaded")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -36,6 +45,7 @@ class Document(Base):
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship(back_populates="documents")
+    session: Mapped["ResearchSession"] = relationship(back_populates="documents", foreign_keys=[session_id])
     chunks: Mapped[list["Chunk"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",

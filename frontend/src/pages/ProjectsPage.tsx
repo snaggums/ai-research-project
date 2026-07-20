@@ -31,9 +31,10 @@ import type {
   ThemePayload,
 } from "@/api/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Input, InputField } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select";
+import { Textarea, TextareaField } from "@/components/ui/textarea";
 import {
   useDeleteDocument,
   useDocument,
@@ -61,7 +62,7 @@ const embeddingProviders = ["mock", "openai", "ollama"];
 const suggestedQuestions = [
   "What are the strongest usability issues in these transcripts?",
   "What evidence supports navigation confusion?",
-  "What should the team improve before the next study?",
+  "What should the team improve before the next project?",
 ];
 
 function roundScore(value: number | undefined) {
@@ -100,28 +101,20 @@ function ProjectForm({
 
   return (
     <form className="grid gap-3" onSubmit={handleSubmit}>
-      <div className="grid gap-2">
-        <label className="text-sm font-medium text-foreground" htmlFor="project-name">
-          Project name
-        </label>
-        <Input
-          id="project-name"
-          value={form.name}
-          onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-          placeholder="Usability study synthesis"
-        />
-      </div>
-      <div className="grid gap-2">
-        <label className="text-sm font-medium text-foreground" htmlFor="project-description">
-          Description
-        </label>
-        <Textarea
-          id="project-description"
-          value={form.description ?? ""}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          placeholder="Research goal, dataset, or sprint notes"
-        />
-      </div>
+      <InputField
+        id="project-name"
+        label="Project name"
+        value={form.name}
+        onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+        placeholder="Checkout usability research"
+      />
+      <TextareaField
+        id="project-description"
+        label="Description"
+        value={form.description ?? ""}
+        onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+        placeholder="Research goal, dataset, or sprint notes"
+      />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={isPending || !form.name.trim()}>
           {submitLabel}
@@ -319,7 +312,8 @@ function SearchPanel({ projectId }: { projectId: string }) {
         <p className="text-sm text-muted-foreground">Find relevant transcript chunks using local mock embeddings.</p>
       </div>
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleSearch}>
-        <Input
+        <SearchField
+          aria-label="Search extracted text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="navigation confusion, onboarding, settings..."
@@ -879,71 +873,44 @@ function AISettingsPanel() {
       {settings.isError ? <p className="text-sm text-destructive">Could not load AI settings.</p> : null}
 
       <form className="grid gap-4 lg:grid-cols-2" onSubmit={handleSave}>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="provider">
-            Provider
-          </label>
-          <Select
-            id="provider"
-            value={form.provider}
-            onChange={(event) => setForm((current) => ({ ...current, provider: event.target.value }))}
-          >
-            {providers.map((provider) => (
-              <option key={provider} value={provider}>
-                {provider}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="model">
-            Model
-          </label>
-          <Input
-            id="model"
-            value={form.model}
-            onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
-            placeholder="gpt-4.1-mini"
-          />
-        </div>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="base-url">
-            Base URL
-          </label>
-          <Input
-            id="base-url"
-            value={form.base_url ?? ""}
-            onChange={(event) => setForm((current) => ({ ...current, base_url: event.target.value }))}
-            placeholder="Optional for OpenRouter, Azure, Ollama, or gateways"
-          />
-        </div>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="embedding-provider">
-            Embedding provider
-          </label>
-          <Select
-            id="embedding-provider"
-            value={form.embedding_provider}
-            onChange={(event) => setForm((current) => ({ ...current, embedding_provider: event.target.value }))}
-          >
-            {embeddingProviders.map((provider) => (
-              <option key={provider} value={provider}>
-                {provider}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="grid gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="embedding-model">
-            Embedding model
-          </label>
-          <Input
-            id="embedding-model"
-            value={form.embedding_model}
-            onChange={(event) => setForm((current) => ({ ...current, embedding_model: event.target.value }))}
-            placeholder="mock-hash-64"
-          />
-        </div>
+        <SelectField
+          id="provider"
+          label="Provider"
+          value={form.provider}
+          options={providers.map((provider) => ({ label: provider, value: provider }))}
+          onValueChange={(provider) => setForm((current) => ({ ...current, provider }))}
+        />
+        <InputField
+          id="model"
+          label="Model"
+          value={form.model}
+          onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
+          placeholder="gpt-4.1-mini"
+        />
+        <InputField
+          id="base-url"
+          label="Base URL"
+          optional
+          value={form.base_url ?? ""}
+          onChange={(event) => setForm((current) => ({ ...current, base_url: event.target.value }))}
+          placeholder="Optional for OpenRouter, Azure, Ollama, or gateways"
+        />
+        <SelectField
+          id="embedding-provider"
+          label="Embedding provider"
+          value={form.embedding_provider}
+          options={embeddingProviders.map((provider) => ({ label: provider, value: provider }))}
+          onValueChange={(embedding_provider) =>
+            setForm((current) => ({ ...current, embedding_provider }))
+          }
+        />
+        <InputField
+          id="embedding-model"
+          label="Embedding model"
+          value={form.embedding_model}
+          onChange={(event) => setForm((current) => ({ ...current, embedding_model: event.target.value }))}
+          placeholder="mock-hash-64"
+        />
         <div className="flex flex-col justify-end gap-2">
           <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
             Key env var: {settings.data?.api_key_env_var ?? "none required"} ·{" "}

@@ -1,26 +1,28 @@
+@import "./styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 17%;
+    --background: 210 40% 98%;
+    --foreground: 217 33% 17%;
     --card: 0 0% 100%;
     --card-foreground: 215 25% 17%;
-    --primary: 172 67% 28%;
+    --primary: 211 100% 27%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 42 80% 92%;
-    --secondary-foreground: 31 47% 22%;
-    --muted: 210 18% 92%;
-    --muted-foreground: 215 12% 42%;
-    --accent: 204 80% 92%;
-    --accent-foreground: 209 60% 22%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 217 33% 17%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 187 92% 90%;
+    --accent-foreground: 211 100% 27%;
     --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 18% 84%;
-    --input: 214 18% 84%;
-    --ring: 172 67% 28%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 192 100% 30%;
     --radius: 0.5rem;
   }
 
@@ -32,4 +34,140 @@
     @apply bg-background text-foreground antialiased;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
+}
+
+@layer components {
+  .air-notification-item.pseudo-focus-visible {
+    outline: 2px solid var(--air-color-interaction-focus) !important;
+    outline-offset: -2px;
+  }
+
+  .air-chip:has(button:focus-visible),
+  .air-chip:has(button.pseudo-focus-visible) {
+    outline: 2px solid var(--air-color-interaction-focus);
+    outline-offset: 2px;
+  }
+
+  .air-accordion:has(> button:focus-visible),
+  .air-accordion:has(> button.pseudo-focus-visible) {
+    outline: 2px solid var(--air-color-interaction-focus);
+    outline-offset: 2px;
+  }
+
+  .air-card:focus-visible,
+  .air-card.pseudo-focus-visible {
+    outline: 2px solid var(--air-color-interaction-focus);
+    outline-offset: 2px;
+  }
+
+  .air-project-card:has(.air-project-card-link:hover),
+  .air-project-card:has(.air-project-card-link.pseudo-hover) {
+    background-color: var(--air-color-bg-subtle);
+  }
+
+  .air-project-card:has(.air-project-card-link:active),
+  .air-project-card:has(.air-project-card-link.pseudo-active) {
+    background-color: var(--air-color-bg-selected);
+  }
+
+  .air-participant-list-item:has(.air-participant-list-item-link:hover),
+  .air-participant-list-item:has(.air-participant-list-item-link.pseudo-hover) {
+    background-color: var(--air-color-bg-subtle);
+    border-color: var(--air-color-border-strong);
+  }
+
+  .air-participant-list-item:has(.air-participant-list-item-link:active),
+  .air-participant-list-item:has(.air-participant-list-item-link.pseudo-active) {
+    background-color: var(--air-color-bg-selected);
+    border-color: var(--air-color-border-strong);
+  }
+
+  .air-participant-list-item:has(.air-participant-list-item-link:focus-visible),
+  .air-participant-list-item:has(.air-participant-list-item-link.pseudo-focus-visible) {
+    box-shadow:
+      0 0 0 2px var(--air-color-bg-canvas),
+      0 0 0 4px var(--air-color-interaction-focus);
+    outline: none;
+  }
+
+  .air-participant-list-item-link:focus-visible,
+  .air-participant-list-item-link.pseudo-focus-visible {
+    outline: none !important;
+  }
+
+  .air-session-item:has(.air-session-item-link:hover),
+  .air-session-item:has(.air-session-item-link.pseudo-hover) {
+    background-color: var(--air-color-bg-subtle);
+    border-color: var(--air-color-border-strong);
+  }
+
+  .air-session-item:has(.air-session-item-link:active),
+  .air-session-item:has(.air-session-item-link.pseudo-active) {
+    background-color: var(--air-color-bg-selected);
+    border-color: var(--air-color-border-strong);
+  }
+
+  .air-session-item:has(.air-session-item-link:focus-visible),
+  .air-session-item:has(.air-session-item-link.pseudo-focus-visible) {
+    box-shadow:
+      0 0 0 2px var(--air-color-bg-canvas),
+      0 0 0 4px var(--air-color-interaction-focus);
+    outline: none;
+  }
+
+  .air-session-item-link:focus-visible,
+  .air-session-item-link.pseudo-focus-visible {
+    outline: none !important;
+  }
+
+  .air-record-list-item:has(.air-record-list-item-link:hover),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-hover) {
+    background: var(--air-color-bg-subtle);
+  }
+
+  .air-record-list-item:has(.air-record-list-item-link:active),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-active) {
+    background: var(--air-color-bg-active);
+  }
+
+  .air-record-list-item:has(.air-record-list-item-link:focus-visible),
+  .air-record-list-item:has(.air-record-list-item-link.pseudo-focus-visible) {
+    border-color: transparent;
+    box-shadow:
+      0 0 0 2px var(--air-color-bg-canvas),
+      0 0 0 4px var(--air-color-interaction-focus);
+  }
+
+  .air-record-list-item-link:focus-visible,
+  .air-record-list-item-link.pseudo-focus-visible {
+    outline: none !important;
+  }
+
+  .air-project-card:has(.air-project-card-link:focus-visible),
+  .air-project-card:has(.air-project-card-link.pseudo-focus-visible) {
+    box-shadow:
+      0 0 0 2px var(--air-color-bg-canvas),
+      0 0 0 4px var(--air-color-interaction-focus);
+    outline: none;
+  }
+
+  .air-project-card-link:focus-visible {
+    outline: none;
+  }
+
+}
+
+/* Storybook injects these pseudo-state classes at runtime, so they must live
+   outside Tailwind's purgeable layers. */
+:where(.pseudo-focus-visible, .pseudo-focus-visible-all) {
+  --tw-ring-color: var(--air-color-interaction-focus) !important;
+  outline-color: var(--air-color-interaction-focus) !important;
+}
+
+[data-control="checkbox"].pseudo-focus-visible + span,
+[data-control="radio"].pseudo-focus-visible + span,
+[data-control="toggle"].pseudo-focus-visible > span:first-child {
+  box-shadow:
+    0 0 0 2px var(--air-color-bg-canvas),
+    0 0 0 4px var(--air-color-interaction-focus) !important;
 }

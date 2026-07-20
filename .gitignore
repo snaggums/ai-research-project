@@ -9,6 +9,8 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.coverage
+.coverage.*
 .mypy_cache/
 .ruff_cache/
 
@@ -17,15 +19,24 @@ node_modules/
 dist/
 build/
 .vite/
+coverage/
+playwright-report/
+test-results/
+storybook-static/
 *.tsbuildinfo
 
 # Local app storage
 storage/uploads/
 **/storage/uploads/
+storage/test-uploads/
+**/storage/test-uploads/
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+# Local design automation state
+.air-dsb-state.json
 
