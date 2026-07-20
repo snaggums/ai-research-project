@@ -9,9 +9,11 @@ import {
   getSessionReport,
   listSessionThemes,
   updateSessionReportStatus,
+  updateSessionReport,
+  updateSessionReportItem,
   updateSessionTheme,
 } from "@/api/synthesis";
-import type { SessionReport, SessionThemePayload } from "@/api/types";
+import type { SessionReport, SessionReportItemPayload, SessionReportPayload, SessionThemePayload } from "@/api/types";
 import { queryKeys } from "@/lib/query-keys";
 
 export function useSessionThemes(projectId: string, sessionId: string) {
@@ -43,6 +45,16 @@ export function useGenerateSessionReport(projectId: string, sessionId: string) {
 export function useUpdateSessionReportStatus(projectId: string, sessionId: string) {
   const client = useQueryClient();
   return useMutation({ mutationFn: (status: SessionReport["status"]) => updateSessionReportStatus(projectId, sessionId, status), onSuccess: (report) => client.setQueryData(queryKeys.sessionReport(projectId, sessionId), report) });
+}
+
+export function useUpdateSessionReport(projectId: string, sessionId: string) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (payload: SessionReportPayload) => updateSessionReport(projectId, sessionId, payload), onSuccess: (report) => client.setQueryData(queryKeys.sessionReport(projectId, sessionId), report) });
+}
+
+export function useUpdateSessionReportItem(projectId: string, sessionId: string) {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: ({ itemId, payload }: { itemId: string; payload: SessionReportItemPayload }) => updateSessionReportItem(projectId, sessionId, itemId, payload), onSuccess: (report) => client.setQueryData(queryKeys.sessionReport(projectId, sessionId), report) });
 }
 
 export function useCreateSessionReportRevision(projectId: string, sessionId: string) {

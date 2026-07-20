@@ -48,6 +48,8 @@ import {
   useSessionReport,
   useSessionThemes,
   useUpdateSessionReportStatus,
+  useUpdateSessionReport,
+  useUpdateSessionReportItem,
   useUpdateSessionTheme,
 } from "@/hooks/useSynthesis";
 import { AskThisSessionWorkspaceView, SessionReportWorkspaceView, SessionThemesWorkspaceView } from "@/pages/synthesis-views";
@@ -493,17 +495,15 @@ export function SessionReportRoute() {
   const report = useSessionReport(projectId, sessionId);
   const generate = useGenerateSessionReport(projectId, sessionId);
   const updateStatus = useUpdateSessionReportStatus(projectId, sessionId);
+  const updateReport = useUpdateSessionReport(projectId, sessionId);
+  const updateReportItem = useUpdateSessionReportItem(projectId, sessionId);
   const revision = useCreateSessionReportRevision(projectId, sessionId);
   const project = projects.data?.find((item) => item.id === projectId);
   const summary = session.data ? toSessionSummary(session.data) : undefined;
   const projectMissing = !projects.isPending && !projects.isError && !project;
   const routeState = projectMissing || isNotFound(session.error) ? "not-found" : projects.isPending || session.isPending ? "loading" : projects.isError || session.isError ? "error" : "ready";
   const reportValue = report.data ? toSessionReport(report.data) : undefined;
-  const openContext = (itemId: string) => {
-    const evidence = reportValue?.items.find((item) => item.id === itemId)?.evidence[0];
-    if (evidence) navigate(`/projects/${projectId}/sessions/${sessionId}/documents/${evidence.documentId}?result=${evidence.contextResultId}`);
-  };
-  return <SessionDetailView activeTab="report" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<SessionReportWorkspaceView errorMessage={report.error ? errorMessage(report.error) : undefined} generating={generate.isPending} onApprove={() => updateStatus.mutate("approved")} onCreateRevision={() => revision.mutate()} onGenerate={() => generate.mutate()} onOpenContext={openContext} onRegenerate={() => generate.mutate()} onRetry={() => void report.refetch()} onReview={() => updateStatus.mutate("researcher-reviewed")} report={reportValue} state={report.isPending ? "loading" : report.isError ? "error" : "ready"} />} />;
+  return <SessionDetailView activeTab="report" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<SessionReportWorkspaceView errorMessage={report.error ? errorMessage(report.error) : undefined} generating={generate.isPending} onApprove={() => updateStatus.mutate("approved")} onCreateRevision={() => revision.mutate()} onEditItem={(itemId, payload) => updateReportItem.mutate({ itemId, payload })} onEditReport={(payload) => updateReport.mutate({ executive_summary: payload.executiveSummary, detailed_notes: payload.detailedNotes })} onGenerate={() => generate.mutate()} onRegenerate={() => generate.mutate()} onRetry={() => void report.refetch()} onReview={() => updateStatus.mutate("researcher-reviewed")} report={reportValue} state={report.isPending ? "loading" : report.isError ? "error" : "ready"} />} />;
 }
 
 export function SessionAskRoute() {
@@ -521,6 +521,7 @@ export function SessionAskRoute() {
 }
 
 export function TranscriptContextRoute() {
+  const navigate = useNavigate();
   const { projectId = "", sessionId = "", documentId = "" } = useParams();
   const [params] = useSearchParams();
   const resultId = params.get("result") ?? "";
@@ -528,9 +529,18 @@ export function TranscriptContextRoute() {
   const session = useSession(projectId, sessionId);
   const context = useTranscriptContext(projectId, sessionId, documentId, resultId);
   const project = projects.data?.find((item) => item.id === projectId);
-  const returnHref = `/projects/${projectId}/sessions/${sessionId}/transcript`;
+  const sessionRoot = `/projects/${projectId}/sessions/${sessionId}`;
+  const requestedReturn = params.get("returnTo");
+  const safeReturns = new Map([
+    [`${sessionRoot}/transcript`, "Transcripts"],
+    [`${sessionRoot}/themes`, "Themes"],
+    [`${sessionRoot}/report`, "Session Report"],
+    [`${sessionRoot}/ask`, "Ask this session"],
+  ]);
+  const returnHref = requestedReturn && safeReturns.has(requestedReturn) ? requestedReturn : `${sessionRoot}/transcript`;
+  const returnLabel = safeReturns.get(returnHref) ?? "Transcripts";
   const state = projects.isPending || session.isPending || context.isPending ? "loading" : isNotFound(context.error) || !resultId ? "unavailable" : projects.isError || session.isError || context.isError ? "error" : "ready";
-  return <TranscriptContextView context={context.data ? toTranscriptContext(context.data) : undefined} onRetry={() => void context.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} returnHref={returnHref} sessionId={sessionId} sessionTitle={session.data?.title ?? "Session"} state={state} />;
+  return <TranscriptContextView context={context.data ? toTranscriptContext(context.data) : undefined} onRetry={() => void context.refetch()} onReturn={() => navigate(returnHref)} projectId={projectId} projectName={project?.name ?? "Project"} returnHref={returnHref} returnLabel={returnLabel} sessionId={sessionId} sessionTitle={session.data?.title ?? "Session"} state={state} />;
 }
 
 function participantOptionsFor(values: ReturnType<typeof toParticipantSummary>[]) {

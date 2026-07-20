@@ -93,6 +93,20 @@ def test_session_theme_report_and_conversation_contracts(client: TestClient) -> 
     assert report["participants"][0]["name"] == "Jordan Moore"
     assert report["detailed_notes"].startswith("Across ")
     assert "detailed patterns" in report["detailed_notes"].lower()
+    edited_item = client.patch(
+        f"{root}/report/items/{report['items'][0]['id']}",
+        json={"title": "Require a persistent order summary", "summary": "Keep the order summary visible throughout checkout."},
+    )
+    assert edited_item.status_code == 200
+    assert edited_item.json()["items"][0]["title"] == "Require a persistent order summary"
+    assert edited_item.json()["items"][0]["provenance"].startswith("Researcher Edited")
+    edited_report = client.patch(
+        f"{root}/report",
+        json={"executive_summary": "Researchers confirmed the checkout context problem.", "detailed_notes": "The persistent summary is the primary follow-up."},
+    )
+    assert edited_report.status_code == 200
+    assert edited_report.json()["executive_summary"] == "Researchers confirmed the checkout context problem."
+    assert edited_report.json()["detailed_notes"] == "The persistent summary is the primary follow-up."
     assert client.patch(f"{root}/report", json={"status": "approved"}).json()["status"] == "approved"
     revision = client.post(f"{root}/report/revisions")
     assert revision.status_code == 201

@@ -72,17 +72,20 @@ export function SessionTranscriptWorkspaceView({ deletePendingId, documents, err
 export interface TranscriptContextViewProps {
   context?: TranscriptContext;
   onRetry?: () => void;
+  onReturn?: () => void;
   projectId: string;
   projectName: string;
   returnHref: string;
+  returnLabel?: string;
   sessionId: string;
   sessionTitle: string;
   state?: "ready" | "loading" | "unavailable" | "error";
 }
 
-export function TranscriptContextView({ context, onRetry, projectId, projectName, returnHref, sessionTitle, state = "ready" }: TranscriptContextViewProps) {
+export function TranscriptContextView({ context, onRetry, onReturn, projectId, projectName, returnHref, returnLabel = "Transcripts", sessionId, sessionTitle, state = "ready" }: TranscriptContextViewProps) {
   const description = state === "unavailable" ? "The requested source passage is no longer available." : "Review the cited source passage and its surrounding transcript.";
-  const header = <PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { href: returnHref, label: sessionTitle }, { label: "Transcript context" }]} description={description} title="Transcript context" />;
+  const sessionHref = `/projects/${projectId}/sessions/${sessionId}/overview`;
+  const header = <><Button asChild className="justify-self-start" size="small" variant="text"><a href={returnHref} onClick={onReturn ? (event) => { event.preventDefault(); onReturn(); } : undefined}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to {returnLabel}</a></Button><PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { href: sessionHref, label: sessionTitle }, { label: "Transcript context" }]} description={description} title="Transcript context" /></>;
   if (state === "loading") return <div className="grid gap-6">{header}<SharedRouteState state="loading" /></div>;
   if (state === "error") return <div className="grid gap-6">{header}<div className="grid gap-4 rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6"><Alert message="The source is still available, but this passage could not be loaded. Retry or return to the Session." size="large" title="Transcript context could not be loaded" tone="error" /><div className="flex gap-2">{onRetry ? <Button onClick={onRetry} size="small">Retry</Button> : null}<Button asChild size="small" variant="gray-subtle"><a href={returnHref}>Return to session</a></Button></div></div></div>;
   if (state === "unavailable" || !context) return <div className="grid gap-6">{header}<div className="grid gap-4 rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6"><Alert message="The source may still be processing or may have been removed. Return to the Session and choose another result." size="large" title="Transcript context is unavailable" tone="warning" /><Button asChild className="justify-self-start" size="small" variant="gray-subtle"><a href={returnHref}>Return to session</a></Button></div></div>;

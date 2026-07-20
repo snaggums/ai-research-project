@@ -9,6 +9,8 @@ import {
   getSessionReport,
   listSessionThemes,
   updateSessionReportStatus,
+  updateSessionReport,
+  updateSessionReportItem,
   updateSessionTheme,
 } from "./synthesis";
 
@@ -23,7 +25,10 @@ describe("Session synthesis API contracts", () => {
   });
 
   it("supports report lifecycle actions and a new revision", async () => {
-    expect((await getSessionReport("alpha-project", "mobile-checkout-test"))?.items.map(({ type }) => type)).toEqual(["requirement", "decision", "action-item", "open-question", "key-insight"]);
+    const report = await getSessionReport("alpha-project", "mobile-checkout-test");
+    expect(report?.items.map(({ type }) => type)).toEqual(["requirement", "decision", "action-item", "open-question", "key-insight"]);
+    expect((await updateSessionReport("alpha-project", "mobile-checkout-test", { executive_summary: "Updated report summary" })).executive_summary).toBe("Updated report summary");
+    expect((await updateSessionReportItem("alpha-project", "mobile-checkout-test", report!.items[0].id, { title: "Updated requirement" })).items[0].title).toBe("Updated requirement");
     expect((await updateSessionReportStatus("alpha-project", "mobile-checkout-test", "approved")).status).toBe("approved");
     expect((await createSessionReportRevision("alpha-project", "mobile-checkout-test")).status).toBe("ai-generated");
     expect((await generateSessionReport("alpha-project", "mobile-checkout-test")).report.status).toBe("ai-generated");

@@ -5,6 +5,7 @@ from app.schemas.synthesis import (
     SessionConversationRead,
     SessionReportGenerateResponse,
     SessionReportRead,
+    SessionReportItemUpdate,
     SessionReportUpdate,
     SessionThemeGenerateResponse,
     SessionThemeRead,
@@ -62,9 +63,18 @@ def generate_session_report(project_id: str, session_id: str, db: Session = Depe
 @router.patch("/projects/{project_id}/sessions/{session_id}/report", response_model=SessionReportRead)
 def update_session_report(project_id: str, session_id: str, payload: SessionReportUpdate, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
-    report = synthesis_service.update_session_report_status(db, research_session, payload.status)
+    report = synthesis_service.update_session_report(db, research_session, payload)
     if report is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session Report not found")
+    return report
+
+
+@router.patch("/projects/{project_id}/sessions/{session_id}/report/items/{item_id}", response_model=SessionReportRead)
+def update_session_report_item(project_id: str, session_id: str, item_id: str, payload: SessionReportItemUpdate, db: Session = Depends(get_db)):
+    research_session = _require_session(db, project_id, session_id)
+    report = synthesis_service.update_session_report_item(db, research_session, item_id, payload)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session Report item not found")
     return report
 
 

@@ -3,6 +3,8 @@ import type {
   SessionConversation,
   SessionReport,
   SessionReportGenerateResponse,
+  SessionReportItemPayload,
+  SessionReportPayload,
   SessionTheme,
   SessionThemeGenerateResponse,
   SessionThemePayload,
@@ -56,9 +58,20 @@ export function generateSessionReport(projectId: string, sessionId: string) {
   return request<SessionReportGenerateResponse>(`${sessionRoot(projectId, sessionId)}/report/generate`, json());
 }
 
-export function updateSessionReportStatus(projectId: string, sessionId: string, status: SessionReport["status"]) {
+export function updateSessionReport(projectId: string, sessionId: string, payload: SessionReportPayload) {
   return request<SessionReport>(`${sessionRoot(projectId, sessionId)}/report`, {
-    ...json({ status }),
+    ...json(payload),
+    method: "PATCH",
+  });
+}
+
+export function updateSessionReportStatus(projectId: string, sessionId: string, status: SessionReport["status"]) {
+  return updateSessionReport(projectId, sessionId, { status });
+}
+
+export function updateSessionReportItem(projectId: string, sessionId: string, itemId: string, payload: SessionReportItemPayload) {
+  return request<SessionReport>(`${sessionRoot(projectId, sessionId)}/report/items/${itemId}`, {
+    ...json(payload),
     method: "PATCH",
   });
 }

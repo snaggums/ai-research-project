@@ -46,6 +46,14 @@ export const synthesisHandlers = [
     Object.assign(reportStore, payload);
     return HttpResponse.json(reportStore);
   }),
+  http.patch(`${sessionRoot}/report/items/:itemId`, async ({ params, request }) => {
+    if (!reportStore || reportStore.project_id !== String(params.projectId) || reportStore.session_id !== String(params.sessionId)) return new HttpResponse("Session Report not found", { status: 404 });
+    const item = reportStore.items.find((candidate) => candidate.id === String(params.itemId));
+    if (!item) return new HttpResponse("Session Report item not found", { status: 404 });
+    Object.assign(item, await request.json());
+    item.provenance = `Researcher Edited · ${item.evidence.length} supporting excerpt${item.evidence.length === 1 ? "" : "s"}`;
+    return HttpResponse.json(reportStore);
+  }),
   http.post(`${sessionRoot}/report/revisions`, ({ params }) => {
     if (!reportStore || reportStore.project_id !== String(params.projectId) || reportStore.session_id !== String(params.sessionId)) return new HttpResponse("Session Report not found", { status: 404 });
     reportStore = { ...reportStore, id: `${reportStore.id}-revision-${sequence++}`, status: "ai-generated", generated_at: "2026-07-15T12:00:00Z" };

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 
 import { toSessionReport } from "@/adapters/synthesis";
 import { toSessionSummary } from "@/adapters/sessions";
@@ -12,7 +13,7 @@ function StoryPage(props: SessionReportWorkspaceViewProps) {
   return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: "alpha-project", name: "Alpha Project" }}><SessionDetailView activeTab="report" onEditSession={() => undefined} projectId="alpha-project" projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<SessionReportWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const report = toSessionReport(sessionReportFixture);
-const meta = { title: "Page Templates/Sessions/Session Report Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { onGenerate: () => undefined, report } } satisfies Meta<typeof StoryPage>;
+const meta = { title: "Page Templates/Sessions/Session Report Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { onApprove: () => undefined, onCreateRevision: () => undefined, onEditItem: () => undefined, onEditReport: () => undefined, onGenerate: () => undefined, onRegenerate: () => undefined, onReview: () => undefined, report } } satisfies Meta<typeof StoryPage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Populated: Story = {};
@@ -21,4 +22,5 @@ export const Generating: Story = { args: { generating: true } };
 export const Error: Story = { args: { errorMessage: "Check your connection and try again.", state: "error" } };
 export const ResearcherReviewed: Story = { args: { report: { ...report, status: "researcher-reviewed" } } };
 export const Approved: Story = { args: { report: { ...report, status: "approved" } } };
+export const Evidence: Story = { play: async ({ canvasElement }) => { await userEvent.click(within(canvasElement).getAllByRole("button", { name: "Open evidence" })[0]); } };
 export const Mobile: Story = { parameters: { viewport: { defaultViewport: "mobile1" } } };

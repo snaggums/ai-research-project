@@ -47,6 +47,7 @@ export function RecordsCollectionView({ onOpenRecord, onRetry, records, state = 
 }
 
 export interface RecordDetailViewProps {
+  generating?: boolean;
   onGenerate?: () => void;
   onOpenSynthesis?: () => void;
   onOpenEvidence?: (itemId: string) => void;
@@ -60,18 +61,20 @@ export interface RecordDetailViewProps {
   statusUpdatingItemId?: string;
 }
 
-export function RecordDetailView({ onGenerate, onOpenEvidence, onOpenSynthesis, onRetry, onStatusChange, record, routeState = "ready", scope, sessions, statusUpdatingItemId, synthesis }: RecordDetailViewProps) {
+export function RecordDetailView({ generating = false, onGenerate, onOpenEvidence, onOpenSynthesis, onRetry, onStatusChange, record, routeState = "ready", scope, sessions, statusUpdatingItemId, synthesis }: RecordDetailViewProps) {
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
   if (routeState === "not-found" || !record || !scope) return <SharedRouteState returnHref="/records" state="not-found" />;
   const eligible = scope.includedSessions.length >= scope.minimumEligibleSessions;
   return <div className="grid gap-6">
     <PageHeader
-      actions={onOpenSynthesis
-        ? <Button onClick={onOpenSynthesis} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{synthesis ? "Review synthesis" : "Generate synthesis"}</Button>
+      actions={synthesis
+        ? <div className="flex flex-wrap gap-2">{onOpenSynthesis ? <Button onClick={onOpenSynthesis} size="small" variant="gray-subtle">Review synthesis</Button> : null}{onGenerate ? <Button disabled={!eligible || generating} onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{generating ? "Regenerating…" : "Regenerate synthesis"}</Button> : null}</div>
         : onGenerate
-          ? <Button disabled={!eligible} onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{synthesis ? "Regenerate synthesis" : "Generate synthesis"}</Button>
-          : <Button asChild size="small"><a href={`/records/${record.id}/synthesis`}><Sparkles aria-hidden="true" className="h-4 w-4" />{synthesis ? "Review synthesis" : "Generate synthesis"}</a></Button>}
+          ? <Button disabled={!eligible || generating} onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{generating ? "Generating…" : "Generate synthesis"}</Button>
+          : onOpenSynthesis
+            ? <Button onClick={onOpenSynthesis} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate synthesis</Button>
+            : <Button asChild size="small"><a href={`/records/${record.id}/synthesis`}><Sparkles aria-hidden="true" className="h-4 w-4" />{synthesis ? "Review synthesis" : "Generate synthesis"}</a></Button>}
       breadcrumbs={[{ href: "/records", label: "Records" }, { label: record.name }]}
       description="Review related Sessions, automatic eligibility, and the latest consolidated research outputs."
       title={record.name}

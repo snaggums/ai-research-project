@@ -19,6 +19,8 @@ from app.schemas.synthesis import (
     SessionReportItemRead,
     SessionReportParticipantRead,
     SessionReportRead,
+    SessionReportItemUpdate,
+    SessionReportUpdate,
     SessionThemeGenerateResponse,
     SessionThemeRead,
     SessionThemeUpdate,
@@ -167,16 +169,48 @@ def generate_session_report(db: Session, research_session: ResearchSession) -> S
     return _report_to_read(loaded, research_session)
 
 
-def update_session_report_status(db: Session, research_session: ResearchSession, status: str) -> SessionReportRead | None:
+def update_session_report(db: Session, research_session: ResearchSession, payload: SessionReportUpdate) -> SessionReportRead | None:
     report = db.scalar(_report_select().where(SessionReport.session_id == research_session.id).order_by(SessionReport.created_at.desc()))
     if report is None:
         return None
-    report.status = status
+    values = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if values.get("status") is not None:
+        report.status = values["status"]
+    if values.get("executive_summary") is not None:
+        report.executive_summary = values["executive_summary"].strip()
+    if values.get("detailed_notes") is not None:
+        report.detailed_notes = values["detailed_notes"].strip()
     report.updated_at = datetime.now(timezone.utc)
     db.add(report)
     db.commit()
-    db.refresh(report)
-    return _report_to_read(report, research_session)
+    loaded = db.scalar(_report_select().where(SessionReport.id == report.id))
+    return _report_to_read(loaded, research_session) if loaded else None
+
+
+def update_session_report_item(
+    db: Session,
+    research_session: ResearchSession,
+    item_id: str,
+    payload: SessionReportItemUpdate,
+) -> SessionReportRead | None:
+    report = db.scalar(_report_select().where(SessionReport.session_id == research_session.id).order_by(SessionReport.created_at.desc()))
+    if report is None:
+        return None
+    item = next((candidate for candidate in report.items if candidate.id == item_id), None)
+    if item is None:
+        return None
+    values = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if values.get("title") is not None:
+        item.title = values["title"].strip()
+    if values.get("summary") is not None:
+        item.summary = values["summary"].strip()
+    item.provenance = f"Researcher Edited · {len(item.evidence)} supporting excerpt{'s' if len(item.evidence) != 1 else ''}"
+    item.updated_at = datetime.now(timezone.utc)
+    report.updated_at = datetime.now(timezone.utc)
+    db.add_all([item, report])
+    db.commit()
+    loaded = db.scalar(_report_select().where(SessionReport.id == report.id))
+    return _report_to_read(loaded, research_session) if loaded else None
 
 
 def create_session_report_revision(db: Session, research_session: ResearchSession) -> SessionReportRead | None:

@@ -323,6 +323,9 @@ export type SessionReport = {
   generated_at: string;
 };
 
+export type SessionReportPayload = Partial<Pick<SessionReport, "status" | "executive_summary" | "detailed_notes">>;
+export type SessionReportItemPayload = Partial<Pick<SessionReportItem, "title" | "summary">>;
+
 export type SessionReportGenerateResponse = {
   report: SessionReport;
   message: string;

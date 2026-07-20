@@ -44,4 +44,10 @@ describe("Transcript page compositions", () => {
     expect(screen.getAllByText(/Maya Chen \(Moderator\)/)).not.toHaveLength(0);
     expect(screen.getByText(/Relevance 91%/)).toBeInTheDocument();
   });
+
+  it("returns transcript evidence to the originating Session Report", () => {
+    const context = toTranscriptContext({ document: transcriptApiFixtures[0], result: transcriptSearchFixtures[0], passages: transcriptApiFixtures[0].blocks, focused_passage_id: "passage-2" });
+    render(<TranscriptContextView context={context} projectId="alpha-project" projectName="Alpha Project" returnHref="/projects/alpha-project/sessions/mobile-checkout-test/report" returnLabel="Session Report" sessionId="mobile-checkout-test" sessionTitle="Mobile checkout test" />);
+    expect(screen.getByRole("link", { name: "Back to Session Report" })).toHaveAttribute("href", "/projects/alpha-project/sessions/mobile-checkout-test/report");
+  });
 });

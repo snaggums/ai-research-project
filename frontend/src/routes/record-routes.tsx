@@ -41,6 +41,7 @@ export function RecordDetailRoute() {
   const sessions = useRecordSessions(recordId);
   const eligibility = useRecordSynthesisEligibility(recordId);
   const synthesis = useLatestRecordSynthesis(recordId);
+  const generate = useGenerateRecordSynthesis(recordId);
   const updateItem = useUpdateRecordSynthesisItem(recordId);
   const errors = [record.error, sessions.error, eligibility.error, synthesis.error];
   const routeState = errors.some(notFound)
@@ -52,6 +53,8 @@ export function RecordDetailRoute() {
         : "ready";
   const synthesisValue = synthesis.data ? toRecordSynthesis(synthesis.data) : undefined;
   return <RecordDetailView
+    generating={generate.isPending}
+    onGenerate={() => generate.mutate()}
     onOpenEvidence={(itemId) => {
       const evidenceId = synthesisValue?.items.find((item) => item.id === itemId)?.evidenceIds[0];
       if (evidenceId) navigate(`/records/${recordId}/synthesis/items/${itemId}/evidence/${evidenceId}`);

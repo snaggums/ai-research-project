@@ -81,7 +81,14 @@ class SessionReportGenerateResponse(BaseModel):
 
 
 class SessionReportUpdate(BaseModel):
-    status: ReportStatus
+    status: ReportStatus | None = None
+    executive_summary: str | None = Field(default=None, min_length=1)
+    detailed_notes: str | None = Field(default=None, min_length=1)
+
+
+class SessionReportItemUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=180)
+    summary: str | None = Field(default=None, min_length=1)
 
 
 class SessionCitationRead(BaseModel):

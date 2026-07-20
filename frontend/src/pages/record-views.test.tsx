@@ -16,10 +16,12 @@ describe("Record page compositions", () => {
   });
 
   it("shows automatic scope, related Sessions, and the latest synthesis", () => {
-    render(<RecordDetailView record={recordSummaries[0]} scope={readyRecordScope} sessions={sessionApiFixtures.slice(0, 2).map(toSessionSummary)} synthesis={recordSynthesis} />);
+    render(<RecordDetailView onGenerate={() => undefined} onOpenSynthesis={() => undefined} record={recordSummaries[0]} scope={readyRecordScope} sessions={sessionApiFixtures.slice(0, 2).map(toSessionSummary)} synthesis={recordSynthesis} />);
     expect(screen.getByRole("heading", { name: "Synthesis scope" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Related Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate synthesis" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review synthesis" })).toBeInTheDocument();
   });
 
   it("prevents synthesis when fewer than two Session Reports are eligible", () => {

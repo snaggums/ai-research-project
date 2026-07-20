@@ -286,12 +286,28 @@ describe("application router foundation", () => {
   });
 
   it("loads the canonical Session Report sections", async () => {
+    const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/report"] });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
     expect(await screen.findByRole("heading", { name: "Session Report" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Key Insights" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    const editDialog = await screen.findByRole("dialog", { name: "Edit report item" });
+    expect(editDialog).toBeInTheDocument();
+    const summary = within(editDialog).getAllByRole("textbox")[1];
+    await user.clear(summary);
+    await user.type(summary, "Updated by the researcher during report review.");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Updated by the researcher during report review.")).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Open evidence" })[0]);
+    expect(await screen.findByRole("heading", { level: 2, name: "Evidence" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/report");
+    expect(within(screen.getByRole("navigation", { name: "Session sections" })).getByRole("link", { name: "Session Report" })).toHaveAttribute("aria-current", "page");
+    await user.click(screen.getByRole("button", { name: "Back to Session Report" }));
+    expect(await screen.findByRole("heading", { name: "Session Report" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/report");
   });
 
   it("loads the workspace Record catalog and follows the Record synthesis workflow", async () => {
