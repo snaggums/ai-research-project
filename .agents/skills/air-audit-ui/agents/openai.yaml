@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit AIR UI"
+  short_description: "Audit AIR parity and accessibility"
+  default_prompt: "Use $air-audit-ui to audit an AIR experience against approved Figma and WCAG 2.2 AA."

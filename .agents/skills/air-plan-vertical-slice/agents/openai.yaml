@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan AIR Slice"
+  short_description: "Plan cross-layer AIR changes"
+  default_prompt: "Use $air-plan-vertical-slice to create a concise plan for an approved AIR vertical slice."
