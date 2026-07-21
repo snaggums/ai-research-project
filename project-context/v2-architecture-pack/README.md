@@ -2,12 +2,11 @@
 
 Status: Architecture, Figma Research Objects, Figma Page Templates, the
 React/Storybook contract map, and implementation scopes I1-I8 are approved.
-Sprint 8 is approved; the Record Synthesis MVP scope, architecture checkpoint,
-and 1.5-week delivery plan are approved. The Day 6 additive Record persistence
-and migration checkpoint and the Day 7 Record generation/end-to-end integration
-checkpoint are implemented and verified. Day 8 final QA and handoff are next.
-Version: 1.9
-Implementation boundary: Record Synthesis MVP
+Sprint 8 and the Record Synthesis MVP are implemented, verified, and merged.
+The Transcript Coding planning contract is approved; Storybook and React wait
+for the core Figma workspace.
+Version: 2.0
+Implementation boundary: Transcript Coding planning and Figma approval
 
 This pack translates the AIR V2 Functional Specification and the approved V2
 clarifications into implementation artifacts. Figma remains the visual source
@@ -35,6 +34,9 @@ Each implementation scope still requires its own approval.
 7. [Record Synthesis MVP 1.5-Week Delivery Roadmap](./07_MVP_1_5_WEEK_DELIVERY_ROADMAP.md)
    - the eight-working-day delivery plan, approval gates, definition of done,
    risks, and post-MVP backlog.
+8. [Transcript Coding Vertical Slice Contract](./08_TRANSCRIPT_CODING_CONTRACT.md)
+   - the Highlight and Record Code domain model, API contracts, state
+   transitions, lean Figma policy, and acceptance criteria for the next slice.
 
 ## Approved direction
 
@@ -69,6 +71,11 @@ Each implementation scope still requires its own approval.
   and Detailed Notes, in that order.
 - The promotion path is Transcript to Session Report to Researcher Review, then
   into Record/Common Component Product Knowledge.
+- Transcript Highlights remain Session-owned evidence; reusable Codes are
+  Record-owned and may organize Highlights across related Sessions.
+- Codex authors Desktop Figma source variants only for new scopes. The user may
+  add Tablet or Mobile variants manually; they become implementation inputs
+  after approval. Previously approved responsive work is preserved.
 - Participant metadata uses required first and last name plus optional email,
   Organization, role, related Records, and researcher notes.
 - Implementation proceeds one sprint at a time and stops for review after

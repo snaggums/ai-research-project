@@ -1,9 +1,9 @@
 # AIR V2 Domain Map
 
 Status: Approved canonical domain model for AIR V2  
-Version: 1.4
+Version: 1.5
 Replaces: AIR Domain Map v1.3
-Scope: Canonical V2 domain direction with Sprint 8 and Record Synthesis MVP boundaries
+Scope: Canonical V2 domain direction with Sprint 8, Record Synthesis MVP, and Transcript Coding boundaries
 
 ## 1. Canonical domain map
 
@@ -28,6 +28,10 @@ Workspace
 |   |   |
 |   |   +-- Documents
 |   |       +-- Transcript (only supported Sprint 8 type)
+|   |           +-- Highlights
+|   |           |   +-- Code Assignments
+|   |           +-- Code Suggestions
+|   |               +-- Supporting Transcript Evidence
 |   |   |
 |   |   +-- Session Report
 |   |   |   +-- Session Information
@@ -58,6 +62,10 @@ Workspace
 +-- Product Knowledge
     |
     +-- Records
+    |   |
+    |   +-- Code Dictionary
+    |   |   +-- Codes
+    |   |       +-- Related Highlights
     |   |
     |   +-- Requirements
     |   |
@@ -340,6 +348,26 @@ Items use the canonical AI Generated, Researcher Reviewed, Approved, and
 Superseded lifecycle. Equivalent source items may be consolidated only when all
 source links remain intact.
 
+### 3.9 Transcript Highlight, Record Code, and Code Suggestion
+
+A Transcript Highlight is Session-owned evidence anchored to one Primary
+Transcript Document by character offsets, an excerpt snapshot, and optional
+speaker/time metadata. A Highlight may exist without a Code.
+
+A Code is a reusable Record-owned classification. A Code Assignment connects a
+Highlight to a Code only when the Highlight's Session belongs to the same
+Record. The same Code can therefore organize evidence across multiple related
+Sessions without copying or moving the source Highlights.
+
+An AI Code Suggestion is a Session-scoped proposal backed by one or more
+Supporting Transcript Evidence passages. Suggestions use an Awaiting Review to
+Accepted or Rejected lifecycle. Accepting a suggestion creates or reuses a
+Record Code, creates or reuses Highlights for its evidence, and retains
+complete generation and review provenance.
+
+The complete field, ownership, transition, and API contract is defined in
+[Transcript Coding Vertical Slice Contract](./08_TRANSCRIPT_CODING_CONTRACT.md).
+
 ## 4. Research artifact lineage
 
 The following is the target lineage model for later V2 sprints:
@@ -361,6 +389,12 @@ Document
           -> Theme
               -> Insight
                   -> Recommendation
+
+Transcript
+  -> Highlight
+      -> Code Assignment
+          -> Record Code
+              -> related Highlights across Record Sessions
 ```
 
 Evidence is logically owned by the Project and retains source pointers to its
@@ -537,6 +571,26 @@ The migration must pass all of the following:
 - cross-Record or arbitrary Project synthesis;
 - manual Themes, manual transcript coding, and AI-assisted code review; and
 - authentication, public access with real research data, and managed secrets.
+
+### Transcript Coding slice includes
+
+- manual coded and uncoded Transcript Highlights;
+- Record-owned reusable Codes;
+- AI Code Suggestions with per-suggestion Accept, Edit, and Reject;
+- expandable Supporting Transcript Evidence;
+- Transcript and Highlight List review modes;
+- status and accepted-Code filtering with match-any semantics; and
+- forward-compatible nullable media timing without audio/video implementation.
+
+### Transcript Coding slice excludes
+
+- phone page templates and mobile-only coding interactions;
+- Provenance filtering;
+- bulk Accept all or Reject all;
+- Record-level Highlight page implementation;
+- Code hierarchy, groups, merging, and archive management;
+- collaborative coding; and
+- audio/video upload, playback, clips, or reels.
 
 ## 9. V3 follow-ups
 
