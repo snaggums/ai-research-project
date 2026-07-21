@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run AIR Quality Gates"
+  short_description: "Run deterministic AIR quality gates"
+  default_prompt: "Use $air-run-quality-gates to run and summarize the repository quality gates."
+
+policy:
+  allow_implicit_invocation: false

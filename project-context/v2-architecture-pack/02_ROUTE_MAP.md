@@ -1,7 +1,7 @@
 # AIR V2 Route Map
 
-Status: Approved through the Record Synthesis MVP architecture checkpoint
-Scope: V2 information architecture with Sprint 8 and Record Synthesis MVP routes identified
+Status: Approved through the Transcript Coding planning checkpoint
+Scope: V2 information architecture with Sprint 8, Record Synthesis MVP, and Transcript Coding routes identified
 
 ## 1. Routing principles
 
@@ -44,7 +44,7 @@ Legend:
 |       |   +-- :sessionId                       S8
 |       |       +-- overview                     Sessions workspace
 |       |       +-- participants                 Sessions workspace
-|       |       +-- transcript                   Sessions workspace
+|       |       +-- transcript                   Sessions workspace + Transcript Coding
 |       |       +-- themes                       Sessions workspace
 |       |       +-- report                       Sessions workspace
 |       |       +-- ask                          Sessions workspace
@@ -186,6 +186,8 @@ Primary content:
   this session;
 - transcript upload, processing, viewing, retry, delete, and Search this
   transcript retrieval;
+- Transcript Coding using Transcript and Highlight List views, AI suggestions,
+  accepted and uncoded Highlights, and Record-owned Codes;
 - theme generation, concise Theme Cards, review/edit/reject, and evidence detail;
 - Session Report workspace;
 - Session-scoped cited question answering.
@@ -194,7 +196,9 @@ The service layer returns Not Found when the Session does not belong to the
 route's Project.
 
 The selected Session tab is represented by its child route so links and browser
-history preserve workspace location.
+history preserve workspace location. Transcript Coding extends the existing
+`transcript` child route; it does not add a competing top-level Session tab or a
+second Transcript route.
 
 ### 3.9 `/projects/:projectId/sessions/:sessionId/documents/:documentId`
 
@@ -303,6 +307,12 @@ Section Navigation. Session workspace tabs remain within Session detail.
 - Dialog-based desktop routes become full-page forms when the viewport cannot
   support the approved Dialog geometry.
 
+For Transcript Coding and future scopes until the responsive policy is
+revisited, Codex authors the 1440 px Desktop Figma source composition only. The
+user may add Tablet or Mobile variants manually; those variants become
+implementation inputs only after review and approval. Previously approved
+responsive routes and components are preserved.
+
 ## 5. Navigation labels and breadcrumbs
 
 | Route | Page label | Example breadcrumb |
@@ -332,9 +342,17 @@ Use search parameters for state that should survive refresh or be shareable:
 - `page` - pagination when introduced;
 - `participant` - Session filter by Participant;
 - `status` - processing status filter.
+- `view=transcript|list` - Transcript Coding primary view;
+- `panel=suggestions|accepted` - Transcript Coding right-rail content;
+- `highlight_status=all|accepted-coded|uncoded|awaiting-review` - coding filter;
+- repeatable `code` - Record Code filters using match-any semantics.
 
 Do not put unsaved form content, open overflow menus, or ephemeral hover/focus
 state in the URL.
+
+Transcript text selection, an open selection toolbar, expanded suggestion
+evidence, and an open filter popover are ephemeral and must not be placed in
+the URL.
 
 ## 7. Route-level states
 

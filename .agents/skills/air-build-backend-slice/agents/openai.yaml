@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build AIR Backend"
+  short_description: "Build an approved AIR backend slice"
+  default_prompt: "Use $air-build-backend-slice to implement an approved AIR backend capability."

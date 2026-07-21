@@ -1,0 +1,4 @@
+interface:
+  display_name: "AIR Figma Contract"
+  short_description: "Create implementation-ready Figma contracts"
+  default_prompt: "Use $air-design-figma-contract to define or update an AIR Figma component or page template."

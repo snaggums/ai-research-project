@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build AIR Frontend"
+  short_description: "Build an approved AIR frontend slice"
+  default_prompt: "Use $air-build-frontend-slice to implement an approved AIR design contract in React."
