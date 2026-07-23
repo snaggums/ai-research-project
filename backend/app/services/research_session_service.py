@@ -7,6 +7,7 @@ from app.models.record import ProductRecord, RecordSynthesisRun, RecordSynthesis
 from app.models.research_session import ResearchSession, SessionParticipant, SessionRelationship
 from app.models.session_report import SessionReport
 from app.models.theme import Theme
+from app.models.transcript_coding import HighlightCodeAssignment, TranscriptHighlight
 from app.schemas.research_session import SessionCreate, SessionFilters, SessionRead, SessionReference, SessionUpdate
 from app.services.participant_service import participant_to_read
 from sqlalchemy import delete, select
@@ -107,6 +108,22 @@ def replace_record_assignment(db: Session, research_session: ResearchSession, ta
     unique_ids = list(dict.fromkeys(value.strip() for value in [*target_ids, *reference_ids] if value and value.strip()))
     if len(unique_ids) > 1:
         raise ValueError("Select one Record for this Session.")
+    current_ids = {value.record_id for value in research_session.record_assignments}
+    if current_ids != set(unique_ids):
+        coded_highlight = db.scalar(
+            select(HighlightCodeAssignment.highlight_id)
+            .join(TranscriptHighlight, TranscriptHighlight.id == HighlightCodeAssignment.highlight_id)
+            .where(
+                TranscriptHighlight.session_id == research_session.id,
+                TranscriptHighlight.deleted_at.is_(None),
+                HighlightCodeAssignment.removed_at.is_(None),
+            )
+            .limit(1)
+        )
+        if coded_highlight is not None:
+            raise ValueError(
+                "record_change_blocked_by_codes: Remove or migrate this Session's active Code assignments before changing its Record."
+            )
     if unique_ids:
         record = db.get(ProductRecord, unique_ids[0])
         if record is None:

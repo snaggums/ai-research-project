@@ -76,7 +76,7 @@ const Tabs = React.forwardRef<HTMLDivElement, TabsProps>(
                 id={tabId}
                 type="button"
                 role="tab"
-                aria-controls={panelId}
+                aria-controls={item.content !== undefined ? panelId : undefined}
                 aria-selected={selected}
                 disabled={item.disabled}
                 tabIndex={selected ? 0 : -1}

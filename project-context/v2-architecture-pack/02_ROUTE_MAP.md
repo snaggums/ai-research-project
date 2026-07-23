@@ -344,7 +344,7 @@ Use search parameters for state that should survive refresh or be shareable:
 - `status` - processing status filter.
 - `view=transcript|list` - Transcript Coding primary view;
 - `panel=suggestions|accepted` - Transcript Coding right-rail content;
-- `highlight_status=all|accepted-coded|uncoded|awaiting-review` - coding filter;
+- `highlight_status=all|accepted-coded|uncoded` - saved Highlight filter;
 - repeatable `code` - Record Code filters using match-any semantics.
 
 Do not put unsaved form content, open overflow menus, or ephemeral hover/focus

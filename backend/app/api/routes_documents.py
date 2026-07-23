@@ -2,7 +2,8 @@ from app.db.session import get_db
 from pathlib import Path
 
 from app.schemas.document import DocumentDetail, DocumentRead, TranscriptContext, TranscriptDocumentRead, TranscriptSearchResponse
-from app.services import document_service, project_service, research_session_service, transcript_service
+from app.services import document_service, project_service, research_session_service, transcript_coding_service, transcript_service
+from app.core.domain_errors import ApplicationError
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -67,6 +68,7 @@ def delete_document(document_id: str, db: Session = Depends(get_db)):
     document = document_service.get_document(db, document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    _guard_coding_dependencies(db, document.id)
     document_service.delete_document(db, document)
     return None
 
@@ -122,6 +124,11 @@ def retry_session_document(project_id: str, session_id: str, document_id: str, b
 def set_primary_session_document(project_id: str, session_id: str, document_id: str, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
+    if (
+        research_session.primary_transcript_document_id
+        and research_session.primary_transcript_document_id != document.id
+    ):
+        _guard_coding_dependencies(db, research_session.primary_transcript_document_id)
     research_session.primary_transcript_document_id = document.id
     db.add(research_session)
     db.commit()
@@ -133,6 +140,7 @@ def set_primary_session_document(project_id: str, session_id: str, document_id: 
 def delete_session_document(project_id: str, session_id: str, document_id: str, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
+    _guard_coding_dependencies(db, document.id)
     if research_session.primary_transcript_document_id == document.id:
         research_session.primary_transcript_document_id = None
         db.add(research_session)
@@ -183,3 +191,12 @@ def _require_document(db: Session, project_id: str, session_id: str, document_id
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transcript not found")
     return document
+
+
+def _guard_coding_dependencies(db: Session, document_id: str) -> None:
+    if transcript_coding_service.has_document_coding_dependencies(db, document_id):
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_has_coding_dependencies",
+            "Remove or migrate this Transcript's Highlights and Code Suggestions before replacing or deleting it.",
+        )

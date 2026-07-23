@@ -53,6 +53,7 @@ import {
   useUpdateSessionTheme,
 } from "@/hooks/useSynthesis";
 import { AskThisSessionWorkspaceView, SessionReportWorkspaceView, SessionThemesWorkspaceView } from "@/pages/synthesis-views";
+import { TranscriptCodingRouteContent } from "@/routes/transcript-coding-route-content";
 
 const emptyAISettings: AISettingsPayload = {
   provider: "mock",
@@ -463,7 +464,53 @@ export function SessionTranscriptRoute() {
   const routeState = projectMissing || isNotFound(session.error) ? "not-found" : projects.isPending || session.isPending ? "loading" : projects.isError || session.isError ? "error" : "ready";
   const transcriptState = transcripts.isPending ? "loading" : transcripts.isError ? "error" : "ready";
   const documents = (transcripts.data ?? []).map(toTranscriptDocumentDetail);
-  return <SessionDetailView activeTab="transcript" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} transcriptContent={<SessionTranscriptWorkspaceView deletePendingId={remove.isPending ? remove.variables : undefined} documents={documents} errorMessage={transcripts.error ? errorMessage(transcripts.error) : undefined} onDelete={(documentId) => { if (window.confirm("Delete this transcript? This action cannot be undone.")) remove.mutate(documentId); }} onOpenContext={(href) => navigate(href)} onRetry={(documentId) => retry.mutate(documentId)} onRetryLoad={() => void transcripts.refetch()} onSearch={(_documentId, query) => search.mutate(query)} onSetPrimary={(documentId) => setPrimary.mutate(documentId)} onUpload={(file) => upload.mutateAsync(file).then(() => undefined)} projectId={projectId} retryingId={retry.isPending ? retry.variables : undefined} searchError={search.error ? errorMessage(search.error) : undefined} searchQuery={search.data?.query} searchResults={search.data?.results.map(toTranscriptSearchResult)} searching={search.isPending} sessionId={sessionId} state={transcriptState} uploadError={upload.error ? errorMessage(upload.error) : undefined} uploading={upload.isPending} />} />;
+  const hasReadyPrimaryTranscript = (transcripts.data ?? []).some((document) =>
+    document.is_primary && document.status === "complete",
+  );
+  return (
+    <SessionDetailView
+      activeTab="transcript"
+      onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)}
+      onRetry={() => void session.refetch()}
+      projectId={projectId}
+      projectName={project?.name ?? "Project"}
+      routeState={routeState}
+      session={summary}
+      transcriptContent={(
+        <div className="grid gap-8">
+          <SessionTranscriptWorkspaceView
+            deletePendingId={remove.isPending ? remove.variables : undefined}
+            documents={documents}
+            errorMessage={transcripts.error ? errorMessage(transcripts.error) : undefined}
+            onDelete={(documentId) => {
+              if (window.confirm("Delete this transcript? This action cannot be undone.")) remove.mutate(documentId);
+            }}
+            onOpenContext={(href) => navigate(href)}
+            onRetry={(documentId) => retry.mutate(documentId)}
+            onRetryLoad={() => void transcripts.refetch()}
+            onSearch={(_documentId, query) => search.mutate(query)}
+            onSetPrimary={(documentId) => setPrimary.mutate(documentId)}
+            onUpload={(file) => upload.mutateAsync(file).then(() => undefined)}
+            projectId={projectId}
+            retryingId={retry.isPending ? retry.variables : undefined}
+            searchError={search.error ? errorMessage(search.error) : undefined}
+            searchQuery={search.data?.query}
+            searchResults={search.data?.results.map(toTranscriptSearchResult)}
+            searching={search.isPending}
+            sessionId={sessionId}
+            state={transcriptState}
+            uploadError={upload.error ? errorMessage(upload.error) : undefined}
+            uploading={upload.isPending}
+          />
+          <TranscriptCodingRouteContent
+            enabled={transcriptState === "ready" && hasReadyPrimaryTranscript}
+            projectId={projectId}
+            sessionId={sessionId}
+          />
+        </div>
+      )}
+    />
+  );
 }
 
 export function SessionThemesRoute() {

@@ -11,6 +11,7 @@ from app.schemas.record import (
 )
 from app.schemas.research_session import SessionRead
 from app.services import record_service, research_session_service
+from app.core.domain_errors import ApplicationError
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -46,6 +47,12 @@ def assign_session_record(project_id: str, session_id: str, payload: RecordAssig
         return record_service.assign_session_record(db, research_session, payload.record_id)
     except ValueError as exc:
         db.rollback()
+        if str(exc).startswith("record_change_blocked_by_codes:"):
+            raise ApplicationError(
+                status.HTTP_409_CONFLICT,
+                "record_change_blocked_by_codes",
+                str(exc).partition(":")[2].strip(),
+            ) from exc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 

@@ -1,9 +1,9 @@
 # Transcript Coding Vertical Slice Contract
 
-Status: Approved planning contract; Figma workspace approval required before Storybook or React implementation
-Date: July 20, 2026
+Status: Approved Figma and Storybook contract; frontend route integration and backend persistence complete
+Date: July 22, 2026
 Depends on: Primary Transcript, Session, Record, evidence, and provenance contracts
-Implementation boundary: Domain model, API contract, state model, and acceptance criteria only
+Implementation boundary: Approved domain and UI contract plus React, React Query, typed API, MSW, additive PostgreSQL persistence, API routes, idempotent mutations, and backend integration tests
 
 ## 1. Objective
 
@@ -14,8 +14,8 @@ AIR adds an evidence-first Transcript Coding workspace where a researcher can:
 - generate AI Code Suggestions with explicit supporting transcript evidence;
 - accept, edit, or reject each suggestion;
 - review accepted and uncoded Highlights without scrolling the full Transcript;
-- filter both the Transcript and Highlight List by accepted Codes and review
-  status; and
+- choose Accepted, Suggested, or Uncoded scope and then filter the active scope
+  by Codes; and
 - preserve source coordinates and provenance so Record-level aggregation and
   future video clips do not require a new evidence model.
 
@@ -238,7 +238,8 @@ POST   /api/projects/{projectId}/sessions/{sessionId}/highlights/{highlightId}/c
 DELETE /api/projects/{projectId}/sessions/{sessionId}/highlights/{highlightId}/codes/{codeId}
 ```
 
-Supported Highlight query parameters:
+Supported Highlight query parameters (the active status tab supplies `status`;
+it is not duplicated inside the filter panel):
 
 - `status=all|accepted-coded|uncoded`;
 - repeatable `code_id` values using match-any semantics;
@@ -390,21 +391,39 @@ does not create a separate AI-only evidence type.
 The workspace has two independent, explicit controls:
 
 - primary view: **Transcript** or **List**;
-- right rail: **Suggestions awaiting review** or **Accepted highlights**.
+- right rail status: **Accepted highlights**, **Suggestions**, or **Uncoded
+  highlights**.
 
-**Filter highlights** opens a popover at Desktop and compact Desktop widths.
-The filter does not replace the right rail. Applied filters display removable
-chips plus a result count. Transcript view dims unrelated text and provides
-Previous/Next match controls; List view returns only matching Highlight cards.
+The three right-rail status controls form one single-selection tab set. Choosing
+a different tab replaces the selection; activating the selected tab again keeps
+it selected. Status is therefore not repeated as a field in **Filter
+highlights**.
 
-The MVP status filter values are:
+**Filter highlights** temporarily replaces the right-rail content at Desktop
+and compact Desktop widths. Applying or closing the panel returns the researcher
+to the previously selected status tab. The view
+and rail selectors remain in the first control row. A separate filter toolbar
+below them contains the conditional **Clear filters** text action and the
+**Filter highlights** button with a criterion-count badge.
 
-- All highlights;
-- Accepted coded highlights;
-- Uncoded highlights; and
-- Suggestions awaiting review.
+When filters are applied, the reusable **ActiveFilterBar** appears below the
+filter toolbar in both Suggestions and Accepted highlights views. It shows an
+**Active filters:** label, one non-selectable removable Chip per criterion, and
+the live summary `X of Y highlights match the active filters.` or `X of Y
+suggestions match the active filters.` Removing a Chip
+immediately removes that criterion. The entire bar is absent when no criteria
+are applied. Transcript view dims unrelated text and provides Previous/Next
+match controls; List view returns only matching Highlight cards. The filter
+panel reports `X of Y highlights` or `X of Y suggestions` for the currently
+selected tab.
 
-Accepted Code selection is a searchable multi-select with match-any semantics.
+Code selection is a searchable multi-select with match-any semantics. Code
+filters are cumulative on top of the selected status tab: the Suggestions tab
+shows only matching Suggestions, and the Accepted highlights tab shows only
+matching accepted Highlights. The Uncoded highlights tab suspends the Code
+filter UI because an uncoded Highlight cannot match a Code; returning to another
+tab restores the applied Code criteria. Suggestions remain proposal records
+until acceptance creates saved Highlights.
 The Provenance filter is explicitly deferred.
 
 ## 6. Lean Figma and responsive scope
@@ -446,10 +465,11 @@ change workspace geometry.
 
 ## 7. Storybook and React gate
 
-No Transcript Coding visual component or page implementation begins until the
-core Figma workspace is approved. Before that approval, permitted work is
-limited to this architecture contract, schema planning, deterministic example
-data, and test planning.
+The core Figma workspace and its Storybook interaction contract are approved.
+The live Session Transcript route uses typed React Query adapters and MSW
+fixtures for the approved workflow. Backend persistence now implements this
+contract with additive tables for Record Codes, Highlights, assignments,
+suggestion runs, suggestions, and ordered evidence anchors.
 
 After approval, implementation order is:
 
@@ -469,14 +489,20 @@ After approval, implementation order is:
 1. Given a complete Primary Transcript, dragging across valid text opens a
    compact selection toolbar with **Highlight** and **Apply code** only.
 2. Highlight saves the exact passage without requiring a Code.
-3. The saved passage appears in Accepted highlights as Uncoded and in List view
-   when the Uncoded filter is active.
-4. Apply code can select an existing active Code or create a new Code in the
+3. Selecting a passage that is already represented by a Highlight shows a
+   disabled **Highlighted** action with a check icon and keeps **Apply code**
+   enabled; the interaction never creates a duplicate Highlight.
+4. Escape clears the transient selection and cyan selected indicator for both
+   pointer-selected and keyboard-selected Transcript Blocks without changing
+   the Block's saved Highlight, Code, or filter state.
+5. The saved passage appears in **Uncoded highlights** and in the Highlight List
+   when that status tab is active.
+6. Apply code can select an existing active Code or create a new Code in the
    Session's Record.
-5. Applying the Code once creates one Highlight and one assignment even if the
+7. Applying the Code once creates one Highlight and one assignment even if the
    user clicks twice or the request is retried.
-6. Removing the final Code assignment retains the Highlight as Uncoded.
-7. Deleting a Highlight removes it from Transcript and List views after
+8. Removing the final Code assignment retains the Highlight as Uncoded.
+9. Deleting a Highlight removes it from Transcript and List views after
    confirmation without deleting its Record Code.
 
 ### 8.2 AI Suggestion workflow
@@ -496,19 +522,36 @@ After approval, implementation order is:
 
 ### 8.3 Filtering and navigation
 
-1. Filter highlights is available after at least one saved Highlight or
-   generated suggestion exists.
-2. Status and Code filters can be combined, and multiple Codes use match-any
-   semantics.
-3. Active filters appear as removable chips and can be cleared together.
-4. Transcript view emphasizes matching passages, dims unrelated text without
+1. Filter highlights is available after at least one saved Highlight or Code
+   Suggestion exists.
+2. Accepted highlights, Suggestions, and Uncoded highlights are mutually
+   exclusive status tabs. Activating the selected tab again keeps it selected.
+3. Multiple Code criteria use match-any semantics and narrow the currently
+   selected Accepted highlights or Suggestions scope.
+4. A separate filter toolbar shows **Clear filters** only while filters are
+   applied. The Filter highlights button shows the number of active criterion
+   values. The view and right-rail selectors remain in the row above it.
+5. The filter panel contains no Status field. It reports `X of Y highlights` or
+   `X of Y suggestions`, updates X while Code inputs change, and uses **Clear
+   filters** to reset Codes.
+6. The reusable **ActiveFilterBar** persists while the researcher switches
+   between Suggestions and Accepted highlights. It shows active criteria as
+   removable Chips and reports `X of Y highlights match the active filters.`
+   Removing a Chip removes only that criterion; **Clear filters** removes all.
+   The component accepts a dynamic filter array and can be reused by Projects,
+   Sessions, Records, Product Knowledge, Transcript Viewer, Evidence Explorer,
+   Themes, and Insights.
+7. Uncoded highlights disables Code filtering and hides ActiveFilterBar without
+   discarding its Code criteria; returning to Accepted highlights or Suggestions
+   restores them.
+8. Transcript view emphasizes matching passages, dims unrelated text without
    making it unreadable, shows the match count, and supports Previous/Next.
-5. List view shows one card per matching Highlight with speaker/location,
+9. List view shows one card per matching Highlight with speaker/location,
    complete excerpt, Code chips, status/provenance, Open in transcript, Edit
    codes, and Delete highlight.
-6. Open in transcript returns to Transcript view, scrolls the source passage
+10. Open in transcript returns to Transcript view, scrolls the source passage
    into view, moves focus to it, and does not lose the active filters.
-7. The optional media region is absent when no media preview exists; no empty
+11. The optional media region is absent when no media preview exists; no empty
    placeholder is shown in the transcript-only slice.
 
 ### 8.4 Ownership, lineage, and Record readiness

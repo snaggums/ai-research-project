@@ -10,12 +10,22 @@ from app.models.participant import Participant, ParticipantRecord
 from app.models.research_session import ResearchSession, SessionParticipant, SessionRelationship
 from app.models.session_report import SessionReport, SessionReportEvidence, SessionReportItem
 from app.models.conversation import Conversation, ConversationMessage, MessageCitation
+from app.models.transcript_coding import (
+    CodeSuggestion,
+    CodeSuggestionEvidence,
+    CodeSuggestionRun,
+    HighlightCodeAssignment,
+    RecordCode,
+    TranscriptHighlight,
+)
 
 __all__ = [
     "AISettings", "Base", "Chunk", "Conversation", "ConversationMessage",
     "Document", "MessageCitation", "Participant", "ParticipantRecord", "Project",
     "ProductRecord", "RecordSynthesisEvidence", "RecordSynthesisItem",
     "RecordSynthesisItemSource", "RecordSynthesisRun", "RecordSynthesisSource",
+    "CodeSuggestion", "CodeSuggestionEvidence", "CodeSuggestionRun",
+    "HighlightCodeAssignment", "RecordCode", "TranscriptHighlight",
     "ResearchSession", "SessionParticipant", "SessionRelationship", "SessionReport",
     "SessionRecord", "SessionReportEvidence", "SessionReportItem", "Theme", "ThemeEvidence",
 ]
