@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   toTranscriptCode,
@@ -25,6 +26,7 @@ import {
 } from "@/hooks/useTranscriptCoding";
 import {
   TranscriptCodingWorkspaceView,
+  type TranscriptCodingRouteState,
   type TranscriptCodingWorkspaceState,
 } from "@/pages/transcript-coding-views";
 import { SharedRouteState } from "@/components/application";
@@ -40,6 +42,7 @@ function mutationMessage(errors: Array<Error | null>) {
 }
 
 export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: TranscriptCodingRouteContentProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const coding = useTranscriptCodingWorkspace(projectId, sessionId, enabled);
   const workspace = coding.data;
   const createHighlight = useCreateTranscriptHighlight(projectId, sessionId);
@@ -52,11 +55,69 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
   const acceptSuggestion = useAcceptTranscriptCodeSuggestion(projectId, sessionId);
   const rejectSuggestion = useRejectTranscriptCodeSuggestion(projectId, sessionId);
   const generateSuggestions = useGenerateTranscriptCodeSuggestions(projectId, sessionId);
+  const currentMutationError = mutationMessage([
+    createHighlight.error,
+    syncCodes.error,
+    removeCode.error,
+    deleteHighlight.error,
+    createCode.error,
+    updateCode.error,
+    updateSuggestion.error,
+    acceptSuggestion.error,
+    rejectSuggestion.error,
+    generateSuggestions.error,
+  ]);
 
-  const codes = React.useMemo(() => workspace?.codes.filter((code) => code.status === "active").map(toTranscriptCode) ?? [], [workspace?.codes]);
-  const highlights = React.useMemo(() => workspace?.highlights.filter((highlight) => !highlight.deleted_at).map(toTranscriptHighlight) ?? [], [workspace?.highlights]);
-  const suggestions = React.useMemo(() => workspace?.suggestions.filter((suggestion) => suggestion.status === "awaiting-review").map(toTranscriptCodeSuggestion) ?? [], [workspace?.suggestions]);
+  const codes = React.useMemo(
+    () => workspace?.codes.filter((code) => code.status === "active").map(toTranscriptCode) ?? [],
+    [workspace?.codes],
+  );
+  const highlights = React.useMemo(
+    () => workspace?.highlights.filter((highlight) => !highlight.deleted_at).map(toTranscriptHighlight) ?? [],
+    [workspace?.highlights],
+  );
+  const suggestions = React.useMemo(
+    () => workspace?.suggestions
+      .filter((suggestion) => suggestion.status === "awaiting-review")
+      .map(toTranscriptCodeSuggestion) ?? [],
+    [workspace?.suggestions],
+  );
+  const visibleCodes = currentMutationError ? codes.map((code) => ({ ...code })) : codes;
+  const visibleHighlights = currentMutationError
+    ? highlights.map((highlight) => ({
+      ...highlight,
+      codes: highlight.codes.map((code) => ({ ...code })),
+      evidence: { ...highlight.evidence },
+    }))
+    : highlights;
+  const visibleSuggestions = currentMutationError
+    ? suggestions.map((suggestion) => ({
+      ...suggestion,
+      evidence: suggestion.evidence.map((evidence) => ({ ...evidence })),
+    }))
+    : suggestions;
   const blocks = React.useMemo(() => workspace ? toTranscriptReaderBlocks(workspace) : [], [workspace]);
+  const routeState = React.useMemo<TranscriptCodingRouteState>(() => ({
+    view: searchParams.get("view") === "list" ? "list" : "transcript",
+    panel: searchParams.get("panel") === "accepted" ? "accepted" : "suggestions",
+    highlightStatus: searchParams.get("highlight_status") === "uncoded"
+      ? "uncoded"
+      : searchParams.get("highlight_status") === "all"
+        ? "all"
+        : "accepted-coded",
+    codeIds: searchParams.getAll("code"),
+  }), [searchParams]);
+  const updateRouteState = React.useCallback((nextState: Partial<TranscriptCodingRouteState>) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextState.view) next.set("view", nextState.view);
+    if (nextState.panel) next.set("panel", nextState.panel);
+    if (nextState.highlightStatus) next.set("highlight_status", nextState.highlightStatus);
+    if (nextState.codeIds) {
+      next.delete("code");
+      for (const codeId of nextState.codeIds) next.append("code", codeId);
+    }
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
 
   if (!enabled) return null;
   if (coding.isPending) {
@@ -77,7 +138,9 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
   }
 
   const generationStatus = workspace.suggestion_run.status;
-  const state: TranscriptCodingWorkspaceState = generationStatus === "queued" || generationStatus === "processing"
+  const state: TranscriptCodingWorkspaceState = generateSuggestions.isPending
+    || generationStatus === "queued"
+    || generationStatus === "processing"
     ? "processing"
     : generationStatus === "failed"
       ? "error"
@@ -86,19 +149,6 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
         : suggestions.length === 0
           ? "accepted-highlights"
           : "review-suggestions";
-  const currentMutationError = mutationMessage([
-    createHighlight.error,
-    syncCodes.error,
-    removeCode.error,
-    deleteHighlight.error,
-    createCode.error,
-    updateCode.error,
-    updateSuggestion.error,
-    acceptSuggestion.error,
-    rejectSuggestion.error,
-    generateSuggestions.error,
-  ]);
-
   function createHighlightPayload(
     highlight: TranscriptHighlightValue,
     selection: TranscriptTextSelectionValue,
@@ -107,6 +157,7 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
     if (!workspace || !block) return undefined;
     return {
       anchor: {
+        chunk_id: block.chunk_id,
         block_id: selection.blockId,
         start_char: block.start_char + selection.startOffset,
         end_char: block.start_char + selection.endOffset,
@@ -139,8 +190,8 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
         />
       ) : null}
       <TranscriptCodingWorkspaceView
-        acceptedHighlights={highlights}
-        availableCodes={codes}
+        acceptedHighlights={visibleHighlights}
+        availableCodes={visibleCodes}
         blocks={blocks}
         onAcceptSuggestion={(suggestionId) => acceptSuggestion.mutate(suggestionId)}
         onApplyCodes={({ codeIds, highlightId, selection }) => {
@@ -180,8 +231,10 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
           for (const highlightId of highlightIds) removeCode.mutate({ highlightId, codeId });
         }}
         onRemoveCode={(highlightId, codeId) => removeCode.mutate({ highlightId, codeId })}
+        onRouteStateChange={updateRouteState}
+        routeState={routeState}
         state={state}
-        suggestions={suggestions}
+        suggestions={visibleSuggestions}
       />
     </div>
   );

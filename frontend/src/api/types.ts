@@ -149,6 +149,7 @@ export type TranscriptContext = {
 };
 
 export type TranscriptCodingBlock = TranscriptBlock & {
+  chunk_id: string | null;
   start_char: number;
   end_char: number;
 };
@@ -237,6 +238,10 @@ export type CreateTranscriptHighlightPayload = {
   };
   code_ids: string[];
   new_code: { name: string; description?: string | null } | null;
+};
+
+export type UpdateTranscriptHighlightPayload = {
+  code_ids: string[];
 };
 
 export type CreateRecordCodePayload = {

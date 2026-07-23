@@ -479,6 +479,13 @@ export function SessionTranscriptRoute() {
       transcriptContent={(
         <div className="grid gap-8">
           <SessionTranscriptWorkspaceView
+            actionError={remove.error
+              ? errorMessage(remove.error)
+              : setPrimary.error
+                ? errorMessage(setPrimary.error)
+                : retry.error
+                  ? errorMessage(retry.error)
+                  : undefined}
             deletePendingId={remove.isPending ? remove.variables : undefined}
             documents={documents}
             errorMessage={transcripts.error ? errorMessage(transcripts.error) : undefined}

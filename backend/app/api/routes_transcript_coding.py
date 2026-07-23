@@ -36,10 +36,22 @@ def list_highlights(
     session_id: str,
     status_filter: str = Query(default="all", alias="status", pattern="^(all|accepted-coded|uncoded)$"),
     code_id: list[str] = Query(default=[]),
+    cursor: str | None = Query(default=None),
+    view: str = Query(default="list", pattern="^(transcript|list)$"),
+    include_media: bool = Query(default=False),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
 ):
-    return transcript_coding_service.list_highlights(db, project_id, session_id, status_filter, code_id, limit)
+    del view, include_media
+    return transcript_coding_service.list_highlights(
+        db,
+        project_id,
+        session_id,
+        status_filter,
+        code_id,
+        cursor,
+        limit,
+    )
 
 
 @router.post(
@@ -141,6 +153,27 @@ def update_code(
     db: Session = Depends(get_db),
 ):
     return transcript_coding_service.update_code(db, record_id, code_id, payload)
+
+
+@router.get("/records/{record_id}/highlights", response_model=list[TranscriptHighlightRead])
+def list_record_highlights(
+    record_id: str,
+    status_filter: str = Query(default="all", alias="status", pattern="^(all|accepted-coded|uncoded)$"),
+    code_id: list[str] = Query(default=[]),
+    cursor: str | None = Query(default=None),
+    include_media: bool = Query(default=False),
+    limit: int = Query(default=100, ge=1, le=250),
+    db: Session = Depends(get_db),
+):
+    del include_media
+    return transcript_coding_service.list_record_highlights(
+        db,
+        record_id,
+        status_filter,
+        code_id,
+        cursor,
+        limit,
+    )
 
 
 @router.get(

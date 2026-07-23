@@ -66,8 +66,17 @@ export interface TranscriptCodingWorkspaceViewProps {
   onRejectSuggestion?: (suggestionId: string) => void;
   onRemoveAcceptedCode?: (codeId: string, highlightIds: string[]) => void;
   onRemoveCode?: (highlightId: string, codeId: string) => void;
+  onRouteStateChange?: (state: Partial<TranscriptCodingRouteState>) => void;
+  routeState?: TranscriptCodingRouteState;
   state?: TranscriptCodingWorkspaceState;
   suggestions: TranscriptCodingSuggestionValue[];
+}
+
+export interface TranscriptCodingRouteState {
+  codeIds: string[];
+  highlightStatus: "all" | "accepted-coded" | "uncoded";
+  panel: "accepted" | "suggestions";
+  view: "transcript" | "list";
 }
 
 interface WorkspaceEditorValue {
@@ -94,9 +103,16 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "") || "code";
 }
 
-function evidenceFromSelection(selection: TranscriptTextSelectionValue, id: string) {
+function evidenceFromSelection(
+  selection: TranscriptTextSelectionValue,
+  id: string,
+  blocks: TranscriptReaderBlockValue[],
+) {
+  const block = blocks.find((candidate) => candidate.id === selection.blockId);
   return {
     blockId: selection.blockId,
+    startChar: block?.startChar !== undefined ? block.startChar + selection.startOffset : undefined,
+    endChar: block?.startChar !== undefined ? block.startChar + selection.endOffset : undefined,
     endOffset: selection.endOffset,
     excerpt: selection.text,
     id,
@@ -104,6 +120,24 @@ function evidenceFromSelection(selection: TranscriptTextSelectionValue, id: stri
     speaker: selection.speaker,
     startOffset: selection.startOffset,
   };
+}
+
+function selectionMatchesHighlight(
+  selection: TranscriptTextSelectionValue,
+  highlight: TranscriptHighlightValue,
+  blocks: TranscriptReaderBlockValue[],
+) {
+  const block = blocks.find((candidate) => candidate.id === selection.blockId);
+  if (
+    block?.startChar !== undefined
+    && highlight.evidence.startChar !== undefined
+    && highlight.evidence.endChar !== undefined
+  ) {
+    return highlight.evidence.startChar === block.startChar + selection.startOffset
+      && highlight.evidence.endChar === block.startChar + selection.endOffset;
+  }
+  return highlight.evidence.excerpt === selection.text
+    && (!highlight.evidence.blockId || highlight.evidence.blockId === selection.blockId);
 }
 
 function selectionFromBlock(block: TranscriptReaderBlockValue): TranscriptTextSelectionValue {
@@ -135,6 +169,8 @@ export function TranscriptCodingWorkspaceView({
   onRejectSuggestion,
   onRemoveAcceptedCode,
   onRemoveCode,
+  onRouteStateChange,
+  routeState,
   state = "review-suggestions",
   suggestions,
 }: TranscriptCodingWorkspaceViewProps) {
@@ -152,10 +188,17 @@ export function TranscriptCodingWorkspaceView({
     suggestions.map((suggestion) => ({ ...suggestion, evidence: suggestion.evidence.map((evidence) => ({ ...evidence })) })),
   );
   const defaultRailPanel: RailPanel = workspaceSuggestions.length > 0 ? "suggestions" : "accepted";
-  const initialRailPanel: RailPanel =
-    state === "accepted-highlights" || state === "active-filters" || state === "filtered-list"
+  const routeRailPanel: RailPanel | undefined = routeState
+    ? routeState.panel === "suggestions"
+      ? "suggestions"
+      : routeState.highlightStatus === "uncoded"
+        ? "uncoded"
+        : "accepted"
+    : undefined;
+  const initialRailPanel: RailPanel = routeRailPanel
+    ?? (state === "accepted-highlights" || state === "active-filters" || state === "filtered-list"
       ? "accepted"
-      : defaultRailPanel;
+      : defaultRailPanel);
   const [activeSuggestionId, setActiveSuggestionId] = React.useState<string | undefined>(workspaceSuggestions[0]?.id);
   const [activeReaderBlockId, setActiveReaderBlockId] = React.useState<string>();
   const [focusReaderBlockId, setFocusReaderBlockId] = React.useState<string>();
@@ -175,9 +218,12 @@ export function TranscriptCodingWorkspaceView({
           : initialRailPanel,
   );
   const previousRailPanel = React.useRef<RailPanel>(initialRailPanel);
-  const [listView, setListView] = React.useState(state === "filtered-list");
+  const [listView, setListView] = React.useState(
+    routeState ? routeState.view === "list" : state === "filtered-list",
+  );
   const initialFilterCodeIds =
-    state === "active-filters" || state === "filtered-list" ? [workspaceCodes[0]?.id].filter(Boolean) : [];
+    routeState?.codeIds
+    ?? (state === "active-filters" || state === "filtered-list" ? [workspaceCodes[0]?.id].filter(Boolean) : []);
   const [filterCodeIds, setFilterCodeIds] = React.useState<string[]>(initialFilterCodeIds);
   const [appliedFilterCodeIds, setAppliedFilterCodeIds] = React.useState<string[]>(initialFilterCodeIds);
   const [codePanelMode, setCodePanelMode] = React.useState<"apply" | "create">("apply");
@@ -350,9 +396,27 @@ export function TranscriptCodingWorkspaceView({
     })));
   }, [suggestions]);
 
+  React.useEffect(() => {
+    if (!routeState) return;
+    const nextPanel: RailPanel = routeState.panel === "suggestions"
+      ? "suggestions"
+      : routeState.highlightStatus === "uncoded"
+        ? "uncoded"
+        : "accepted";
+    previousRailPanel.current = nextPanel;
+    setPanel(nextPanel);
+    setListView(routeState.view === "list");
+    setFilterCodeIds(routeState.codeIds);
+    setAppliedFilterCodeIds(routeState.codeIds);
+  }, [routeState]);
+
   function showRail(nextPanel: RailPanel) {
     previousRailPanel.current = nextPanel;
     setPanel(nextPanel);
+    onRouteStateChange?.({
+      panel: nextPanel === "suggestions" ? "suggestions" : "accepted",
+      highlightStatus: nextPanel === "uncoded" ? "uncoded" : nextPanel === "accepted" ? "accepted-coded" : "all",
+    });
   }
 
   function showTransientPanel(nextPanel: "apply" | "filters") {
@@ -366,6 +430,7 @@ export function TranscriptCodingWorkspaceView({
   function clearFilters() {
     setFilterCodeIds([]);
     setAppliedFilterCodeIds([]);
+    onRouteStateChange?.({ codeIds: [] });
   }
 
   function removeActiveFilter(filterId: string) {
@@ -373,6 +438,9 @@ export function TranscriptCodingWorkspaceView({
       const codeId = filterId.slice("code:".length);
       setFilterCodeIds((current) => current.filter((value) => value !== codeId));
       setAppliedFilterCodeIds((current) => current.filter((value) => value !== codeId));
+      onRouteStateChange?.({
+        codeIds: appliedFilterCodeIds.filter((value) => value !== codeId),
+      });
     }
   }
 
@@ -383,7 +451,7 @@ export function TranscriptCodingWorkspaceView({
     const sequence = nextManualHighlightId.current++;
     const highlight: TranscriptHighlightValue = {
       codes,
-      evidence: evidenceFromSelection(selection, `manual-evidence-${sequence}`),
+      evidence: evidenceFromSelection(selection, `manual-evidence-${sequence}`, blocks),
       id: `manual-highlight-${sequence}`,
       provenance: "Researcher highlighted",
       status: codes.length > 0 ? "accepted" : "uncoded",
@@ -396,8 +464,7 @@ export function TranscriptCodingWorkspaceView({
 
   function handleHighlight(selection: TranscriptTextSelectionValue) {
     const existingHighlight = workspaceHighlights.find((highlight) =>
-      highlight.evidence.excerpt === selection.text
-      && (!highlight.evidence.blockId || highlight.evidence.blockId === selection.blockId),
+      selectionMatchesHighlight(selection, highlight, blocks),
     );
     if (existingHighlight) {
       setActiveReaderBlockId(selection.blockId);
@@ -412,8 +479,7 @@ export function TranscriptCodingWorkspaceView({
 
   function handleApplyCodeSelection(selection: TranscriptTextSelectionValue) {
     const existingHighlight = workspaceHighlights.find((highlight) =>
-      highlight.evidence.excerpt === selection.text
-      && (!highlight.evidence.blockId || highlight.evidence.blockId === selection.blockId),
+      selectionMatchesHighlight(selection, highlight, blocks),
     );
     setPendingSelection(existingHighlight ? undefined : selection);
     setEditingHighlightId(existingHighlight?.id);
@@ -497,6 +563,7 @@ export function TranscriptCodingWorkspaceView({
     const blockId = highlight.evidence.blockId
       ?? blocks.find((block) => block.excerpt === highlight.evidence.excerpt)?.id;
     setListView(false);
+    onRouteStateChange?.({ view: "transcript" });
     setActiveReaderBlockId(blockId);
     setFocusReaderBlockId(undefined);
     requestAnimationFrame(() => setFocusReaderBlockId(blockId));
@@ -650,10 +717,26 @@ export function TranscriptCodingWorkspaceView({
             <div className="grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-3" aria-label="Transcript coding controls">
                 <div className="flex flex-wrap gap-2" aria-label="Transcript coding views">
-                  <Button aria-pressed={!listView} onClick={() => setListView(false)} size="small" variant={!listView ? "brand-subtle" : "text"}>
+                  <Button
+                    aria-pressed={!listView}
+                    onClick={() => {
+                      setListView(false);
+                      onRouteStateChange?.({ view: "transcript" });
+                    }}
+                    size="small"
+                    variant={!listView ? "brand-subtle" : "text"}
+                  >
                     <Rows3 aria-hidden="true" className="h-4 w-4" />Transcript
                   </Button>
-                  <Button aria-pressed={listView} onClick={() => setListView(true)} size="small" variant={listView ? "brand-subtle" : "text"}>
+                  <Button
+                    aria-pressed={listView}
+                    onClick={() => {
+                      setListView(true);
+                      onRouteStateChange?.({ view: "list" });
+                    }}
+                    size="small"
+                    variant={listView ? "brand-subtle" : "text"}
+                  >
                     <List aria-hidden="true" className="h-4 w-4" />Highlight list
                   </Button>
                 </div>
@@ -826,6 +909,7 @@ export function TranscriptCodingWorkspaceView({
                     codeIds={filterCodeIds}
                     onApply={({ codeIds }) => {
                       setAppliedFilterCodeIds(codeIds);
+                      onRouteStateChange?.({ codeIds });
                       setPanel(previousRailPanel.current);
                     }}
                     onClear={clearFilters}

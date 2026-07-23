@@ -28,6 +28,8 @@ function toEvidence(
   return {
     id: "id" in evidence ? evidence.id : fallbackId,
     blockId: anchor.block_id ?? undefined,
+    startChar: anchor.start_char,
+    endChar: anchor.end_char,
     startOffset: undefined,
     endOffset: undefined,
     excerpt: anchor.excerpt_snapshot,
@@ -67,6 +69,8 @@ export function toTranscriptCodeSuggestion(
 export function toTranscriptReaderBlocks(workspace: TranscriptCodingWorkspace): TranscriptReaderBlockValue[] {
   return workspace.transcript.blocks.map((block) => ({
     id: block.id,
+    startChar: block.start_char,
+    endChar: block.end_char,
     excerpt: block.text,
     location: block.location,
     speaker: block.speaker,

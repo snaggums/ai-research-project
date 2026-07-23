@@ -198,5 +198,5 @@ def _guard_coding_dependencies(db: Session, document_id: str) -> None:
         raise ApplicationError(
             status.HTTP_409_CONFLICT,
             "transcript_has_coding_dependencies",
-            "Remove or migrate this Transcript's Highlights and Code Suggestions before replacing or deleting it.",
+            "This Transcript contains Highlights or Code Suggestions and cannot be replaced or deleted in the current workflow. Keep it as the Primary Transcript so its evidence remains traceable.",
         )

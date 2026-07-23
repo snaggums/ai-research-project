@@ -7,17 +7,31 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api";
 
 export class TranscriptApiError extends Error {
+  code?: string;
   status: number;
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.name = "TranscriptApiError";
     this.status = status;
+    this.code = code;
   }
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
-  if (!response.ok) throw new TranscriptApiError((await response.text()) || `Request failed with status ${response.status}`, response.status);
+  if (!response.ok) {
+    const raw = await response.text();
+    let message = raw || `Request failed with status ${response.status}`;
+    let code: string | undefined;
+    try {
+      const parsed = JSON.parse(raw) as { code?: unknown; detail?: unknown };
+      if (typeof parsed.detail === "string") message = parsed.detail;
+      if (typeof parsed.code === "string") code = parsed.code;
+    } catch {
+      // Plain-text API errors remain researcher-readable.
+    }
+    throw new TranscriptApiError(message, response.status, code);
+  }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }

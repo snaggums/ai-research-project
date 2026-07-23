@@ -146,6 +146,7 @@ const codingBlocks = transcriptReaderBlocks.reduce<Array<TranscriptCodingWorkspa
     const start = blocks.length === 0 ? 0 : blocks[blocks.length - 1].end_char + 1;
     blocks.push({
       id: block.id,
+      chunk_id: block.id,
       speaker: block.speaker ?? "Speaker",
       location: block.location,
       text: block.excerpt,
@@ -163,7 +164,7 @@ function anchorForEvidence(evidence: TranscriptEvidenceValue): TranscriptAnchor 
   );
   return {
     document_id: "checkout-transcript",
-    chunk_id: null,
+    chunk_id: block?.chunk_id ?? null,
     block_id: block?.id ?? evidence.blockId ?? null,
     start_char: block?.start_char ?? 0,
     end_char: (block?.start_char ?? 0) + evidence.excerpt.length,

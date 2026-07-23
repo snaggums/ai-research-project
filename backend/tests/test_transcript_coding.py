@@ -6,6 +6,17 @@ pytestmark = pytest.mark.integration
 
 
 def _project(client: TestClient, name: str = "Transcript Coding Project") -> dict:
+    settings_response = client.put(
+        "/api/settings/ai",
+        json={
+            "provider": "mock",
+            "model": "mock-chat",
+            "base_url": None,
+            "embedding_provider": "mock",
+            "embedding_model": "mock-hash-64",
+        },
+    )
+    assert settings_response.status_code == 200
     response = client.post("/api/projects", json={"name": name, "description": "Transcript Coding persistence"})
     assert response.status_code == 201
     return response.json()
@@ -50,6 +61,7 @@ def _anchor(workspace: dict, start_offset: int = 0, end_offset: int | None = Non
     text = block["text"]
     end_offset = len(text) if end_offset is None else end_offset
     return {
+        "chunk_id": block["chunk_id"],
         "block_id": block["id"],
         "start_char": block["start_char"] + start_offset,
         "end_char": block["start_char"] + end_offset,
@@ -109,6 +121,7 @@ def test_manual_codes_assignments_filters_and_record_guard(client: TestClient) -
     assert highlight_response.status_code == 201, highlight_response.text
     highlight = highlight_response.json()
     assert [value["id"] for value in highlight["codes"]] == [code["id"]]
+    assert highlight["anchor"]["chunk_id"] == workspace["transcript"]["blocks"][0]["chunk_id"]
 
     document_id = workspace["document_id"]
     protected_delete = client.delete(f"{root}/documents/{document_id}")
@@ -121,6 +134,18 @@ def test_manual_codes_assignments_filters_and_record_guard(client: TestClient) -
     )
     assert accepted.status_code == 200
     assert [value["id"] for value in accepted.json()] == [highlight["id"]]
+
+    record_highlights = client.get(
+        "/api/records/record-1/highlights",
+        params=[("status", "accepted-coded"), ("code_id", code["id"]), ("view", "list")],
+    )
+    assert record_highlights.status_code == 200
+    assert [value["id"] for value in record_highlights.json()] == [highlight["id"]]
+    assert record_highlights.json()[0]["session_id"] == research_session["id"]
+
+    invalid_cursor = client.get(f"{root}/highlights", params={"cursor": "missing-highlight"})
+    assert invalid_cursor.status_code == 422
+    assert invalid_cursor.json()["code"] == "invalid_cursor"
 
     blocked = client.patch(
         f"/api/projects/{project['id']}/sessions/{research_session['id']}",

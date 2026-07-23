@@ -6,6 +6,7 @@ import type {
   RecordCode,
   TranscriptCodingWorkspace,
   UpdateRecordCodePayload,
+  UpdateTranscriptHighlightPayload,
   UpdateTranscriptCodeSuggestionPayload,
 } from "@/api/types";
 import { transcriptCodingApiFixture } from "@/mocks/fixtures/transcript-coding";
@@ -89,6 +90,15 @@ export const transcriptCodingHandlers = [
     };
     workspace.highlights.push(highlight);
     return HttpResponse.json(highlight, { status: 201 });
+  }),
+  http.patch(`${TRANSCRIPT_CODING_API_BASE_URL}/projects/:projectId/sessions/:sessionId/highlights/:highlightId`, async ({ params, request }) => {
+    const workspace = matchWorkspace(String(params.projectId), String(params.sessionId));
+    const highlight = workspace.highlights.find((item) => item.id === String(params.highlightId));
+    if (!highlight) return new HttpResponse("Highlight not found", { status: 404 });
+    const payload = await request.json() as UpdateTranscriptHighlightPayload;
+    highlight.codes = workspace.codes.filter((code) => payload.code_ids.includes(code.id));
+    highlight.updated_at = timestamp;
+    return HttpResponse.json(highlight);
   }),
   http.post(`${TRANSCRIPT_CODING_API_BASE_URL}/projects/:projectId/sessions/:sessionId/highlights/:highlightId/codes`, async ({ params, request }) => {
     const workspace = matchWorkspace(String(params.projectId), String(params.sessionId));

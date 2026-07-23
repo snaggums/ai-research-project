@@ -74,6 +74,29 @@ describe("application router foundation", () => {
     });
   });
 
+  it("persists Transcript Coding view and status controls in route search parameters", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/transcript"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Highlight list" }));
+    expect(router.state.location.search).toContain("view=list");
+
+    await user.click(screen.getByRole("tab", { name: "Uncoded highlights" }));
+    expect(router.state.location.search).toContain("panel=accepted");
+    expect(router.state.location.search).toContain("highlight_status=uncoded");
+
+    await act(() => router.navigate(-1));
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveAttribute("aria-selected", "true");
+    });
+    expect(router.state.location.search).toContain("view=list");
+  });
+
   it("opens a retrieved excerpt in the Transcript context route", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));

@@ -5,6 +5,7 @@ import type {
   TranscriptCodeSuggestion,
   TranscriptCodingWorkspace,
   TranscriptHighlight,
+  UpdateTranscriptHighlightPayload,
   UpdateRecordCodePayload,
   UpdateTranscriptCodeSuggestionPayload,
 } from "./types";
@@ -50,8 +51,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function idempotencyHeaders(): HeadersInit {
-  return { "Idempotency-Key": crypto.randomUUID() };
+function idempotencyHeaders(requestKey?: string): HeadersInit {
+  return { "Idempotency-Key": requestKey ?? crypto.randomUUID() };
 }
 
 const sessionRoot = (projectId: string, sessionId: string) =>
@@ -65,10 +66,11 @@ export function createTranscriptHighlight(
   projectId: string,
   sessionId: string,
   payload: CreateTranscriptHighlightPayload,
+  requestKey?: string,
 ) {
   return request<TranscriptHighlight>(`${sessionRoot(projectId, sessionId)}/highlights`, {
     method: "POST",
-    headers: idempotencyHeaders(),
+    headers: idempotencyHeaders(requestKey),
     body: JSON.stringify(payload),
   });
 }
@@ -77,6 +79,19 @@ export function deleteTranscriptHighlight(projectId: string, sessionId: string, 
   return request<void>(`${sessionRoot(projectId, sessionId)}/highlights/${highlightId}`, {
     method: "DELETE",
     headers: idempotencyHeaders(),
+  });
+}
+
+export function updateTranscriptHighlight(
+  projectId: string,
+  sessionId: string,
+  highlightId: string,
+  payload: UpdateTranscriptHighlightPayload,
+) {
+  return request<TranscriptHighlight>(`${sessionRoot(projectId, sessionId)}/highlights/${highlightId}`, {
+    method: "PATCH",
+    headers: idempotencyHeaders(),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -134,23 +149,37 @@ export function updateTranscriptCodeSuggestion(
   });
 }
 
-export function acceptTranscriptCodeSuggestion(projectId: string, sessionId: string, suggestionId: string) {
+export function acceptTranscriptCodeSuggestion(
+  projectId: string,
+  sessionId: string,
+  suggestionId: string,
+  requestKey?: string,
+) {
   return request<TranscriptCodingWorkspace>(`${sessionRoot(projectId, sessionId)}/code-suggestions/${suggestionId}/accept`, {
     method: "POST",
-    headers: idempotencyHeaders(),
+    headers: idempotencyHeaders(requestKey),
   });
 }
 
-export function rejectTranscriptCodeSuggestion(projectId: string, sessionId: string, suggestionId: string) {
+export function rejectTranscriptCodeSuggestion(
+  projectId: string,
+  sessionId: string,
+  suggestionId: string,
+  requestKey?: string,
+) {
   return request<TranscriptCodeSuggestion>(`${sessionRoot(projectId, sessionId)}/code-suggestions/${suggestionId}/reject`, {
     method: "POST",
-    headers: idempotencyHeaders(),
+    headers: idempotencyHeaders(requestKey),
   });
 }
 
-export function generateTranscriptCodeSuggestions(projectId: string, sessionId: string) {
+export function generateTranscriptCodeSuggestions(
+  projectId: string,
+  sessionId: string,
+  requestKey?: string,
+) {
   return request<TranscriptCodingWorkspace>(`${sessionRoot(projectId, sessionId)}/code-suggestions/generate`, {
     method: "POST",
-    headers: idempotencyHeaders(),
+    headers: idempotencyHeaders(requestKey),
   });
 }

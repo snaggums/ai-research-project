@@ -9,7 +9,7 @@ from uuid import uuid4
 from app.core.domain_errors import ApplicationError
 from app.models.chunk import Chunk
 from app.models.document import Document
-from app.models.record import ProductRecord
+from app.models.record import ProductRecord, SessionRecord
 from app.models.research_session import ResearchSession
 from app.models.transcript_coding import (
     CodeSuggestion,
@@ -97,10 +97,45 @@ def list_highlights(
     session_id: str,
     status_filter: str,
     code_ids: list[str],
+    cursor: str | None,
     limit: int,
 ) -> list[TranscriptHighlightRead]:
     _workspace_context(db, project_id, session_id)
     values = _session_highlights(db, session_id)
+    values = _values_after_cursor(values, cursor)
+    return _filter_highlights(values, status_filter, code_ids, limit)
+
+
+def list_record_highlights(
+    db: Session,
+    record_id: str,
+    status_filter: str,
+    code_ids: list[str],
+    cursor: str | None,
+    limit: int,
+) -> list[TranscriptHighlightRead]:
+    _require_record(db, record_id)
+    values = list(
+        db.scalars(
+            _highlight_select()
+            .join(SessionRecord, SessionRecord.session_id == TranscriptHighlight.session_id)
+            .where(
+                SessionRecord.record_id == record_id,
+                TranscriptHighlight.deleted_at.is_(None),
+            )
+            .order_by(TranscriptHighlight.created_at.desc(), TranscriptHighlight.id)
+        ).unique().all()
+    )
+    values = _values_after_cursor(values, cursor)
+    return _filter_highlights(values, status_filter, code_ids, limit)
+
+
+def _filter_highlights(
+    values: list[TranscriptHighlight],
+    status_filter: str,
+    code_ids: list[str],
+    limit: int,
+) -> list[TranscriptHighlightRead]:
     requested = set(code_ids)
     filtered: list[TranscriptHighlight] = []
     for value in values:
@@ -113,6 +148,18 @@ def list_highlights(
             continue
         filtered.append(value)
     return [highlight_to_read(value) for value in filtered[:limit]]
+
+
+def _values_after_cursor(
+    values: list[TranscriptHighlight],
+    cursor: str | None,
+) -> list[TranscriptHighlight]:
+    if not cursor:
+        return values
+    for index, value in enumerate(values):
+        if value.id == cursor:
+            return values[index + 1 :]
+    raise _error(422, "invalid_cursor", "The Highlight cursor is not available in this scope.")
 
 
 def create_highlight(
@@ -566,6 +613,7 @@ def _coding_blocks(db: Session, document: Document) -> list[TranscriptCodingBloc
         blocks.append(
             TranscriptCodingBlock(
                 id=chunk.id,
+                chunk_id=chunk.id,
                 speaker=speaker,
                 location=str(metadata.get("timestamp") or f"Excerpt {chunk.chunk_index + 1}"),
                 text=display,
@@ -576,7 +624,17 @@ def _coding_blocks(db: Session, document: Document) -> list[TranscriptCodingBloc
     if blocks:
         return blocks
     speaker, display, display_offset = _speaker_display_anchor(content)
-    return [TranscriptCodingBlock(id=f"document-{document.id}", speaker=speaker, location="Transcript", text=display, start_char=display_offset, end_char=len(content))]
+    return [
+        TranscriptCodingBlock(
+            id=f"document-{document.id}",
+            chunk_id=None,
+            speaker=speaker,
+            location="Transcript",
+            text=display,
+            start_char=display_offset,
+            end_char=len(content),
+        )
+    ]
 
 
 def _validate_anchor(db: Session, context: WorkspaceContext, payload: TranscriptAnchorCreate) -> TranscriptAnchor:

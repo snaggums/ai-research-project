@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class TranscriptCodingBlock(BaseModel):
     id: str
+    chunk_id: str | None
     speaker: str
     location: str
     text: str

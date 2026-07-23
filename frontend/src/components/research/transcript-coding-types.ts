@@ -16,11 +16,13 @@ export interface TranscriptCodeValue {
 
 export interface TranscriptEvidenceValue {
   blockId?: string;
+  endChar?: number;
   endOffset?: number;
   id: string;
   excerpt: string;
   location: string;
   speaker?: string;
+  startChar?: number;
   startOffset?: number;
 }
 
