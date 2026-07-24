@@ -63,6 +63,15 @@ describe("application router foundation", () => {
       expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(1)");
     });
 
+    await user.click(screen.getByRole("button", { name: "Apply code" }));
+    await user.click(screen.getByRole("option", { name: /Navigation terminology/ }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
+      expect(screen.getByRole("heading", { name: "Accepted highlights" })).toBeInTheDocument();
+    });
+
     await act(() => router.navigate("/projects/alpha-project/sessions/mobile-checkout-test/overview"));
     await screen.findByRole("link", { name: "Transcript" });
     await act(() => router.navigate("/projects/alpha-project/sessions/mobile-checkout-test/transcript"));
@@ -70,7 +79,7 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveTextContent("(1)");
-      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(1)");
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
     });
   });
 

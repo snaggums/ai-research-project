@@ -83,6 +83,37 @@ export const transcriptReaderBlocks: TranscriptReaderBlockValue[] = [
   },
 ];
 
+export const importedTemplatedTranscriptBlocks: TranscriptReaderBlockValue[] = [
+  {
+    id: "imported-s003-1",
+    excerpt: "Please send a secure message about your parent's medication.",
+    location: "0:00",
+    speaker: "Maya Chen",
+    state: "default",
+  },
+  {
+    id: "imported-s003-2",
+    excerpt: "I am looking for Messages. I see it, but I want to confirm I am in my mother's account.",
+    location: "3:06",
+    speaker: "Tanya",
+    state: "default",
+  },
+  {
+    id: "imported-s003-3",
+    excerpt: "What tells you which account is active?",
+    location: "6:13",
+    speaker: "Maya Chen",
+    state: "default",
+  },
+  {
+    id: "imported-s005-role-label",
+    excerpt: "The recurring issue is that teams treat each Record as unique, but users experience one system.",
+    location: "0:00",
+    speaker: "Jordan - UX",
+    state: "default",
+  },
+];
+
 export const transcriptCodingSuggestions = [
   {
     id: "suggestion-navigation",

@@ -10,6 +10,8 @@ import { TranscriptCodeChip } from "./transcript-code-chip";
 import type { TranscriptEvidenceValue, TranscriptHighlightStatus } from "./transcript-coding-types";
 
 export interface TranscriptCodeSuggestionProps {
+  applyCodeDisabled?: boolean;
+  applyCodeUnavailableReason?: string;
   codeName: string;
   confidence?: number;
   defaultEvidenceExpanded?: boolean;
@@ -18,6 +20,7 @@ export interface TranscriptCodeSuggestionProps {
   evidenceExpanded?: boolean;
   layout?: "default" | "compact";
   onAccept?: () => void;
+  onApplyCode?: () => void;
   onDeleteHighlight?: (highlightId: string) => void;
   onEdit?: () => void;
   onEditCode?: () => void;
@@ -33,6 +36,8 @@ export interface TranscriptCodeSuggestionProps {
 }
 
 export function TranscriptCodeSuggestion({
+  applyCodeDisabled = false,
+  applyCodeUnavailableReason,
   codeName,
   confidence,
   defaultEvidenceExpanded = false,
@@ -41,6 +46,7 @@ export function TranscriptCodeSuggestion({
   evidenceExpanded: controlledEvidenceExpanded,
   layout = "default",
   onAccept,
+  onApplyCode,
   onDeleteHighlight,
   onEdit,
   onEditCode,
@@ -56,6 +62,7 @@ export function TranscriptCodeSuggestion({
 }: TranscriptCodeSuggestionProps) {
   const [internalEvidenceExpanded, setInternalEvidenceExpanded] = React.useState(defaultEvidenceExpanded);
   const [highlightToDelete, setHighlightToDelete] = React.useState<TranscriptEvidenceValue | null>(null);
+  const applyCodeDescriptionId = React.useId();
   const evidenceExpanded = controlledEvidenceExpanded ?? internalEvidenceExpanded;
   const visibleEvidence = evidenceExpanded ? evidence : evidence.slice(0, 1);
   const evidenceCount = evidence.length;
@@ -176,6 +183,28 @@ export function TranscriptCodeSuggestion({
             <footer className="flex flex-wrap items-center justify-end gap-2">
               <Button onClick={onEditCode} size="small" variant="gray-subtle">Edit</Button>
               <Button onClick={onRemoveAcceptedCode} size="small" variant="text">Remove</Button>
+            </footer>
+          ) : showActions && status === "uncoded" && onApplyCode ? (
+            <footer className="grid gap-2">
+              {applyCodeUnavailableReason ? (
+                <p
+                  className="text-sm leading-5 text-[var(--air-color-text-secondary)]"
+                  id={applyCodeDescriptionId}
+                >
+                  {applyCodeUnavailableReason}
+                </p>
+              ) : null}
+              <div className="flex justify-end">
+                <Button
+                  aria-describedby={applyCodeUnavailableReason ? applyCodeDescriptionId : undefined}
+                  disabled={applyCodeDisabled}
+                  onClick={onApplyCode}
+                  size="small"
+                  variant="brand"
+                >
+                  Apply code
+                </Button>
+              </div>
             </footer>
           ) : null}
         </div>

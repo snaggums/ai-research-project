@@ -193,6 +193,8 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
         acceptedHighlights={visibleHighlights}
         availableCodes={visibleCodes}
         blocks={blocks}
+        canApplyCodes={Boolean(workspace.record)}
+        codeUnavailableReason="Assign this Session to a Record before applying a Code."
         onAcceptSuggestion={(suggestionId) => acceptSuggestion.mutate(suggestionId)}
         onApplyCodes={({ codeIds, highlightId, selection }) => {
           // New selections are persisted atomically by onCreateHighlight with
@@ -212,9 +214,7 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
           if (payload) createHighlight.mutate(payload);
         }}
         onDeleteHighlight={(highlightId) => {
-          if (window.confirm("Delete this Highlight? Its source Transcript and Record Codes will not be deleted.")) {
-            deleteHighlight.mutate(highlightId);
-          }
+          deleteHighlight.mutate(highlightId);
         }}
         onEditCode={(codeId, value) => {
           if (value) updateCode.mutate({ codeId, payload: { name: value.name, description: value.description } });

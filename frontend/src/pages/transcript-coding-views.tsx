@@ -49,7 +49,9 @@ export interface TranscriptCodingWorkspaceViewProps {
   acceptedHighlights: TranscriptHighlightValue[];
   availableCodes: TranscriptCodeValue[];
   blocks: TranscriptReaderBlockValue[];
+  canApplyCodes?: boolean;
   className?: string;
+  codeUnavailableReason?: string;
   onAcceptSuggestion?: (suggestionId: string) => void;
   onApplyCodes?: (value: {
     codeIds: string[];
@@ -140,6 +142,22 @@ function selectionMatchesHighlight(
     && (!highlight.evidence.blockId || highlight.evidence.blockId === selection.blockId);
 }
 
+function evidenceMatchesHighlight(
+  left: TranscriptHighlightValue["evidence"],
+  right: TranscriptHighlightValue["evidence"],
+) {
+  if (
+    left.startChar !== undefined
+    && left.endChar !== undefined
+    && right.startChar !== undefined
+    && right.endChar !== undefined
+  ) {
+    return left.startChar === right.startChar && left.endChar === right.endChar;
+  }
+  return left.excerpt === right.excerpt
+    && (!left.blockId || !right.blockId || left.blockId === right.blockId);
+}
+
 function selectionFromBlock(block: TranscriptReaderBlockValue): TranscriptTextSelectionValue {
   return {
     blockId: block.id,
@@ -156,7 +174,9 @@ export function TranscriptCodingWorkspaceView({
   acceptedHighlights,
   availableCodes,
   blocks,
+  canApplyCodes = true,
   className,
+  codeUnavailableReason = "Assign this Session to a Record before applying a Code.",
   onAcceptSuggestion,
   onApplyCodes,
   onCreateCode,
@@ -208,6 +228,7 @@ export function TranscriptCodingWorkspaceView({
     return block ? selectionFromBlock(block) : undefined;
   });
   const [editingHighlightId, setEditingHighlightId] = React.useState<string>();
+  const editingHighlightEvidence = React.useRef<TranscriptHighlightValue["evidence"]>();
   const [selectedCodeIds, setSelectedCodeIds] = React.useState<string[]>([]);
   const [editor, setEditor] = React.useState<WorkspaceEditorValue>();
   const [rejectedCount, setRejectedCount] = React.useState(0);
@@ -333,7 +354,7 @@ export function TranscriptCodingWorkspaceView({
     return { ...block, codes: blockCodes, highlighted: blockHighlights.length > 0, state: evidenceMatch ? "filtered-match" as const : "dimmed" as const };
   });
   const summaryState = state === "processing" ? "processing" : state === "no-suggestions" ? "empty" : state === "error" ? "error" : "awaiting-review";
-  const showReader = state !== "processing" && state !== "no-suggestions" && state !== "error";
+  const showReader = state !== "processing" && state !== "error";
   const acceptedCodeGroups = React.useMemo(() => {
     const groups = new Map<
       string,
@@ -378,6 +399,15 @@ export function TranscriptCodingWorkspaceView({
   }, [panel, workspaceSuggestions.length]);
 
   React.useEffect(() => {
+    const evidence = editingHighlightEvidence.current;
+    if (evidence) {
+      setEditingHighlightId((currentId) => {
+        if (!currentId || acceptedHighlights.some((highlight) => highlight.id === currentId)) return currentId;
+        return acceptedHighlights.find((highlight) =>
+          evidenceMatchesHighlight(highlight.evidence, evidence),
+        )?.id ?? currentId;
+      });
+    }
     setWorkspaceHighlights(acceptedHighlights.map((highlight) => ({
       ...highlight,
       codes: [...highlight.codes],
@@ -483,6 +513,7 @@ export function TranscriptCodingWorkspaceView({
     );
     setPendingSelection(existingHighlight ? undefined : selection);
     setEditingHighlightId(existingHighlight?.id);
+    editingHighlightEvidence.current = existingHighlight?.evidence;
     setSelectedCodeIds(existingHighlight?.codes.map((code) => code.id) ?? []);
     setCodePanelMode("apply");
     showTransientPanel("apply");
@@ -505,6 +536,7 @@ export function TranscriptCodingWorkspaceView({
     }
     setPendingSelection(undefined);
     setEditingHighlightId(undefined);
+    editingHighlightEvidence.current = undefined;
     setSelectedCodeIds([]);
     showRail(codes.length > 0 ? "accepted" : "uncoded");
   }
@@ -573,6 +605,7 @@ export function TranscriptCodingWorkspaceView({
 
   function editHighlightCodes(highlight: TranscriptHighlightValue) {
     setEditingHighlightId(highlight.id);
+    editingHighlightEvidence.current = highlight.evidence;
     setPendingSelection(undefined);
     setSelectedCodeIds(highlight.codes.map((code) => code.id));
     setCodePanelMode("apply");
@@ -850,6 +883,7 @@ export function TranscriptCodingWorkspaceView({
                     onCancel={() => {
                       setPendingSelection(undefined);
                       setEditingHighlightId(undefined);
+                      editingHighlightEvidence.current = undefined;
                       setSelectedCodeIds([]);
                       setCodePanelMode("apply");
                       setPanel(previousRailPanel.current);
@@ -962,10 +996,13 @@ export function TranscriptCodingWorkspaceView({
                     </header>
                     {uncodedHighlights.map((highlight) => (
                       <TranscriptCodeSuggestion
+                        applyCodeDisabled={!canApplyCodes}
+                        applyCodeUnavailableReason={!canApplyCodes ? codeUnavailableReason : undefined}
                         codeName="Uncoded highlight"
                         description="Saved for coding later."
                         evidence={[highlight.evidence]}
                         key={highlight.id}
+                        onApplyCode={() => editHighlightCodes(highlight)}
                         onDeleteHighlight={() => handleDeleteHighlight(highlight.id)}
                         provenance={highlight.provenance}
                         status="uncoded"

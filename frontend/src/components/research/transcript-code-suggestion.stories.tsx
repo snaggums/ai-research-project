@@ -135,6 +135,10 @@ function StatefulTranscriptCodeSuggestion(args: React.ComponentProps<typeof Tran
           args.onAccept?.();
           setStatus("accepted");
         }}
+        onApplyCode={() => {
+          args.onApplyCode?.();
+          setActionMessage("Apply Code opened for this Highlight.");
+        }}
         onEdit={() => {
           args.onEdit?.();
           setDraftName(codeName);
@@ -182,11 +186,12 @@ const meta = {
   tags: ["autodocs"],
   decorators: [(Story) => <div className="mx-auto w-[24.5rem] p-6"><Story /></div>],
   parameters: {
-    docs: { description: { component: "Reviews one AI Code proposal or one accepted Code with supporting Highlights. Suggested and accepted actions share a stable footer location. Accepted Remove clears the Code from every supporting Highlight and removes the entire accepted Code section; the Highlights remain Uncoded and the Code remains in the library." } },
+    docs: { description: { component: "Reviews one AI Code proposal, accepted Code, or uncoded Highlight with supporting evidence. Uncoded Highlights expose Apply code in the stable action footer. Accepted Remove clears the Code from every supporting Highlight and removes the entire accepted Code section; the Highlights remain Uncoded and the Code remains in the library." } },
   },
   args: {
     ...suggestion,
     onAccept: fn(),
+    onApplyCode: fn(),
     onDeleteHighlight: fn(),
     onEdit: fn(),
     onEditCode: fn(),
@@ -206,6 +211,22 @@ export const Accepted: Story = { args: { status: "accepted" } };
 export const AcceptedExpanded: Story = { args: { defaultEvidenceExpanded: true, status: "accepted" } };
 export const AcceptedSelected: Story = { args: { selected: true, status: "accepted" } };
 export const Uncoded: Story = { args: { codeName: "Uncoded highlight", description: "This saved Highlight does not yet have a Record code.", status: "uncoded" } };
+export const UncodedRecordRequired: Story = {
+  args: {
+    applyCodeDisabled: true,
+    applyCodeUnavailableReason: "Assign this Session to a Record before applying a Code.",
+    codeName: "Uncoded highlight",
+    description: "This saved Highlight does not yet have a Record code.",
+    status: "uncoded",
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "Apply code" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Apply code" })).toHaveAccessibleDescription(
+      "Assign this Session to a Record before applying a Code.",
+    );
+  },
+};
 export const Compact: Story = { args: { layout: "compact" } };
 export const ExpandEvidence: Story = {
   play: async ({ canvasElement }) => {
@@ -220,6 +241,19 @@ export const AcceptSuggestion: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Accept" }));
     await expect(args.onAccept).toHaveBeenCalled();
     await expect(canvas.getByText("Accepted")).toBeInTheDocument();
+  },
+};
+export const ApplyCodeToUncoded: Story = {
+  args: {
+    codeName: "Uncoded highlight",
+    description: "This saved Highlight does not yet have a Record code.",
+    status: "uncoded",
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Apply code" }));
+    await expect(args.onApplyCode).toHaveBeenCalled();
+    await expect(canvas.getByRole("status")).toHaveTextContent("Apply Code opened for this Highlight.");
   },
 };
 export const EditSuggestion: Story = {

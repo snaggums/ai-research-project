@@ -1,7 +1,9 @@
+import * as React from "react";
 import { ArrowUpRight, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { TranscriptCodeChip } from "./transcript-code-chip";
 import type { TranscriptHighlightValue } from "./transcript-coding-types";
@@ -23,6 +25,8 @@ export function TranscriptHighlightListItem({
   onOpenInTranscript,
   onRemoveCode,
 }: TranscriptHighlightListItemProps) {
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+
   return (
     <article
       className={cn(
@@ -78,12 +82,21 @@ export function TranscriptHighlightListItem({
           </Button>
         ) : null}
         {onDelete ? (
-          <Button onClick={onDelete} size="small" variant="danger-subtle">
+          <Button onClick={() => setDeleteOpen(true)} size="small" variant="danger-subtle">
             <Trash2 aria-hidden="true" className="h-4 w-4" />
             Delete highlight
           </Button>
         ) : null}
       </footer>
+      <Dialog
+        description="This removes only this Highlight. Its source Transcript and Record Codes will not be deleted."
+        intent="destructive"
+        onOpenChange={setDeleteOpen}
+        onPrimary={onDelete}
+        open={deleteOpen}
+        primaryLabel="Delete highlight"
+        title="Delete highlight?"
+      />
     </article>
   );
 }

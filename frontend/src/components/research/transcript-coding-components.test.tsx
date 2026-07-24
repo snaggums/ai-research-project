@@ -55,6 +55,41 @@ describe("Transcript Coding Research Objects", () => {
     expect(screen.getByRole("button", { name: "View less supporting transcript evidence" })).toBeInTheDocument();
   });
 
+  it("exposes Apply code for an uncoded Highlight and explains when Record assignment is required", async () => {
+    const user = userEvent.setup();
+    const onApplyCode = vi.fn();
+    const { rerender } = render(
+      <TranscriptCodeSuggestion
+        codeName="Uncoded highlight"
+        description="Saved for coding later."
+        evidence={[evidence[0]]}
+        onApplyCode={onApplyCode}
+        status="uncoded"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Apply code" }));
+    expect(onApplyCode).toHaveBeenCalledOnce();
+
+    rerender(
+      <TranscriptCodeSuggestion
+        applyCodeDisabled
+        applyCodeUnavailableReason="Assign this Session to a Record before applying a Code."
+        codeName="Uncoded highlight"
+        description="Saved for coding later."
+        evidence={[evidence[0]]}
+        onApplyCode={onApplyCode}
+        status="uncoded"
+      />,
+    );
+
+    const disabledAction = screen.getByRole("button", { name: "Apply code" });
+    expect(disabledAction).toBeDisabled();
+    expect(disabledAction).toHaveAccessibleDescription(
+      "Assign this Session to a Record before applying a Code.",
+    );
+  });
+
   it("keeps accepted-highlight code removal distinct from destructive highlight deletion", async () => {
     const user = userEvent.setup();
     const onRemoveCode = vi.fn();
@@ -400,6 +435,30 @@ describe("Transcript Coding Research Objects", () => {
     expect(selectedText).toHaveClass("line-clamp-2");
     expect(selectedText).toHaveClass("[overflow-wrap:anywhere]");
     expect(acceptedCodesControl).toHaveClass("w-full");
+  });
+
+  it("confirms Highlight List deletion once and preserves the Highlight when canceled", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn();
+    const highlight: TranscriptHighlightValue = {
+      id: "highlight-uncoded",
+      codes: [],
+      evidence: evidence[0],
+      provenance: "Researcher highlighted",
+      status: "uncoded",
+    };
+    render(<TranscriptHighlightListItem highlight={highlight} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete highlight" }));
+    let dialog = screen.getByRole("dialog", { name: "Delete highlight?" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByText(evidence[0].excerpt, { exact: false })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Delete highlight" }));
+    dialog = screen.getByRole("dialog", { name: "Delete highlight?" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete highlight" }));
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 
   it("renders the complete filtered-list contract and coding generation states", () => {

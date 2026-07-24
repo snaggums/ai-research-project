@@ -11,6 +11,7 @@ import {
   transcriptCodingCodes,
   transcriptCodingHighlights,
   transcriptCodingSuggestions,
+  importedTemplatedTranscriptBlocks,
   transcriptReaderBlocks,
 } from "@/mocks/fixtures/transcript-coding";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
@@ -87,6 +88,13 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ReviewSuggestions: Story = {};
+export const ImportedTemplatedDocx: Story = {
+  args: {
+    blocks: importedTemplatedTranscriptBlocks,
+    suggestions: [],
+    acceptedHighlights: [],
+  },
+};
 export const AcceptedHighlights: Story = { args: { state: "accepted-highlights" } };
 export const ManualSelection: Story = {
   args: { state: "manual-selection" },
@@ -135,6 +143,32 @@ export const ClickPassageAndApplyCode: Story = {
         text: transcriptReaderBlocks[0].excerpt,
       }),
     }));
+  },
+};
+export const ApplyCodeToUncodedHighlight: Story = {
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("tab", { name: "Uncoded highlights" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Apply code" }));
+    await expect(canvas.getByRole("heading", { name: "Apply code" })).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("option", { name: /Navigation terminology/ }));
+    await userEvent.click(canvas.getByRole("button", { name: "Apply" }));
+    await expect(args.onApplyCodes).toHaveBeenCalledWith({
+      codeIds: ["code-navigation-terminology"],
+      highlightId: "highlight-uncoded",
+    });
+    await expect(canvas.getByRole("heading", { name: "Accepted highlights" })).toBeInTheDocument();
+  },
+};
+export const UncodedRecordRequired: Story = {
+  args: { canApplyCodes: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("tab", { name: "Uncoded highlights" }));
+    await expect(canvas.getByRole("button", { name: "Apply code" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Apply code" })).toHaveAccessibleDescription(
+      "Assign this Session to a Record before applying a Code.",
+    );
   },
 };
 export const ApplyCode: Story = { args: { state: "apply-code" } };
