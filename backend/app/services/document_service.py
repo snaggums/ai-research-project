@@ -9,9 +9,10 @@ from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.project import Project
 from app.models.research_session import ResearchSession
+from app.models.transcript_block import TranscriptBlockRecord
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import embed_text
-from app.services.parsing_service import SUPPORTED_EXTENSIONS, extract_text
+from app.services.parsing_service import ParsedTranscript, SUPPORTED_EXTENSIONS, extract_transcript
 from app.services.v1_migration_service import get_or_create_import_session
 from fastapi import UploadFile
 from sqlalchemy import delete, select
@@ -89,16 +90,23 @@ def process_document(document_id: str) -> None:
         db.commit()
 
         try:
-            content = extract_text(document.file_path)
-            if not content:
+            parsed = extract_transcript(document.file_path)
+            if not parsed.content:
                 raise ValueError("No text could be extracted from this file.")
-            document.content = content
+            blocks = _replace_document_blocks(db, document, parsed)
+            _replace_document_chunks(db, document, parsed, blocks)
+            document.content = parsed.content
+            document.parser_name = parsed.parser_name
+            document.parser_version = parsed.parser_version
+            document.extraction_metadata = parsed.metadata
             document.status = "complete"
             document.error_message = None
             document.processed_at = datetime.now(timezone.utc)
-            _replace_document_chunks(db, document, content)
         except Exception as exc:
-            db.execute(delete(Chunk).where(Chunk.document_id == document.id))
+            db.rollback()
+            document = db.get(Document, document_id)
+            if document is None:
+                return
             document.status = "failed"
             document.error_message = str(exc)
             document.processed_at = datetime.now(timezone.utc)
@@ -122,9 +130,89 @@ def _safe_filename(filename: str) -> str:
     return safe[:120] or "upload"
 
 
-def _replace_document_chunks(db: Session, document: Document, content: str) -> None:
+def _replace_document_blocks(
+    db: Session,
+    document: Document,
+    parsed: ParsedTranscript,
+) -> list[TranscriptBlockRecord]:
+    existing = list(
+        db.scalars(
+            select(TranscriptBlockRecord)
+            .where(TranscriptBlockRecord.document_id == document.id)
+            .order_by(TranscriptBlockRecord.block_index)
+        ).all()
+    )
+    by_index = {value.block_index: value for value in existing}
+    retained_indexes: set[int] = set()
+    values: list[TranscriptBlockRecord] = []
+
+    for block in parsed.blocks:
+        retained_indexes.add(block.block_index)
+        value = by_index.get(block.block_index)
+        if value is None:
+            value = TranscriptBlockRecord(
+                id=str(uuid4()),
+                document_id=document.id,
+                block_index=block.block_index,
+                text=block.text,
+                start_char=block.start_char,
+                end_char=block.end_char,
+                parser_name=parsed.parser_name,
+                parser_version=parsed.parser_version,
+            )
+        value.kind = "speech"
+        value.speaker = block.speaker
+        value.location = block.location
+        value.text = block.text
+        value.start_char = block.start_char
+        value.end_char = block.end_char
+        value.start_ms = block.start_ms
+        value.end_ms = block.end_ms
+        value.parser_name = parsed.parser_name
+        value.parser_version = parsed.parser_version
+        value.source_metadata = block.source_metadata
+        db.add(value)
+        values.append(value)
+
+    for value in existing:
+        if value.block_index not in retained_indexes:
+            db.delete(value)
+
+    db.flush()
+    return values
+
+
+def _replace_document_chunks(
+    db: Session,
+    document: Document,
+    parsed: ParsedTranscript,
+    blocks: list[TranscriptBlockRecord],
+) -> None:
     db.execute(delete(Chunk).where(Chunk.document_id == document.id))
-    for text_chunk in chunk_text(content):
+    if blocks:
+        for chunk_index, block in enumerate(blocks):
+            db.add(
+                Chunk(
+                    document_id=document.id,
+                    project_id=document.project_id,
+                    text=block.text,
+                    embedding=embed_text(block.text),
+                    chunk_index=chunk_index,
+                    start_char=block.start_char,
+                    end_char=block.end_char,
+                    extra_metadata={
+                        "source": "structured_transcript",
+                        "block_id": block.id,
+                        "speaker": block.speaker,
+                        "timestamp": block.location,
+                        "start_ms": block.start_ms,
+                        "end_ms": block.end_ms,
+                    },
+                )
+            )
+        return
+
+    for text_chunk in chunk_text(parsed.content):
         db.add(
             Chunk(
                 document_id=document.id,

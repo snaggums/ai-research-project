@@ -19,6 +19,7 @@ from app.models.transcript_coding import (
     RecordCode,
     TranscriptHighlight,
 )
+from app.models.transcript_block import TranscriptBlockRecord
 from app.schemas.research_session import SessionReference
 from app.schemas.transcript_coding import (
     HighlightCodesUpdate,
@@ -598,6 +599,32 @@ def content_checksum(content: str) -> str:
 def _coding_blocks(db: Session, document: Document) -> list[TranscriptCodingBlock]:
     content = document.content or ""
     chunks = list(db.scalars(select(Chunk).where(Chunk.document_id == document.id).order_by(Chunk.chunk_index)).all())
+    stored = list(
+        db.scalars(
+            select(TranscriptBlockRecord)
+            .where(TranscriptBlockRecord.document_id == document.id)
+            .order_by(TranscriptBlockRecord.block_index)
+        ).all()
+    )
+    if stored:
+        chunks_by_block: dict[str, Chunk] = {}
+        for chunk in chunks:
+            block_id = (chunk.extra_metadata or {}).get("block_id")
+            if block_id and str(block_id) not in chunks_by_block:
+                chunks_by_block[str(block_id)] = chunk
+        return [
+            TranscriptCodingBlock(
+                id=value.id,
+                chunk_id=chunks_by_block[value.id].id if value.id in chunks_by_block else None,
+                speaker=value.speaker or "Transcript",
+                location=value.location or f"Passage {value.block_index + 1}",
+                text=value.text,
+                start_char=value.start_char,
+                end_char=value.end_char,
+            )
+            for value in stored
+        ]
+
     blocks: list[TranscriptCodingBlock] = []
     for chunk in chunks:
         start = chunk.start_char if chunk.start_char is not None else content.find(chunk.text)
@@ -652,6 +679,26 @@ def _validate_anchor(db: Session, context: WorkspaceContext, payload: Transcript
         )
         if chunk is None:
             raise _error(422, "invalid_transcript_selection", "The selected Transcript block is not part of the Primary Transcript.")
+    if payload.block_id:
+        stored_blocks = list(
+            db.scalars(
+                select(TranscriptBlockRecord).where(
+                    TranscriptBlockRecord.document_id == context.document.id
+                )
+            ).all()
+        )
+        if stored_blocks:
+            block = next((value for value in stored_blocks if value.id == payload.block_id), None)
+            if (
+                block is None
+                or payload.start_char < block.start_char
+                or payload.end_char > block.end_char
+            ):
+                raise _error(
+                    422,
+                    "invalid_transcript_selection",
+                    "The selected Transcript passage is outside its source block.",
+                )
     return TranscriptAnchor(
         document_id=context.document.id,
         chunk_id=payload.chunk_id,
@@ -908,17 +955,21 @@ def _build_suggestion(
         if end <= start:
             continue
         excerpt = content[start:end]
+        metadata = chunk.extra_metadata or {}
         speaker, _ = _speaker_and_text(excerpt)
+        speaker = str(metadata.get("speaker") or speaker)
         evidence.append(
             CodeSuggestionEvidence(
                 document_id=document.id,
                 chunk_id=chunk.id,
-                block_id=chunk.id,
+                block_id=str(metadata.get("block_id") or chunk.id),
                 start_char=start,
                 end_char=end,
                 excerpt_snapshot=excerpt,
                 speaker=speaker,
-                location=str((chunk.extra_metadata or {}).get("timestamp") or f"Excerpt {chunk.chunk_index + 1}"),
+                location=str(metadata.get("timestamp") or f"Excerpt {chunk.chunk_index + 1}"),
+                start_ms=metadata.get("start_ms"),
+                end_ms=metadata.get("end_ms"),
                 content_checksum=checksum,
                 display_order=index,
             )

@@ -53,6 +53,7 @@ def retry_document_processing(document_id: str, background_tasks: BackgroundTask
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
 
+    _guard_coding_dependencies(db, document.id)
     document.status = "uploaded"
     document.error_message = None
     document.processed_at = None
@@ -110,6 +111,7 @@ def get_session_document(project_id: str, session_id: str, document_id: str, db:
 def retry_session_document(project_id: str, session_id: str, document_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
+    _guard_coding_dependencies(db, document.id)
     document.status = "uploaded"
     document.error_message = None
     document.processed_at = None

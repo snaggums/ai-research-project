@@ -18,6 +18,7 @@ from app.models.transcript_coding import (
     RecordCode,
     TranscriptHighlight,
 )
+from app.models.transcript_block import TranscriptBlockRecord
 
 __all__ = [
     "AISettings", "Base", "Chunk", "Conversation", "ConversationMessage",
@@ -26,6 +27,7 @@ __all__ = [
     "RecordSynthesisItemSource", "RecordSynthesisRun", "RecordSynthesisSource",
     "CodeSuggestion", "CodeSuggestionEvidence", "CodeSuggestionRun",
     "HighlightCodeAssignment", "RecordCode", "TranscriptHighlight",
+    "TranscriptBlockRecord",
     "ResearchSession", "SessionParticipant", "SessionRelationship", "SessionReport",
     "SessionRecord", "SessionReportEvidence", "SessionReportItem", "Theme", "ThemeEvidence",
 ]
