@@ -319,7 +319,11 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
         },
       });
       expect(upload.ok()).toBeTruthy();
-      expect((await request.post(`${root}/themes/generate`)).ok()).toBeTruthy();
+      const themesResponse = await request.post(`${root}/themes/generate`);
+      expect(
+        themesResponse.ok(),
+        `Theme generation failed (${themesResponse.status()}): ${await themesResponse.text()}`,
+      ).toBeTruthy();
       expect((await request.post(`${root}/report/generate`)).ok()).toBeTruthy();
       expect((await request.patch(`${root}/report`, { data: { status: "approved" } })).ok()).toBeTruthy();
     }
@@ -336,7 +340,24 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
     await firstReviewButton.click();
     const firstItem = page.locator("article").filter({ has: page.getByRole("heading", { name: firstItemTitle }) });
     await expect(firstItem.getByText("Researcher Reviewed", { exact: true })).toBeVisible();
-    await firstItem.getByRole("button", { name: "Open evidence" }).click();
+
+    await page.goto("/records/record-1?view=knowledge");
+    await expect(page.getByRole("heading", { level: 1, name: "Record 1" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
+    const search = page.getByRole("searchbox", { name: "Search" });
+    await search.fill(firstItemTitle);
+    await expect(page.getByRole("status").getByText("1 item", { exact: true })).toBeVisible();
+    const knowledgeItem = page.locator("article").filter({ hasText: firstItemTitle });
+    await expect(knowledgeItem).toBeVisible();
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(search).toBeFocused();
+
+    await knowledgeItem.getByRole("button").first().click();
+    await expect(knowledgeItem.getByRole("heading", { name: "Evidence preview" })).toBeVisible();
+    await expect(knowledgeItem.getByRole("button", { name: "Open evidence" })).toBeVisible();
+    await knowledgeItem.getByRole("button", { name: "Approve item" }).click();
+    await expect(knowledgeItem.getByText("Approved", { exact: true })).toBeVisible();
+    await knowledgeItem.getByRole("button", { name: "Open evidence" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeVisible();
     await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
   } finally {

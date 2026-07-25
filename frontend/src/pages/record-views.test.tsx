@@ -20,8 +20,39 @@ describe("Record page compositions", () => {
     expect(screen.getByRole("heading", { name: "Synthesis scope" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Related Sessions" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate synthesis" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate synthesis" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review synthesis" })).toBeInTheDocument();
+  });
+
+  it("composes the approved Knowledge view from every latest synthesis item", async () => {
+    const user = userEvent.setup();
+    const onOpenEvidence = vi.fn();
+    const onStatusChange = vi.fn();
+    const onViewChange = vi.fn();
+    render(
+      <RecordDetailView
+        activeView="knowledge"
+        onGenerate={() => undefined}
+        onOpenEvidence={onOpenEvidence}
+        onStatusChange={onStatusChange}
+        onViewChange={onViewChange}
+        record={recordSummaries[0]}
+        scope={readyRecordScope}
+        sessions={[]}
+        synthesis={recordSynthesis}
+      />,
+    );
+    expect(screen.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("9 items")).toBeInTheDocument();
+    expect(screen.getAllByText("AI Generated")).not.toHaveLength(0);
+    expect(screen.getAllByText("Superseded")).not.toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: /Review evidence links for approved items/ }));
+    await user.click(screen.getByRole("button", { name: "Open evidence" }));
+    expect(onOpenEvidence).toHaveBeenCalledWith("record-action-evidence-links");
+    await user.click(screen.getByRole("button", { name: "Approve item" }));
+    expect(onStatusChange).toHaveBeenCalledWith("record-action-evidence-links", "approved");
+    await user.click(screen.getByRole("tab", { name: "Overview" }));
+    expect(onViewChange).toHaveBeenCalledWith("overview");
   });
 
   it("prevents synthesis when fewer than two Session Reports are eligible", () => {

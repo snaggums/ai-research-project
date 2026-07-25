@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { delay, http, HttpResponse } from "msw";
 
+import { createAppQueryClient } from "@/app/query-client";
 import { appRoutes } from "@/app/router";
 import { AppProviders } from "@/app/providers";
 import { API_BASE_URL, server } from "@/test/server";
@@ -395,13 +396,50 @@ describe("application router foundation", () => {
     await user.click(await screen.findByRole("link", { name: "Open Record 1" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Record 1" })).toBeInTheDocument();
     expect(within(globalNavigation).getByRole("link", { name: "Record 1" })).toHaveAttribute("aria-current", "page");
-      await user.click(screen.getByRole("button", { name: "Review synthesis" }));
-      expect(await screen.findByRole("heading", { level: 1, name: "Record 1 synthesis" })).toBeInTheDocument();
-      await user.click((await screen.findAllByRole("button", { name: "Mark reviewed" }))[0]);
-      expect(await screen.findAllByText("Researcher Reviewed")).not.toHaveLength(0);
-      await user.click((await screen.findAllByRole("button", { name: /Open evidence/ }))[0]);
+    await user.click(screen.getByRole("tab", { name: "Knowledge" }));
+    expect(new URLSearchParams(router.state.location.search).get("view")).toBe("knowledge");
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "knowledge");
+    expect(await screen.findByText("3 items")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Requirements" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Overview" }));
+    expect(router.state.location.search).toBe("");
+    await user.click(screen.getByRole("button", { name: "Review synthesis" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Record 1 synthesis" })).toBeInTheDocument();
+    await user.click((await screen.findAllByRole("button", { name: "Mark reviewed" }))[0]);
+    expect(await screen.findAllByText("Researcher Reviewed")).not.toHaveLength(0);
+    await user.click((await screen.findAllByRole("button", { name: /Open evidence/ }))[0]);
     expect(await screen.findByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeInTheDocument();
     expect(router.state.location.pathname).toContain("/records/record-1/synthesis/items/");
+  });
+
+  it("keeps the Record shell available when Knowledge cannot load", async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}/records/record-1/synthesis/latest`,
+        () => HttpResponse.json({ detail: "Knowledge is temporarily unavailable." }, { status: 500 }),
+      ),
+    );
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=knowledge"],
+    });
+    const queryClient = createAppQueryClient();
+    queryClient.setDefaultOptions({
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: false,
+        staleTime: 30_000,
+      },
+      mutations: { retry: false },
+    });
+    render(<AppProviders queryClient={queryClient}><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Record 1" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("Requirements could not be loaded")).toBeInTheDocument();
+    expect(screen.getByText("Decisions could not be loaded")).toBeInTheDocument();
+    expect(screen.getByText("Action items could not be loaded")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Retry" })).toHaveLength(3);
+    expect(screen.queryByText("Checkout must confirm payment success")).not.toBeInTheDocument();
   });
 
   it("asks a Session-scoped question and renders cited transcript context", async () => {

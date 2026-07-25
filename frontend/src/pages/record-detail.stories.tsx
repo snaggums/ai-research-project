@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 
 import { ApplicationShell } from "@/components/application";
 import { toSessionSummary } from "@/adapters/sessions";
@@ -26,6 +27,31 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Ready: Story = {};
+export const KnowledgeReady: Story = {
+  args: {
+    activeView: "knowledge",
+    onOpenEvidence: fn(),
+    onStatusChange: fn(),
+  },
+};
+export const KnowledgeLoading: Story = {
+  args: { activeView: "knowledge", knowledgeState: "loading", synthesis: undefined },
+};
+export const KnowledgeEmpty: Story = {
+  args: {
+    activeView: "knowledge",
+    knowledgeState: "empty",
+    synthesis: { ...recordSynthesis, items: [] },
+  },
+};
+export const KnowledgeError: Story = {
+  args: {
+    activeView: "knowledge",
+    knowledgeState: "error",
+    onRetryKnowledge: () => undefined,
+    synthesis: undefined,
+  },
+};
 export const InsufficientData: Story = { args: { record: recordSummaries[1], scope: insufficientRecordScope, sessions: sessionApiFixtures.slice(0, 1).map(toSessionSummary), synthesis: undefined } };
 export const Loading: Story = { args: { record: undefined, routeState: "loading", scope: undefined, sessions: [] } };
 export const Error: Story = { args: { onRetry: () => undefined, record: undefined, routeState: "error", scope: undefined, sessions: [] } };
