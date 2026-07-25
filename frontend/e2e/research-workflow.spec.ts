@@ -117,8 +117,10 @@ test("researcher completes the V2 Session evidence workflow", async ({ page, req
     expect(Math.abs((inputBox!.y + inputBox!.height / 2) - (buttonBox!.y + buttonBox!.height / 2))).toBeLessThanOrEqual(1);
     await transcriptSearch.fill("navigation confusing");
     await searchButton.click();
-    await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
-    await page.getByRole("link", { name: "Open transcript context" }).first().click();
+    const searchResultLink = page.getByRole("link", { name: "Open transcript context" }).first();
+    const searchResult = searchResultLink.locator("xpath=ancestor::article");
+    await expect(searchResult).toContainText(/dashboard navigation was confusing/i);
+    await searchResultLink.click();
     await expect(page.getByRole("heading", { name: "Transcript context", level: 1 })).toBeVisible();
     await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
 
@@ -211,7 +213,7 @@ test("researcher codes structured DOCX turns and preserves the workflow across r
     await expect(page.getByText(codeName, { exact: true }).first()).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Transcript coding" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Transcript coding", exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "Accepted highlights" }).click();
     await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(1)");
     await expect(page.getByText(codeName, { exact: true }).first()).toBeVisible();
@@ -232,7 +234,7 @@ test("researcher codes structured DOCX turns and preserves the workflow across r
     await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(0)");
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Transcript coding" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Transcript coding", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(0)");
     await expect(page.getByText(templatedTranscript.firstTurn, { exact: true })).toHaveCount(1);
   } finally {
