@@ -1,8 +1,12 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import {
+  createTemplatedTranscriptDocx,
+  templatedTranscript,
+} from "./fixtures/templated-transcript-docx";
 
 
 const apiBaseUrl = "http://127.0.0.1:8001/api";
@@ -113,8 +117,10 @@ test("researcher completes the V2 Session evidence workflow", async ({ page, req
     expect(Math.abs((inputBox!.y + inputBox!.height / 2) - (buttonBox!.y + buttonBox!.height / 2))).toBeLessThanOrEqual(1);
     await transcriptSearch.fill("navigation confusing");
     await searchButton.click();
-    await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
-    await page.getByRole("link", { name: "Open transcript context" }).first().click();
+    const searchResultLink = page.getByRole("link", { name: "Open transcript context" }).first();
+    const searchResult = searchResultLink.locator("xpath=ancestor::article");
+    await expect(searchResult).toContainText(/dashboard navigation was confusing/i);
+    await searchResultLink.click();
     await expect(page.getByRole("heading", { name: "Transcript context", level: 1 })).toBeVisible();
     await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
 
@@ -142,6 +148,97 @@ test("researcher completes the V2 Session evidence workflow", async ({ page, req
     await expect(page.getByRole("heading", { name: "Transcript context", level: 1 })).toBeVisible();
   } finally {
     await deleteProject(request, projectId);
+  }
+});
+
+test("researcher codes structured DOCX turns and preserves the workflow across refresh", async ({ page, request }, testInfo) => {
+  const project = await createProject(request, `Transcript Coding Project ${Date.now()}`);
+  const codeName = "Caregiver account context";
+
+  try {
+    const sessionResponse = await request.post(`${apiBaseUrl}/projects/${project.id}/sessions`, {
+      data: {
+        title: "Structured transcript coding interview",
+        type: "interview",
+        participant_ids: [],
+        related_record_ids: ["record-1"],
+      },
+    });
+    expect(sessionResponse.ok()).toBeTruthy();
+    const researchSession = (await sessionResponse.json()) as { id: string };
+    const transcriptPath = testInfo.outputPath("S003_Simplified_Transcript.docx");
+    await writeFile(transcriptPath, createTemplatedTranscriptDocx());
+
+    await page.goto(`/projects/${project.id}/sessions/${researchSession.id}/transcript`);
+    await page.locator('input[type="file"]').setInputFiles(transcriptPath);
+    const uploadResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/projects/${project.id}/sessions/${researchSession.id}/documents`)
+        && response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Upload transcript" }).click();
+    expect((await uploadResponse).ok()).toBeTruthy();
+    await expect(page.getByText("Analysis complete", { exact: true })).toBeVisible({ timeout: 30_000 });
+
+    const firstPassage = page.getByText(templatedTranscript.firstTurn, { exact: true });
+    const firstBlock = firstPassage.locator("xpath=ancestor::article");
+    const secondBlock = page
+      .getByText(templatedTranscript.secondTurn, { exact: true })
+      .locator("xpath=ancestor::article");
+    await expect(firstBlock).toContainText("Maya Chen");
+    await expect(firstBlock).toContainText("0:00");
+    await expect(secondBlock).toContainText("Tanya");
+    await expect(secondBlock).toContainText("3:06");
+    await expect(page.getByText(/started transcription/i)).toHaveCount(0);
+    await expect(page.getByText(/stopped transcription/i)).toHaveCount(0);
+
+    await firstPassage.click();
+    await page.getByRole("button", { name: "Highlight", exact: true }).click();
+    const uncodedTab = page.getByRole("tab", { name: "Uncoded highlights" });
+    await expect(uncodedTab).toContainText("(1)");
+    await expect(page.getByRole("heading", { name: "Uncoded highlights" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Apply code" }).click();
+    await page.getByRole("button", { name: "Create a new code" }).click();
+    await page.getByLabel("Code name").fill(codeName);
+    await page.getByLabel("Description").fill("Evidence about acting in another person's account.");
+    await page.getByRole("button", { name: "Create code" }).click();
+    await expect(page.getByRole("option", { name: new RegExp(codeName) })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("button", { name: "Apply" }).click();
+
+    const acceptedTab = page.getByRole("tab", { name: "Accepted highlights" });
+    await expect(acceptedTab).toContainText("(1)");
+    await expect(uncodedTab).toContainText("(0)");
+    await expect(page.getByRole("heading", { name: "Accepted highlights" })).toBeVisible();
+    await expect(page.getByText(codeName, { exact: true }).first()).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Transcript coding", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Accepted highlights" }).click();
+    await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(1)");
+    await expect(page.getByText(codeName, { exact: true }).first()).toBeVisible();
+
+    const deleteHighlight = page.getByRole("button", { name: "Delete highlight from Maya Chen, 0:00" });
+    await deleteHighlight.click();
+    let deleteDialog = page.getByRole("dialog", { name: "Delete highlight?" });
+    await expect(deleteDialog).toHaveCount(1);
+    await deleteDialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByText(templatedTranscript.firstTurn, { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(1)");
+
+    await deleteHighlight.click();
+    deleteDialog = page.getByRole("dialog", { name: "Delete highlight?" });
+    await expect(deleteDialog).toHaveCount(1);
+    await deleteDialog.getByRole("button", { name: "Delete highlight" }).click();
+    await expect(deleteDialog).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(0)");
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Transcript coding", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Accepted highlights" })).toContainText("(0)");
+    await expect(page.getByText(templatedTranscript.firstTurn, { exact: true })).toHaveCount(1);
+  } finally {
+    await deleteProject(request, project.id);
   }
 });
 

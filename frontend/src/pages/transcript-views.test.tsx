@@ -37,6 +37,17 @@ describe("Transcript page compositions", () => {
     expect(screen.getByRole("heading", { name: "Transcripts" })).toBeInTheDocument();
   });
 
+  it("surfaces a blocked Transcript dependency action", () => {
+    render(
+      <SessionTranscriptWorkspaceView
+        {...defaultProps}
+        actionError="This Transcript contains Highlights or Code Suggestions and cannot be deleted."
+      />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("cannot be deleted");
+    expect(screen.getByText("Transcript action could not be completed")).toBeInTheDocument();
+  });
+
   it("renders the focused source passage and named moderator", () => {
     const context = toTranscriptContext({ document: transcriptApiFixtures[0], result: transcriptSearchFixtures[0], passages: transcriptApiFixtures[0].blocks, focused_passage_id: "passage-2" });
     render(<TranscriptContextView context={context} projectId="alpha-project" projectName="Alpha Project" returnHref="/projects/alpha-project/sessions/mobile-checkout-test/transcript" sessionId="mobile-checkout-test" sessionTitle="Mobile checkout test" />);

@@ -14,6 +14,7 @@ import type { TranscriptContext, TranscriptDocumentDetail, TranscriptSearchResul
 import { formatTranscriptDate, formatTranscriptSize, transcriptFormat } from "@/components/research/transcript-presentation";
 
 export interface SessionTranscriptWorkspaceViewProps {
+  actionError?: string;
   deletePendingId?: string;
   documents: TranscriptDocumentDetail[];
   errorMessage?: string;
@@ -36,7 +37,7 @@ export interface SessionTranscriptWorkspaceViewProps {
   uploading?: boolean;
 }
 
-export function SessionTranscriptWorkspaceView({ deletePendingId, documents, errorMessage, onDelete, onOpenContext, onRetry, onRetryLoad, onSearch, onSetPrimary, onUpload, projectId, retryingId, searchError, searchQuery = "", searchResults, searching = false, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
+export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, documents, errorMessage, onDelete, onOpenContext, onRetry, onRetryLoad, onSearch, onSetPrimary, onUpload, projectId, retryingId, searchError, searchQuery = "", searchResults, searching = false, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
   const [selectedFile, setSelectedFile] = React.useState<File>();
   const [showUploader, setShowUploader] = React.useState(false);
   const [viewingId, setViewingId] = React.useState<string>();
@@ -62,6 +63,7 @@ export function SessionTranscriptWorkspaceView({ deletePendingId, documents, err
   if (!documents.length || showUploader) return <div className="grid gap-4"><div className="flex justify-center"><TranscriptUploader file={selectedFile} onChooseDifferentFile={() => setSelectedFile(undefined)} onFilesSelected={(files) => setSelectedFile(files[0])} onRemove={() => setSelectedFile(undefined)} onRetryUpload={() => void submitUpload()} onUpload={() => void submitUpload()} progress={50} requestError={uploadError} state={uploaderState} /></div>{documents.length ? <Button className="justify-self-center" onClick={() => setShowUploader(false)} size="small" variant="text">Cancel</Button> : null}</div>;
   return <section aria-labelledby="transcripts-heading" className="grid gap-4">
     <header className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold" id="transcripts-heading">Transcripts</h2><Button onClick={() => { setSelectedFile(undefined); setShowUploader(true); }} size="small" variant="gray-subtle"><Upload aria-hidden="true" className="h-4 w-4" />Upload transcript</Button></header>
+    {actionError ? <Alert message={actionError} size="large" title="Transcript action could not be completed" tone="error" /> : null}
     <div className="grid gap-4">{documents.map((document) => <TranscriptDocumentItem document={document} href="#view-transcript" isPrimary={document.isPrimary} key={document.id} onDelete={deletePendingId === document.id ? undefined : () => onDelete(document.id)} onRetry={() => onRetry(document.id)} onSetPrimary={() => onSetPrimary(document.id)} retrying={retryingId === document.id} viewLabel="View transcript" onClickCapture={(event) => { const anchor = (event.target as HTMLElement).closest("a[href='#view-transcript']"); if (anchor) { event.preventDefault(); setViewingId(document.id); } }} />)}</div>
     {primary ? <form className="grid gap-2 sm:grid-cols-[1fr_auto]" onSubmit={(event) => { event.preventDefault(); if (query.trim()) onSearch(primary.id, query); }}><SearchField hint="Find relevant source excerpts by speaker, phrase, or topic." label="Search this transcript" onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search this transcript" value={query} /><Button className="sm:mt-7" disabled={!query.trim() || searching} size="large" type="submit"><Search aria-hidden="true" className="h-4 w-4" />{searching ? "Searching…" : "Search transcript"}</Button></form> : null}
     {searchError ? <Alert message={searchError} size="large" title="Transcript search failed" tone="error" /> : null}

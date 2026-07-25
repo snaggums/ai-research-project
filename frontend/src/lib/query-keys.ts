@@ -17,6 +17,8 @@ export const queryKeys = {
     ["projects", projectId, "sessions", sessionId, "documents", documentId] as const,
   transcriptContext: (projectId: EntityId, sessionId: EntityId, documentId: EntityId, resultId: EntityId) =>
     ["projects", projectId, "sessions", sessionId, "documents", documentId, "context", resultId] as const,
+  transcriptCoding: (projectId: EntityId, sessionId: EntityId) =>
+    ["projects", projectId, "sessions", sessionId, "coding"] as const,
   sessionThemes: (projectId: EntityId, sessionId: EntityId) =>
     ["projects", projectId, "sessions", sessionId, "themes"] as const,
   sessionReport: (projectId: EntityId, sessionId: EntityId) =>

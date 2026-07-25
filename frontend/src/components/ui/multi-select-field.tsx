@@ -29,6 +29,7 @@ export interface MultiSelectFieldProps {
   required?: boolean;
   showChips?: boolean;
   showDisclosureIcon?: boolean;
+  selectedTextMaxLines?: 1 | 2;
   value?: string[];
 }
 
@@ -51,6 +52,7 @@ function MultiSelectField({
   required,
   showChips = true,
   showDisclosureIcon = true,
+  selectedTextMaxLines = 1,
   value,
 }: MultiSelectFieldProps) {
   const generatedId = React.useId();
@@ -122,7 +124,10 @@ function MultiSelectField({
         >
           <span
             className={cn(
-              "block min-w-0 flex-1 truncate",
+              "min-w-0 flex-1 overflow-hidden",
+              selectedTextMaxLines === 2
+                ? "line-clamp-2 [overflow-wrap:anywhere]"
+                : "block truncate",
               selectedOptions.length === 0 && "text-[var(--air-color-text-secondary)]",
             )}
             title={selectedText || undefined}

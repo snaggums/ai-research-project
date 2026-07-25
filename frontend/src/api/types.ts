@@ -148,6 +148,114 @@ export type TranscriptContext = {
   focused_passage_id: string;
 };
 
+export type TranscriptCodingBlock = TranscriptBlock & {
+  chunk_id: string | null;
+  start_char: number;
+  end_char: number;
+};
+
+export type TranscriptAnchor = {
+  document_id: string;
+  chunk_id: string | null;
+  block_id: string | null;
+  start_char: number;
+  end_char: number;
+  excerpt_snapshot: string;
+  speaker: string | null;
+  location: string | null;
+  start_ms: number | null;
+  end_ms: number | null;
+  content_checksum: string;
+};
+
+export type RecordCode = {
+  id: string;
+  record_id: string;
+  name: string;
+  description: string | null;
+  status: "active" | "archived";
+  created_at: string;
+  updated_at: string;
+};
+
+export type TranscriptHighlight = {
+  id: string;
+  project_id: string;
+  session_id: string;
+  document_id: string;
+  anchor: TranscriptAnchor;
+  origin: "researcher" | "ai-suggestion";
+  codes: RecordCode[];
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export type TranscriptCodeSuggestionEvidence = {
+  id: string;
+  anchor: TranscriptAnchor;
+  display_order: number;
+};
+
+export type TranscriptCodeSuggestion = {
+  id: string;
+  run_id: string;
+  record_id: string;
+  proposed_name: string;
+  proposed_description: string | null;
+  confidence: number | null;
+  status: "awaiting-review" | "accepted" | "rejected";
+  was_edited: boolean;
+  accepted_code_id: string | null;
+  reviewed_at: string | null;
+  evidence: TranscriptCodeSuggestionEvidence[];
+};
+
+export type TranscriptCodingWorkspace = {
+  project_id: string;
+  session_id: string;
+  document_id: string;
+  record: SessionReference | null;
+  transcript: {
+    content_checksum: string;
+    blocks: TranscriptCodingBlock[];
+  };
+  suggestion_run: {
+    id: string | null;
+    status: "idle" | "queued" | "processing" | "complete" | "failed";
+    error_detail: string | null;
+  };
+  codes: RecordCode[];
+  highlights: TranscriptHighlight[];
+  suggestions: TranscriptCodeSuggestion[];
+};
+
+export type CreateTranscriptHighlightPayload = {
+  anchor: Omit<TranscriptAnchor, "document_id" | "chunk_id" | "start_ms" | "end_ms"> & {
+    chunk_id?: string | null;
+    start_ms?: number | null;
+    end_ms?: number | null;
+  };
+  code_ids: string[];
+  new_code: { name: string; description?: string | null } | null;
+};
+
+export type UpdateTranscriptHighlightPayload = {
+  code_ids: string[];
+};
+
+export type CreateRecordCodePayload = {
+  name: string;
+  description?: string | null;
+};
+
+export type UpdateRecordCodePayload = Partial<CreateRecordCodePayload>;
+
+export type UpdateTranscriptCodeSuggestionPayload = {
+  proposed_name?: string;
+  proposed_description?: string | null;
+};
+
 export type SearchResult = {
   chunk_id: string;
   document_id: string;

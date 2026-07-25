@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { delay, http, HttpResponse } from "msw";
@@ -30,7 +30,80 @@ describe("application router foundation", () => {
     const sessionNavigation = screen.getByRole("navigation", { name: "Session sections" });
     expect(within(sessionNavigation).getByRole("link", { name: "Transcript" })).toHaveAttribute("aria-current", "page");
     expect(await screen.findByRole("searchbox", { name: "Search this transcript" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Suggestions awaiting review" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Search Alpha Project" })).not.toBeInTheDocument();
+  });
+
+  it("persists Transcript Coding highlights and suggestion review in the live Session route", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/transcript"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
+
+    const suggestion = screen
+      .getByRole("button", { name: /Navigation terminology Labels for uploaded research/ })
+      .closest("article");
+    if (!suggestion) throw new Error("Expected the Navigation terminology suggestion card.");
+    await user.click(within(suggestion).getByRole("button", { name: "Accept" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveTextContent("(1)");
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
+    });
+
+    await user.click(screen.getByText("Where would you expect to find uploaded research after a session?"));
+    await user.click(screen.getByRole("button", { name: "Highlight" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(1)");
+    });
+
+    await user.click(screen.getByRole("button", { name: "Apply code" }));
+    await user.click(screen.getByRole("option", { name: /Navigation terminology/ }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
+      expect(screen.getByRole("heading", { name: "Accepted highlights" })).toBeInTheDocument();
+    });
+
+    await act(() => router.navigate("/projects/alpha-project/sessions/mobile-checkout-test/overview"));
+    await screen.findByRole("link", { name: "Transcript" });
+    await act(() => router.navigate("/projects/alpha-project/sessions/mobile-checkout-test/transcript"));
+
+    expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveTextContent("(1)");
+      expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
+    });
+  });
+
+  it("persists Transcript Coding view and status controls in route search parameters", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/transcript"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Highlight list" }));
+    expect(router.state.location.search).toContain("view=list");
+
+    await user.click(screen.getByRole("tab", { name: "Uncoded highlights" }));
+    expect(router.state.location.search).toContain("panel=accepted");
+    expect(router.state.location.search).toContain("highlight_status=uncoded");
+
+    await act(() => router.navigate(-1));
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveAttribute("aria-selected", "true");
+    });
+    expect(router.state.location.search).toContain("view=list");
   });
 
   it("opens a retrieved excerpt in the Transcript context route", async () => {

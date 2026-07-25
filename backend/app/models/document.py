@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.db.base import Base
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, JSON, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -10,6 +10,7 @@ if False:
     from app.models.chunk import Chunk
     from app.models.project import Project
     from app.models.research_session import ResearchSession
+    from app.models.transcript_block import TranscriptBlockRecord
 
 
 class Document(Base):
@@ -34,6 +35,9 @@ class Document(Base):
     mime_type: Mapped[str | None] = mapped_column(Text, nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parser_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extraction_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="uploaded", server_default="uploaded")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(
@@ -50,4 +54,10 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    transcript_blocks: Mapped[list["TranscriptBlockRecord"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="TranscriptBlockRecord.block_index",
     )

@@ -11,6 +11,7 @@ export interface ChipProps extends Omit<React.HTMLAttributes<HTMLDivElement>, "o
   onSelectedChange?: (selected: boolean) => void;
   removable?: boolean;
   removeLabel?: string;
+  selectable?: boolean;
   selected?: boolean;
   size?: "small" | "large";
 }
@@ -27,6 +28,7 @@ const Chip = React.forwardRef<HTMLDivElement, ChipProps>(
       onSelectedChange,
       removable = true,
       removeLabel,
+      selectable = true,
       selected,
       size = "small",
       ...props
@@ -59,21 +61,34 @@ const Chip = React.forwardRef<HTMLDivElement, ChipProps>(
         )}
         {...props}
       >
-        <button
-          type="button"
-          data-control="chip"
-          className={cn(
-            "flex h-full min-w-0 items-center gap-1 rounded-l-full font-medium outline-none",
-            size === "small" ? "pl-2 pr-1 [&_svg]:h-4 [&_svg]:w-4" : "gap-2 pl-3 pr-1 [&_svg]:h-5 [&_svg]:w-5",
-            !removable && (size === "small" ? "rounded-r-full pr-2" : "rounded-r-full pr-3"),
-          )}
-          aria-pressed={isSelected}
-          disabled={disabled}
-          onClick={toggleSelected}
-        >
-          {leadingIcon ? <span aria-hidden="true" className="shrink-0">{leadingIcon}</span> : null}
-          <span className="truncate">{children}</span>
-        </button>
+        {selectable ? (
+          <button
+            type="button"
+            data-control="chip"
+            className={cn(
+              "flex h-full min-w-0 items-center gap-1 rounded-l-full font-medium outline-none",
+              size === "small" ? "pl-2 pr-1 [&_svg]:h-4 [&_svg]:w-4" : "gap-2 pl-3 pr-1 [&_svg]:h-5 [&_svg]:w-5",
+              !removable && (size === "small" ? "rounded-r-full pr-2" : "rounded-r-full pr-3"),
+            )}
+            aria-pressed={isSelected}
+            disabled={disabled}
+            onClick={toggleSelected}
+          >
+            {leadingIcon ? <span aria-hidden="true" className="shrink-0">{leadingIcon}</span> : null}
+            <span className="truncate">{children}</span>
+          </button>
+        ) : (
+          <span
+            className={cn(
+              "flex h-full min-w-0 items-center gap-1 rounded-l-full font-medium",
+              size === "small" ? "pl-2 pr-1 [&_svg]:h-4 [&_svg]:w-4" : "gap-2 pl-3 pr-1 [&_svg]:h-5 [&_svg]:w-5",
+              !removable && (size === "small" ? "rounded-r-full pr-2" : "rounded-r-full pr-3"),
+            )}
+          >
+            {leadingIcon ? <span aria-hidden="true" className="shrink-0">{leadingIcon}</span> : null}
+            <span className="truncate">{children}</span>
+          </span>
+        )}
         {removable ? (
           <button
             type="button"
