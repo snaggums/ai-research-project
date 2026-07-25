@@ -209,9 +209,10 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
           name: code.name,
           description: code.description ?? null,
         }))}
-        onCreateHighlight={(highlight, selection) => {
+        onCreateHighlight={async (highlight, selection) => {
           const payload = createHighlightPayload(highlight, selection);
-          if (payload) createHighlight.mutate(payload);
+          if (!payload) return undefined;
+          return toTranscriptHighlight(await createHighlight.mutateAsync(payload));
         }}
         onDeleteHighlight={(highlightId) => {
           deleteHighlight.mutate(highlightId);

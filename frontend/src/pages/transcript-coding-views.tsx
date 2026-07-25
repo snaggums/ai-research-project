@@ -59,7 +59,10 @@ export interface TranscriptCodingWorkspaceViewProps {
     selection?: TranscriptTextSelectionValue;
   }) => void;
   onCreateCode?: (code: TranscriptCodeValue) => Promise<TranscriptCodeValue | void> | TranscriptCodeValue | void;
-  onCreateHighlight?: (highlight: TranscriptHighlightValue, selection: TranscriptTextSelectionValue) => void;
+  onCreateHighlight?: (
+    highlight: TranscriptHighlightValue,
+    selection: TranscriptTextSelectionValue,
+  ) => Promise<TranscriptHighlightValue | void> | TranscriptHighlightValue | void;
   onDeleteHighlight?: (highlightId: string) => void;
   onEditCode?: (codeId: string, value?: { name: string; description: string }) => void;
   onEditSuggestion?: (suggestionId: string, value?: { codeName: string; description: string }) => void;
@@ -229,6 +232,10 @@ export function TranscriptCodingWorkspaceView({
   });
   const [editingHighlightId, setEditingHighlightId] = React.useState<string>();
   const editingHighlightEvidence = React.useRef<TranscriptHighlightValue["evidence"]>();
+  const pendingHighlightPersistence = React.useRef(
+    new Map<string, Promise<TranscriptHighlightValue | void>>(),
+  );
+  const persistedHighlightIds = React.useRef(new Map<string, string>());
   const [selectedCodeIds, setSelectedCodeIds] = React.useState<string[]>([]);
   const [editor, setEditor] = React.useState<WorkspaceEditorValue>();
   const [rejectedCount, setRejectedCount] = React.useState(0);
@@ -488,8 +495,36 @@ export function TranscriptCodingWorkspaceView({
     };
     setWorkspaceHighlights((current) => [...current, highlight]);
     setActiveReaderBlockId(selection.blockId);
-    onCreateHighlight?.(highlight, selection);
+    const persistence = onCreateHighlight?.(highlight, selection);
+    if (persistence) {
+      const pending = Promise.resolve(persistence)
+        .then((persistedHighlight) => {
+          if (!persistedHighlight) return undefined;
+          persistedHighlightIds.current.set(highlight.id, persistedHighlight.id);
+          setWorkspaceHighlights((current) => current.map((candidate) =>
+            candidate.id === highlight.id ? persistedHighlight : candidate,
+          ));
+          setEditingHighlightId((currentId) =>
+            currentId === highlight.id ? persistedHighlight.id : currentId,
+          );
+          return persistedHighlight;
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          pendingHighlightPersistence.current.delete(highlight.id);
+        });
+      pendingHighlightPersistence.current.set(highlight.id, pending);
+    }
     return highlight;
+  }
+
+  async function resolvePersistedHighlightId(highlightId: string) {
+    const knownId = persistedHighlightIds.current.get(highlightId);
+    if (knownId) return knownId;
+    const pending = pendingHighlightPersistence.current.get(highlightId);
+    if (!pending) return highlightId;
+    const persistedHighlight = await pending;
+    return persistedHighlight?.id;
   }
 
   function handleHighlight(selection: TranscriptTextSelectionValue) {
@@ -519,15 +554,18 @@ export function TranscriptCodingWorkspaceView({
     showTransientPanel("apply");
   }
 
-  function handleApplyCodes(codeIds: string[]) {
+  async function handleApplyCodes(codeIds: string[]) {
     const codes = workspaceCodes.filter((code) => codeIds.includes(code.id));
     if (editingHighlightId) {
+      const optimisticHighlightId = editingHighlightId;
+      const persistedHighlightId = await resolvePersistedHighlightId(optimisticHighlightId);
+      if (!persistedHighlightId) return;
       setWorkspaceHighlights((current) => current.map((highlight) =>
-        highlight.id === editingHighlightId
+        highlight.id === optimisticHighlightId || highlight.id === persistedHighlightId
           ? { ...highlight, codes, status: codes.length > 0 ? "accepted" : "uncoded" }
           : highlight,
       ));
-      onApplyCodes?.({ codeIds, highlightId: editingHighlightId });
+      onApplyCodes?.({ codeIds, highlightId: persistedHighlightId });
     } else if (pendingSelection) {
       const highlight = createManualHighlight(pendingSelection, codes);
       onApplyCodes?.({ codeIds, highlightId: highlight.id, selection: pendingSelection });
