@@ -2,6 +2,10 @@ import * as React from "react";
 import { ArrowLeft, RefreshCw, Sparkles } from "lucide-react";
 
 import { EmptyState, EntityCollection, PageHeader, SharedRouteState } from "@/components/application";
+import {
+  RecordKnowledgeWorkspace,
+  type RecordKnowledgeWorkspaceState,
+} from "@/components/research/record-knowledge-workspace";
 import { RecordListItem } from "@/components/research/record-list-item";
 import { RecordSummary } from "@/components/research/record-summary";
 import { RecordSynthesisResults } from "@/components/research/record-synthesis-results";
@@ -11,6 +15,7 @@ import { TranscriptContextPassage } from "@/components/research/transcript-conte
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs } from "@/components/ui/tabs";
 import type {
   RecordSummary as RecordSummaryValue,
   LifecycleStatus,
@@ -47,12 +52,16 @@ export function RecordsCollectionView({ onOpenRecord, onRetry, records, state = 
 }
 
 export interface RecordDetailViewProps {
+  activeView?: "overview" | "knowledge";
   generating?: boolean;
+  knowledgeState?: RecordKnowledgeWorkspaceState;
   onGenerate?: () => void;
   onOpenSynthesis?: () => void;
   onOpenEvidence?: (itemId: string) => void;
+  onRetryKnowledge?: () => void;
   onStatusChange?: (itemId: string, status: LifecycleStatus) => void;
   onRetry?: () => void;
+  onViewChange?: (view: "overview" | "knowledge") => void;
   record?: RecordSummaryValue;
   routeState?: "ready" | "loading" | "error" | "not-found";
   scope?: RecordSynthesisScope;
@@ -61,30 +70,135 @@ export interface RecordDetailViewProps {
   statusUpdatingItemId?: string;
 }
 
-export function RecordDetailView({ generating = false, onGenerate, onOpenEvidence, onOpenSynthesis, onRetry, onStatusChange, record, routeState = "ready", scope, sessions, statusUpdatingItemId, synthesis }: RecordDetailViewProps) {
+export function RecordDetailView({
+  activeView = "overview",
+  generating = false,
+  knowledgeState,
+  onGenerate,
+  onOpenEvidence,
+  onOpenSynthesis,
+  onRetry,
+  onRetryKnowledge,
+  onStatusChange,
+  onViewChange,
+  record,
+  routeState = "ready",
+  scope,
+  sessions,
+  statusUpdatingItemId,
+  synthesis,
+}: RecordDetailViewProps) {
+  const [knowledgeQuery, setKnowledgeQuery] = React.useState("");
+  const [expandedItemIds, setExpandedItemIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
   if (routeState === "not-found" || !record || !scope) return <SharedRouteState returnHref="/records" state="not-found" />;
   const eligible = scope.includedSessions.length >= scope.minimumEligibleSessions;
+  const resolvedKnowledgeState = knowledgeState
+    ?? (synthesis?.status === "complete"
+      ? synthesis.items.length
+        ? "ready"
+        : "empty"
+      : "empty");
+
+  function toggleKnowledgeItem(itemId: string) {
+    setExpandedItemIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }
+
+  const overview = (
+    <div className="grid gap-6">
+      <RecordSynthesisScopeSummary scope={scope} />
+      <EntityCollection countLabel={`${sessions.length} related ${sessions.length === 1 ? "Session" : "Sessions"}`} title="Related Sessions">
+        {sessions.length ? <div className="grid gap-4">{sessions.map((session) => <SessionCollectionItem href={`/projects/${session.projectId}/sessions/${session.id}/overview`} key={session.id} session={session} />)}</div> : <EmptyState description="Assign this Record from a Session form to include that Session here." title="No related Sessions" />}
+      </EntityCollection>
+      {synthesis?.status === "complete" ? (
+        <div className="grid gap-4">
+          {onOpenSynthesis ? (
+            <div className="flex justify-end">
+              <Button onClick={onOpenSynthesis} size="small" variant="gray-subtle">
+                Review synthesis
+              </Button>
+            </div>
+          ) : null}
+          <RecordSynthesisResults
+            onOpenEvidence={onOpenEvidence}
+            onStatusChange={onStatusChange}
+            statusUpdatingItemId={statusUpdatingItemId}
+            synthesis={synthesis}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const knowledge = (
+    <RecordKnowledgeWorkspace
+      expandedItemIds={expandedItemIds}
+      items={synthesis?.status === "complete" ? synthesis.items : []}
+      onOpenEvidence={onOpenEvidence}
+      onQueryChange={setKnowledgeQuery}
+      onRetry={onRetryKnowledge}
+      onStatusChange={onStatusChange}
+      onToggleItem={toggleKnowledgeItem}
+      query={knowledgeQuery}
+      state={resolvedKnowledgeState}
+      statusUpdatingItemId={statusUpdatingItemId}
+    />
+  );
+
   return <div className="grid gap-6">
     <PageHeader
-      actions={synthesis
-        ? <div className="flex flex-wrap gap-2">{onOpenSynthesis ? <Button onClick={onOpenSynthesis} size="small" variant="gray-subtle">Review synthesis</Button> : null}{onGenerate ? <Button disabled={!eligible || generating} onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{generating ? "Regenerating…" : "Regenerate synthesis"}</Button> : null}</div>
-        : onGenerate
-          ? <Button disabled={!eligible || generating} onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />{generating ? "Generating…" : "Generate synthesis"}</Button>
-          : onOpenSynthesis
-            ? <Button onClick={onOpenSynthesis} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate synthesis</Button>
-            : <Button asChild size="small"><a href={`/records/${record.id}/synthesis`}><Sparkles aria-hidden="true" className="h-4 w-4" />{synthesis ? "Review synthesis" : "Generate synthesis"}</a></Button>}
       breadcrumbs={[{ href: "/records", label: "Records" }, { label: record.name }]}
-      description="Review related Sessions, automatic eligibility, and the latest consolidated research outputs."
+      description="Cross-session synthesis of requirements, decisions, and action items."
       title={record.name}
     />
     <RecordSummary record={record} />
-    <RecordSynthesisScopeSummary scope={scope} />
-    <EntityCollection countLabel={`${sessions.length} related ${sessions.length === 1 ? "Session" : "Sessions"}`} title="Related Sessions">
-      {sessions.length ? <div className="grid gap-4">{sessions.map((session) => <SessionCollectionItem href={`/projects/${session.projectId}/sessions/${session.id}/overview`} key={session.id} session={session} />)}</div> : <EmptyState description="Assign this Record from a Session form to include that Session here." title="No related Sessions" />}
-    </EntityCollection>
-    {synthesis?.status === "complete" ? <RecordSynthesisResults onOpenEvidence={onOpenEvidence} onStatusChange={onStatusChange} statusUpdatingItemId={statusUpdatingItemId} synthesis={synthesis} /> : null}
+    <section className="flex flex-col gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="record-synthesis-action-title">
+      <div>
+        <h2 className="text-sm font-semibold" id="record-synthesis-action-title">
+          {eligible ? "Ready to synthesize" : "More research required"}
+        </h2>
+        <p className="mt-1 text-sm text-[var(--air-color-text-secondary)]">
+          {eligible
+            ? "Uses only eligible Session Reports in this Record."
+            : `At least ${scope.minimumEligibleSessions} eligible Session Reports are required.`}
+        </p>
+      </div>
+      {onGenerate ? (
+        <Button disabled={!eligible || generating} onClick={onGenerate} size="small">
+          <Sparkles aria-hidden="true" className="h-4 w-4" />
+          {generating ? "Generating…" : "Generate synthesis"}
+        </Button>
+      ) : eligible ? (
+        <Button asChild size="small">
+          <a href={`/records/${record.id}/synthesis`}>
+            <Sparkles aria-hidden="true" className="h-4 w-4" />
+            Generate synthesis
+          </a>
+        </Button>
+      ) : (
+        <Button disabled size="small">
+          <Sparkles aria-hidden="true" className="h-4 w-4" />
+          Generate synthesis
+        </Button>
+      )}
+    </section>
+    <Tabs
+      aria-label="Record views"
+      items={[
+        { content: overview, label: "Overview", value: "overview" },
+        { content: knowledge, label: "Knowledge", value: "knowledge" },
+      ]}
+      onValueChange={(value) => onViewChange?.(value as "overview" | "knowledge")}
+      value={activeView}
+    />
   </div>;
 }
 

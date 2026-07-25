@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { toRecordSummary, toRecordSynthesis, toRecordSynthesisScope } from "@/adapters/records";
 import { toSessionSummary } from "@/adapters/sessions";
@@ -36,6 +36,7 @@ export function RecordsCollectionRoute() {
 
 export function RecordDetailRoute() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { recordId = "" } = useParams();
   const record = useRecord(recordId);
   const sessions = useRecordSessions(recordId);
@@ -43,25 +44,44 @@ export function RecordDetailRoute() {
   const synthesis = useLatestRecordSynthesis(recordId);
   const generate = useGenerateRecordSynthesis(recordId);
   const updateItem = useUpdateRecordSynthesisItem(recordId);
-  const errors = [record.error, sessions.error, eligibility.error, synthesis.error];
-  const routeState = errors.some(notFound)
+  const criticalErrors = [record.error, sessions.error, eligibility.error];
+  const routeState = criticalErrors.some(notFound)
     ? "not-found"
-    : record.isPending || sessions.isPending || eligibility.isPending || synthesis.isPending
+    : record.isPending || sessions.isPending || eligibility.isPending
       ? "loading"
-      : errors.some(Boolean)
+      : criticalErrors.some(Boolean)
         ? "error"
         : "ready";
   const synthesisValue = synthesis.data ? toRecordSynthesis(synthesis.data) : undefined;
+  const activeView = searchParams.get("view") === "knowledge" ? "knowledge" : "overview";
+  const knowledgeState = synthesis.isPending
+    ? "loading"
+    : synthesis.isError
+      ? "error"
+      : synthesisValue?.status === "complete" && synthesisValue.items.length
+        ? "ready"
+        : "empty";
   return <RecordDetailView
+    activeView={activeView}
     generating={generate.isPending}
+    knowledgeState={knowledgeState}
     onGenerate={() => generate.mutate()}
     onOpenEvidence={(itemId) => {
       const evidenceId = synthesisValue?.items.find((item) => item.id === itemId)?.evidenceIds[0];
       if (evidenceId) navigate(`/records/${recordId}/synthesis/items/${itemId}/evidence/${evidenceId}`);
     }}
     onRetry={() => { void record.refetch(); void sessions.refetch(); void eligibility.refetch(); void synthesis.refetch(); }}
+    onRetryKnowledge={() => { void synthesis.refetch(); }}
     onStatusChange={(itemId, status) => updateItem.mutate({ itemId, status })}
     onOpenSynthesis={() => navigate(`/records/${recordId}/synthesis`)}
+    onViewChange={(view) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        if (view === "knowledge") next.set("view", "knowledge");
+        else next.delete("view");
+        return next;
+      });
+    }}
     record={record.data ? toRecordSummary(record.data) : undefined}
     routeState={routeState}
     scope={eligibility.data ? toRecordSynthesisScope(eligibility.data) : undefined}
