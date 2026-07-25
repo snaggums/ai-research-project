@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type { TranscriptHighlightValue } from "@/components/research";
 import {
   importedTemplatedTranscriptBlocks,
   transcriptCodingCodes,
@@ -202,11 +203,16 @@ describe("Transcript Coding Workspace filters", () => {
   it("reconciles an optimistic Highlight ID before applying a Code", async () => {
     const user = userEvent.setup();
     const onApplyCodes = vi.fn();
-    const { rerender } = render(
+    let resolveHighlight: (highlight: TranscriptHighlightValue) => void = () => undefined;
+    const onCreateHighlight = vi.fn(() => new Promise<TranscriptHighlightValue>((resolve) => {
+      resolveHighlight = resolve;
+    }));
+    render(
       <TranscriptCodingWorkspaceView
         {...props}
         acceptedHighlights={[]}
         onApplyCodes={onApplyCodes}
+        onCreateHighlight={onCreateHighlight}
         state="no-suggestions"
         suggestions={[]}
       />,
@@ -215,11 +221,12 @@ describe("Transcript Coding Workspace filters", () => {
     await user.click(screen.getByText(transcriptReaderBlocks[0].excerpt));
     await user.click(screen.getByRole("button", { name: "Highlight" }));
     await user.click(screen.getByRole("button", { name: "Apply code" }));
+    await user.click(screen.getByRole("option", { name: /Navigation terminology/ }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onApplyCodes).not.toHaveBeenCalled();
 
-    rerender(
-      <TranscriptCodingWorkspaceView
-        {...props}
-        acceptedHighlights={[{
+    await act(async () => {
+      resolveHighlight({
           codes: [],
           evidence: {
             ...transcriptReaderBlocks[0],
@@ -228,20 +235,18 @@ describe("Transcript Coding Workspace filters", () => {
           id: "persisted-highlight",
           provenance: "Researcher highlighted",
           status: "uncoded",
-        }]}
-        onApplyCodes={onApplyCodes}
-        state="accepted-highlights"
-        suggestions={[]}
-      />,
-    );
-
-    await user.click(screen.getByRole("option", { name: /Navigation terminology/ }));
-    await user.click(screen.getByRole("button", { name: "Apply" }));
-
-    expect(onApplyCodes).toHaveBeenCalledWith({
-      codeIds: ["code-navigation-terminology"],
-      highlightId: "persisted-highlight",
+      });
     });
+
+    await waitFor(() => {
+      expect(onApplyCodes).toHaveBeenCalledWith({
+        codeIds: ["code-navigation-terminology"],
+        highlightId: "persisted-highlight",
+      });
+    });
+    expect(onApplyCodes).not.toHaveBeenCalledWith(
+      expect.objectContaining({ highlightId: "manual-highlight-1" }),
+    );
   });
 
   it("disables right-rail Code application when the Session has no Record", async () => {
