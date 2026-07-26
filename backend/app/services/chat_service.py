@@ -50,6 +50,7 @@ def _answer_with_litellm(
     base_url: str | None,
     question: str,
     citations: list[ChatCitation],
+    supplemental_context: str | None = None,
 ) -> str:
     try:
         from litellm import completion
@@ -59,6 +60,15 @@ def _answer_with_litellm(
     context = "\n\n".join(
         f"[{index}] {citation.document_name}, chunk {citation.chunk_index + 1}, score {citation.score:.2f}\n{citation.text}"
         for index, citation in enumerate(citations, start=1)
+    )
+    interpretation_context = (
+        (
+            "\n\nInterpretation context from reviewed synthesis. Use it to understand "
+            "the Record, but support every factual claim with the numbered primary "
+            f"transcript excerpts below:\n{supplemental_context}"
+        )
+        if supplemental_context
+        else ""
     )
     messages = [
         {
@@ -70,7 +80,10 @@ def _answer_with_litellm(
         },
         {
             "role": "user",
-            "content": f"Question: {question}\n\nContext:\n{context}",
+            "content": (
+                f"Question: {question}{interpretation_context}"
+                f"\n\nPrimary transcript evidence:\n{context}"
+            ),
         },
     ]
     try:

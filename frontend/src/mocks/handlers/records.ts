@@ -7,6 +7,10 @@ import type {
 } from "@/api/types";
 import type { RecordSynthesis as RecordSynthesisDomain, RecordSynthesisScope } from "@/domain/types";
 import {
+  recordChatAnswerFixture,
+  recordChatSourcesFixture,
+} from "@/mocks/fixtures/ask-record";
+import {
   insufficientRecordScope,
   readyRecordScope,
   recordSummaries,
@@ -104,6 +108,46 @@ export const recordHandlers = [
     const recordId = String(params.recordId);
     if (!recordSummaries.some((record) => record.id === recordId)) return new HttpResponse("Record not found", { status: 404 });
     return HttpResponse.json(sessionApiFixtures.filter((session) => session.related_records.some((record) => record.id === recordId)));
+  }),
+  http.get(`${recordRoot}/chat/sources`, ({ params }) => {
+    const recordId = String(params.recordId);
+    if (!recordSummaries.some((record) => record.id === recordId)) return new HttpResponse("Record not found", { status: 404 });
+    if (recordId === "record-2") {
+      return HttpResponse.json({
+        record_id: recordId,
+        primary_transcript_count: 0,
+        reviewed_report_count: 0,
+        record_knowledge_available: false,
+        searchable: false,
+      });
+    }
+    return HttpResponse.json({ ...recordChatSourcesFixture, record_id: recordId });
+  }),
+  http.post(`${recordRoot}/chat/ask`, async ({ params, request }) => {
+    const recordId = String(params.recordId);
+    if (!recordSummaries.some((record) => record.id === recordId)) return new HttpResponse("Record not found", { status: 404 });
+    const payload = await request.json() as { question?: string };
+    const question = payload.question?.trim();
+    if (!question) return HttpResponse.json({ detail: "Question is required." }, { status: 422 });
+    if (recordId === "record-2") {
+      return HttpResponse.json(
+        { detail: "This Record has no processed primary transcript evidence available to search." },
+        { status: 409 },
+      );
+    }
+    if (question.toLowerCase().includes("biometric")) {
+      return HttpResponse.json({
+        ...recordChatAnswerFixture,
+        question,
+        status: "insufficient-evidence",
+        answer: null,
+        citations: recordChatAnswerFixture.citations.slice(0, 1).map((citation) => ({
+          ...citation,
+          relevance: "partial",
+        })),
+      });
+    }
+    return HttpResponse.json({ ...structuredClone(recordChatAnswerFixture), question });
   }),
   http.get(`${recordRoot}/synthesis/eligibility`, ({ params }) => {
     const scope = scopes[String(params.recordId)];

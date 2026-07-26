@@ -2,6 +2,9 @@ from app.db.session import get_db
 from app.schemas.record import (
     RecordAssignment,
     RecordCatalogRead,
+    RecordChatRequest,
+    RecordChatResponse,
+    RecordChatSourceAvailabilityRead,
     RecordSynthesisEligibilityRead,
     RecordSynthesisEvidenceRead,
     RecordSynthesisGenerateRequest,
@@ -36,6 +39,27 @@ def get_record(record_id: str, db: Session = Depends(get_db)):
 def list_record_sessions(record_id: str, db: Session = Depends(get_db)):
     _require_record(db, record_id)
     return record_service.list_record_sessions(db, record_id)
+
+
+@router.get("/records/{record_id}/chat/sources", response_model=RecordChatSourceAvailabilityRead)
+def get_record_chat_sources(record_id: str, db: Session = Depends(get_db)):
+    _require_record(db, record_id)
+    return record_service.get_chat_source_availability(db, record_id)
+
+
+@router.post("/records/{record_id}/chat/ask", response_model=RecordChatResponse)
+def ask_record(record_id: str, payload: RecordChatRequest, db: Session = Depends(get_db)):
+    _require_record(db, record_id)
+    try:
+        return record_service.answer_record_question(
+            db,
+            record_id,
+            payload.question,
+            payload.limit,
+        )
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.put("/projects/{project_id}/sessions/{session_id}/record", response_model=SessionRead)

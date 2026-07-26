@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timezone
 import importlib.util
 import json
@@ -18,6 +19,7 @@ from app.models.record import (
     RecordSynthesisSource,
     SessionRecord,
 )
+from app.models.conversation import Conversation
 from app.models.research_session import SessionRelationship
 from app.models.session_report import SessionReport, SessionReportItem
 from app.services import record_service
@@ -110,6 +112,111 @@ def test_record_eligibility_uses_reviewed_evidence_linked_reports(client: TestCl
     assert record["related_session_count"] == 3
     assert record["eligible_session_count"] == 2
     assert record["readiness"] == "ready"
+
+
+def test_record_chat_searches_all_related_transcripts_without_persisting_history(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    project = _project(client)
+    _eligible_session(
+        client,
+        project["id"],
+        "Reviewed checkout interview",
+        "researcher-reviewed",
+    )
+    excluded = _session(
+        client,
+        project["id"],
+        "Excluded navigation follow-up",
+        "record-1",
+    )
+    excluded_root = (
+        f"/api/projects/{project['id']}/sessions/{excluded['id']}"
+    )
+    upload = client.post(
+        f"{excluded_root}/documents",
+        files={
+            "file": (
+                "excluded-follow-up.txt",
+                (
+                    "Morgan Lee:\nThe cobalt breadcrumb remained visible, "
+                    "which made navigation feel recoverable."
+                ).encode(),
+                "text/plain",
+            )
+        },
+    )
+    assert upload.status_code == 201
+
+    sources = client.get("/api/records/record-1/chat/sources")
+    assert sources.status_code == 200
+    assert sources.json() == {
+        "record_id": "record-1",
+        "primary_transcript_count": 2,
+        "reviewed_report_count": 1,
+        "record_knowledge_available": False,
+        "searchable": True,
+    }
+
+    response = client.post(
+        "/api/records/record-1/chat/ask",
+        json={"question": "What did the cobalt breadcrumb change?"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "answered"
+    assert body["answer"]
+    assert body["record_knowledge_used"] is False
+    assert "not consolidated through Record Knowledge" in body["traceability_note"]
+    assert body["citations"][0]["session_id"] == excluded["id"]
+    assert body["citations"][0]["project_name"] == project["name"]
+    assert body["citations"][0]["context_result_id"]
+    assert db_session.scalar(select(func.count()).select_from(Conversation)) == 0
+
+
+def test_record_chat_reports_no_sources_and_withholds_unsupported_conclusions(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    no_sources = client.get("/api/records/record-2/chat/sources")
+    assert no_sources.status_code == 200
+    assert no_sources.json()["searchable"] is False
+    assert client.post(
+        "/api/records/record-2/chat/ask",
+        json={"question": "What did participants say?"},
+    ).status_code == 409
+
+    project = _project(client)
+    _eligible_session(
+        client,
+        project["id"],
+        "Account recovery interview",
+        "approved",
+    )
+    original_search = record_service._search_record_chunks
+
+    def low_relevance_search(*args, **kwargs):
+        return [
+            replace(item, score=0.01)
+            for item in original_search(*args, **kwargs)
+        ]
+
+    monkeypatch.setattr(
+        record_service,
+        "_search_record_chunks",
+        low_relevance_search,
+    )
+    response = client.post(
+        "/api/records/record-1/chat/ask",
+        json={"question": "Did participants prefer biometric verification?"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "insufficient-evidence"
+    assert body["answer"] is None
+    assert body["citations"]
+    assert {citation["relevance"] for citation in body["citations"]} == {"partial"}
 
 
 def test_record_synthesis_generation_is_evidence_linked_and_idempotent(client: TestClient, db_session: Session) -> None:
