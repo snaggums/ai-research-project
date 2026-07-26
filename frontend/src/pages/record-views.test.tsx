@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import { toSessionSummary } from "@/adapters/sessions";
+import { askRecordSuggestedQuestions } from "@/mocks/fixtures/ask-record";
 import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
 import { RecordDetailView, RecordsCollectionView, RecordSynthesisView } from "./record-views";
@@ -53,6 +54,36 @@ describe("Record page compositions", () => {
     expect(onStatusChange).toHaveBeenCalledWith("record-action-evidence-links", "approved");
     await user.click(screen.getByRole("tab", { name: "Overview" }));
     expect(onViewChange).toHaveBeenCalledWith("overview");
+  });
+
+  it("integrates Ask Record as the third Record Detail view without synthesis actions", () => {
+    render(
+      <RecordDetailView
+        activeView="ask-record"
+        askRecordProps={{
+          onAsk: () => undefined,
+          suggestedQuestions: askRecordSuggestedQuestions,
+        }}
+        record={recordSummaries[0]}
+        scope={readyRecordScope}
+        sessions={[]}
+        synthesis={recordSynthesis}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: "Ask Record" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Ask Record 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Ask Record 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Ready to synthesize" }),
+    ).not.toBeInTheDocument();
   });
 
   it("prevents synthesis when fewer than two Session Reports are eligible", () => {

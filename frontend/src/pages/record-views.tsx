@@ -3,6 +3,10 @@ import { ArrowLeft, RefreshCw, Sparkles } from "lucide-react";
 
 import { EmptyState, EntityCollection, PageHeader, SharedRouteState } from "@/components/application";
 import {
+  AskRecordWorkspace,
+  type AskRecordWorkspaceProps,
+} from "@/components/research/ask-record-workspace";
+import {
   RecordKnowledgeWorkspace,
   type RecordKnowledgeWorkspaceState,
 } from "@/components/research/record-knowledge-workspace";
@@ -52,7 +56,8 @@ export function RecordsCollectionView({ onOpenRecord, onRetry, records, state = 
 }
 
 export interface RecordDetailViewProps {
-  activeView?: "overview" | "knowledge";
+  activeView?: "overview" | "knowledge" | "ask-record";
+  askRecordProps?: AskRecordWorkspaceProps;
   generating?: boolean;
   knowledgeState?: RecordKnowledgeWorkspaceState;
   onGenerate?: () => void;
@@ -61,7 +66,7 @@ export interface RecordDetailViewProps {
   onRetryKnowledge?: () => void;
   onStatusChange?: (itemId: string, status: LifecycleStatus) => void;
   onRetry?: () => void;
-  onViewChange?: (view: "overview" | "knowledge") => void;
+  onViewChange?: (view: "overview" | "knowledge" | "ask-record") => void;
   record?: RecordSummaryValue;
   routeState?: "ready" | "loading" | "error" | "not-found";
   scope?: RecordSynthesisScope;
@@ -72,6 +77,7 @@ export interface RecordDetailViewProps {
 
 export function RecordDetailView({
   activeView = "overview",
+  askRecordProps,
   generating = false,
   knowledgeState,
   onGenerate,
@@ -152,6 +158,12 @@ export function RecordDetailView({
       statusUpdatingItemId={statusUpdatingItemId}
     />
   );
+  const askRecord = askRecordProps ? (
+    <AskRecordWorkspace
+      {...askRecordProps}
+      recordName={askRecordProps.recordName ?? record.name}
+    />
+  ) : null;
 
   return <div className="grid gap-6">
     <PageHeader
@@ -160,7 +172,7 @@ export function RecordDetailView({
       title={record.name}
     />
     <RecordSummary record={record} />
-    <section className="flex flex-col gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="record-synthesis-action-title">
+    {activeView === "overview" ? <section className="flex flex-col gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="record-synthesis-action-title">
       <div>
         <h2 className="text-sm font-semibold" id="record-synthesis-action-title">
           {eligible ? "Ready to synthesize" : "More research required"}
@@ -189,14 +201,19 @@ export function RecordDetailView({
           Generate synthesis
         </Button>
       )}
-    </section>
+    </section> : null}
     <Tabs
       aria-label="Record views"
       items={[
         { content: overview, label: "Overview", value: "overview" },
         { content: knowledge, label: "Knowledge", value: "knowledge" },
+        ...(askRecord
+          ? [{ content: askRecord, label: "Ask Record", value: "ask-record" }]
+          : []),
       ]}
-      onValueChange={(value) => onViewChange?.(value as "overview" | "knowledge")}
+      onValueChange={(value) =>
+        onViewChange?.(value as "overview" | "knowledge" | "ask-record")
+      }
       value={activeView}
     />
   </div>;

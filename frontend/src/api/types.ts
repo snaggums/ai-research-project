@@ -549,3 +549,40 @@ export type RecordSynthesisEvidence = {
   session_title: string;
   context: TranscriptContext;
 };
+
+export type RecordChatSourceAvailability = {
+  record_id: string;
+  primary_transcript_count: number;
+  reviewed_report_count: number;
+  record_knowledge_available: boolean;
+  searchable: boolean;
+};
+
+export type RecordChatCitation = {
+  id: string;
+  reference: number;
+  project_id: string;
+  project_name: string;
+  session_id: string;
+  session_title: string;
+  document_id: string;
+  document_name: string;
+  speaker: string;
+  location: string;
+  excerpt: string;
+  context_result_id: string;
+  relevance: "supporting" | "partial";
+  score: number;
+};
+
+export type RecordChatResponse = {
+  question: string;
+  status: "answered" | "insufficient-evidence";
+  answer: string | null;
+  citations: RecordChatCitation[];
+  traceability_note: string;
+  record_knowledge_used: boolean;
+  provider: string;
+  model: string | null;
+  used_mock: boolean;
+};

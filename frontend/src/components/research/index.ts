@@ -1,4 +1,6 @@
 export * from "./ai-provider-settings-form";
+export * from "./ask-record-workspace";
+export * from "./evidence-citation-card";
 export * from "./participant-form";
 export * from "./participant-list-item";
 export * from "./participant-picker";

@@ -1,5 +1,7 @@
 import type {
   RecordCatalogItem,
+  RecordChatResponse,
+  RecordChatSourceAvailability,
   RecordSynthesis,
   RecordSynthesisEligibility,
   RecordSynthesisEvidence,
@@ -42,6 +44,17 @@ export function getRecord(recordId: string) {
 
 export function listRecordSessions(recordId: string) {
   return request<Session[]>(`${root(recordId)}/sessions`);
+}
+
+export function getRecordChatSources(recordId: string) {
+  return request<RecordChatSourceAvailability>(`${root(recordId)}/chat/sources`);
+}
+
+export function askRecord(recordId: string, question: string, limit = 6) {
+  return request<RecordChatResponse>(`${root(recordId)}/chat/ask`, {
+    method: "POST",
+    body: JSON.stringify({ question, limit }),
+  });
 }
 
 export function getRecordSynthesisEligibility(recordId: string) {

@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  askRecord,
   generateRecordSynthesis,
   getLatestRecordSynthesis,
   getRecord,
+  getRecordChatSources,
   getRecordSynthesisEligibility,
   getRecordSynthesisEvidence,
   listRecords,
@@ -23,6 +25,20 @@ export function useRecord(recordId: string) {
 
 export function useRecordSessions(recordId: string) {
   return useQuery({ queryKey: queryKeys.recordSessions(recordId), queryFn: () => listRecordSessions(recordId), enabled: Boolean(recordId) });
+}
+
+export function useRecordChatSources(recordId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.recordChatSources(recordId),
+    queryFn: () => getRecordChatSources(recordId),
+    enabled: Boolean(recordId) && enabled,
+  });
+}
+
+export function useAskRecord(recordId: string) {
+  return useMutation({
+    mutationFn: (question: string) => askRecord(recordId, question),
+  });
 }
 
 export function useRecordSynthesisEligibility(recordId: string) {

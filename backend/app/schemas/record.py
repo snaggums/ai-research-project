@@ -87,6 +87,48 @@ class RecordSynthesisEvidenceRead(BaseModel):
     context: TranscriptContext
 
 
+class RecordChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=6, ge=1, le=12)
+
+
+class RecordChatSourceAvailabilityRead(BaseModel):
+    record_id: str
+    primary_transcript_count: int
+    reviewed_report_count: int
+    record_knowledge_available: bool
+    searchable: bool
+
+
+class RecordChatCitationRead(BaseModel):
+    id: str
+    reference: int
+    project_id: str
+    project_name: str
+    session_id: str
+    session_title: str
+    document_id: str
+    document_name: str
+    speaker: str
+    location: str
+    excerpt: str
+    context_result_id: str
+    relevance: Literal["supporting", "partial"]
+    score: float
+
+
+class RecordChatResponse(BaseModel):
+    question: str
+    status: Literal["answered", "insufficient-evidence"]
+    answer: str | None
+    citations: list[RecordChatCitationRead]
+    traceability_note: str
+    record_knowledge_used: bool
+    provider: str
+    model: str | None
+    used_mock: bool
+
+
 class GeneratedRecordSynthesisItem(BaseModel):
     type: Literal["requirement", "decision", "action-item"]
     title: str = Field(min_length=1, max_length=240)

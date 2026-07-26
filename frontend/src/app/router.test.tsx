@@ -446,6 +446,96 @@ describe("application router foundation", () => {
     expect(screen.queryByText("Checkout must confirm payment success")).not.toBeInTheDocument();
   });
 
+  it("keeps one active Ask Record thread and opens primary transcript evidence", async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=ask-record"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByRole("heading", { name: "Ask Record 1" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Ask Record" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(new URLSearchParams(router.state.location.search).get("view")).toBe(
+      "ask-record",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "What prevents participants from feeling confident after checkout?",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByRole("heading", { name: "AIR answer" })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Ask Record conversation" }))
+        .getAllByRole("listitem"),
+    ).toHaveLength(2);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Which requirements appear across multiple Sessions?",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("list", { name: "Ask Record conversation" }))
+          .getAllByRole("listitem"),
+      ).toHaveLength(4);
+    });
+
+    await user.click(
+      screen.getAllByRole("link", {
+        name: "Open transcript context for citation 1",
+      })[0],
+    );
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Transcript context" }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      "/projects/alpha-project/sessions/mobile-checkout-test/documents/checkout-transcript",
+    );
+    expect(router.state.location.search).toBe("?result=result-1");
+  });
+
+  it("shows the production Ask Record no-sources state without a composer", async () => {
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-2?view=ask-record"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByText("No searchable Record sources"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Source availability" })).toBeInTheDocument();
+    expect(screen.getAllByText("0")).toHaveLength(2);
+    expect(screen.queryByRole("textbox", { name: "Ask Record 2" })).not.toBeInTheDocument();
+  });
+
+  it("withholds an Ask Record conclusion when only partial evidence is returned", async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=ask-record"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    const composer = await screen.findByRole("textbox", { name: "Ask Record 1" });
+    await user.type(
+      composer,
+      "Did participants prefer biometric verification over one-time passcodes?",
+    );
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+
+    expect(await screen.findByText("Not enough evidence")).toBeInTheDocument();
+    expect(screen.getByText("No conclusion was generated.", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("Partially relevant")).toBeInTheDocument();
+  });
+
   it("asks a Session-scoped question and renders cited transcript context", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));

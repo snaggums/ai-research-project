@@ -28,6 +28,8 @@ export const queryKeys = {
   records: () => ["records"] as const,
   record: (recordId: EntityId) => ["records", recordId] as const,
   recordSessions: (recordId: EntityId) => ["records", recordId, "sessions"] as const,
+  recordChatSources: (recordId: EntityId) =>
+    ["records", recordId, "chat", "sources"] as const,
   recordSynthesisEligibility: (recordId: EntityId) => ["records", recordId, "synthesis", "eligibility"] as const,
   recordSynthesis: (recordId: EntityId) => ["records", recordId, "synthesis", "latest"] as const,
   recordSynthesisEvidence: (recordId: EntityId, itemId: EntityId, evidenceId: EntityId) =>

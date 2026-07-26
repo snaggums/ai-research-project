@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 import json
 from uuid import uuid4
 
+from app.models.chunk import Chunk
 from app.models.document import Document
+from app.models.project import Project
 from app.models.record import (
     ProductRecord,
     RecordSynthesisEvidence,
@@ -20,6 +22,9 @@ from app.models.session_report import SessionReport, SessionReportEvidence, Sess
 from app.schemas.record import (
     GeneratedRecordSynthesisPayload,
     RecordCatalogRead,
+    RecordChatCitationRead,
+    RecordChatResponse,
+    RecordChatSourceAvailabilityRead,
     RecordSynthesisEligibilityRead,
     RecordSynthesisEvidenceRead,
     RecordSynthesisExcludedSessionRead,
@@ -27,10 +32,12 @@ from app.schemas.record import (
     RecordSynthesisRead,
     RecordSynthesisSourceSessionRead,
 )
+from app.schemas.chat import ChatCitation
 from app.schemas.research_session import SessionRead
-from app.services import ai_settings_service, research_session_service, theme_service, transcript_service
+from app.services import ai_settings_service, chat_service, research_session_service, theme_service, transcript_service
+from app.services.embedding_service import embed_text
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -39,6 +46,7 @@ MINIMUM_ELIGIBLE_SESSIONS = 2
 ELIGIBLE_REPORT_STATUSES = {"researcher-reviewed", "approved"}
 ELIGIBLE_ITEM_TYPES = {"requirement", "decision", "action-item"}
 RECORD_SYNTHESIS_PROMPT_VERSION = "record-synthesis-v1"
+RECORD_CHAT_SUPPORTING_SCORE = 0.25
 
 
 @dataclass(frozen=True)
@@ -47,6 +55,15 @@ class GeneratedRecordItem:
     title: str
     summary: str
     source_report_item_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class RecordRetrievedChunk:
+    chunk: Chunk
+    document: Document
+    project: Project
+    research_session: ResearchSession
+    score: float
 
 
 def list_records(db: Session) -> list[RecordCatalogRead]:
@@ -70,6 +87,127 @@ def list_record_sessions(db: Session, record_id: str) -> list[SessionRead]:
         .order_by(ResearchSession.updated_at.desc())
     ).unique().all()
     return [research_session_service.session_to_read(db, session) for session in sessions]
+
+
+def get_chat_source_availability(db: Session, record_id: str) -> RecordChatSourceAvailabilityRead:
+    primary_transcript_count = db.scalar(
+        select(func.count(func.distinct(Document.id)))
+        .select_from(Document)
+        .join(ResearchSession, ResearchSession.id == Document.session_id)
+        .join(SessionRecord, SessionRecord.session_id == ResearchSession.id)
+        .join(Chunk, Chunk.document_id == Document.id)
+        .where(
+            SessionRecord.record_id == record_id,
+            Document.status == "complete",
+            Document.document_type == "transcript",
+        )
+    ) or 0
+    reviewed_report_count = len(_eligible_source_reports(db, record_id))
+    record_knowledge_available = db.scalar(
+        select(RecordSynthesisRun.id)
+        .where(
+            RecordSynthesisRun.record_id == record_id,
+            RecordSynthesisRun.status == "complete",
+        )
+        .order_by(RecordSynthesisRun.created_at.desc())
+        .limit(1)
+    ) is not None
+    return RecordChatSourceAvailabilityRead(
+        record_id=record_id,
+        primary_transcript_count=primary_transcript_count,
+        reviewed_report_count=reviewed_report_count,
+        record_knowledge_available=record_knowledge_available,
+        searchable=primary_transcript_count > 0,
+    )
+
+
+def answer_record_question(
+    db: Session,
+    record_id: str,
+    question: str,
+    limit: int = 6,
+) -> RecordChatResponse:
+    clean_question = question.strip()
+    if not clean_question:
+        raise ValueError("Question is required.")
+    record = get_record(db, record_id)
+    if record is None:
+        raise ValueError("Record not found.")
+
+    retrieved = _search_record_chunks(db, record_id, clean_question, limit)
+    if not retrieved:
+        raise ValueError(
+            "This Record has no processed primary transcript evidence available to search."
+        )
+
+    knowledge = get_latest_synthesis(db, record_id)
+    knowledge_available = knowledge is not None and knowledge.status == "complete"
+    traceability_note = (
+        "Trace: latest Record Knowledge → reviewed Session Report items → cited primary transcript passages."
+        if knowledge_available
+        else (
+            "Trace: reviewed or approved Session Reports → cited primary transcript passages. "
+            "This answer is not consolidated through Record Knowledge."
+        )
+    )
+    supporting = [
+        item for item in retrieved if item.score >= RECORD_CHAT_SUPPORTING_SCORE
+    ]
+    settings = ai_settings_service.get_or_create_settings(db)
+    used_mock = settings.provider.strip().lower() == "mock" or not settings.has_api_key
+
+    if not supporting:
+        return RecordChatResponse(
+            question=clean_question,
+            status="insufficient-evidence",
+            answer=None,
+            citations=_record_chat_citations(retrieved[:3], relevance="partial"),
+            traceability_note=traceability_note,
+            record_knowledge_used=knowledge_available,
+            provider=settings.provider,
+            model=settings.model,
+            used_mock=used_mock,
+        )
+
+    evidence = supporting[: min(3, limit)]
+    chat_citations = [
+        ChatCitation(
+            chunk_id=item.chunk.id,
+            document_id=item.document.id,
+            document_name=item.document.filename,
+            chunk_index=item.chunk.chunk_index,
+            text=item.chunk.text,
+            score=item.score,
+        )
+        for item in evidence
+    ]
+    answer = (
+        _mock_record_answer(clean_question, chat_citations)
+        if used_mock
+        else chat_service._answer_with_litellm(
+            provider=settings.provider,
+            model=settings.model,
+            base_url=settings.base_url,
+            question=clean_question,
+            citations=chat_citations,
+            supplemental_context=_record_interpretation_context(
+                db,
+                record_id,
+                knowledge,
+            ),
+        )
+    )
+    return RecordChatResponse(
+        question=clean_question,
+        status="answered",
+        answer=answer,
+        citations=_record_chat_citations(evidence, relevance="supporting"),
+        traceability_note=traceability_note,
+        record_knowledge_used=knowledge_available,
+        provider=settings.provider,
+        model=settings.model,
+        used_mock=used_mock,
+    )
 
 
 def assign_session_record(db: Session, research_session: ResearchSession, record_id: str | None) -> SessionRead:
@@ -343,6 +481,138 @@ def _ineligibility_reason(report: SessionReport | None) -> str | None:
     if not eligible_items:
         return "Session Report has no evidence-linked Requirements, Decisions, or Action Items"
     return None
+
+
+def _search_record_chunks(
+    db: Session,
+    record_id: str,
+    query: str,
+    limit: int,
+) -> list[RecordRetrievedChunk]:
+    distance = Chunk.embedding.cosine_distance(embed_text(query))
+    rows = db.execute(
+        select(
+            Chunk,
+            Document,
+            Project,
+            ResearchSession,
+            distance.label("distance"),
+        )
+        .join(Document, Document.id == Chunk.document_id)
+        .join(ResearchSession, ResearchSession.id == Document.session_id)
+        .join(SessionRecord, SessionRecord.session_id == ResearchSession.id)
+        .join(Project, Project.id == Document.project_id)
+        .where(
+            SessionRecord.record_id == record_id,
+            Document.status == "complete",
+            Document.document_type == "transcript",
+        )
+        .order_by(distance)
+        .limit(limit)
+    ).all()
+    return [
+        RecordRetrievedChunk(
+            chunk=chunk,
+            document=document,
+            project=project,
+            research_session=research_session,
+            score=round(
+                max(0.0, min(1.0, 1.0 - float(raw_distance or 0))),
+                2,
+            ),
+        )
+        for chunk, document, project, research_session, raw_distance in rows
+    ]
+
+
+def _record_chat_citations(
+    retrieved: list[RecordRetrievedChunk],
+    relevance: str,
+) -> list[RecordChatCitationRead]:
+    citations: list[RecordChatCitationRead] = []
+    for reference, item in enumerate(retrieved, start=1):
+        speaker, excerpt = _speaker_and_excerpt(item.chunk.text)
+        citations.append(
+            RecordChatCitationRead(
+                id=item.chunk.id,
+                reference=reference,
+                project_id=item.project.id,
+                project_name=item.project.name,
+                session_id=item.research_session.id,
+                session_title=item.research_session.title,
+                document_id=item.document.id,
+                document_name=item.document.filename,
+                speaker=speaker,
+                location=_chunk_location(item.chunk),
+                excerpt=excerpt,
+                context_result_id=item.chunk.id,
+                relevance=relevance,
+                score=item.score,
+            )
+        )
+    return citations
+
+
+def _record_interpretation_context(
+    db: Session,
+    record_id: str,
+    knowledge: RecordSynthesisRead | None,
+) -> str:
+    sections: list[str] = []
+    if knowledge is not None and knowledge.status == "complete":
+        items = "\n".join(
+            f"- {item.type}: {item.title}. {item.summary}"
+            for item in knowledge.items[:12]
+        )
+        if items:
+            sections.append(f"Latest Record Knowledge:\n{items}")
+
+    reports: list[str] = []
+    for research_session, report in _eligible_source_reports(db, record_id):
+        report_items = " ".join(
+            f"{item.title}: {item.summary}"
+            for item in report.items
+            if item.item_type in ELIGIBLE_ITEM_TYPES
+        )
+        reports.append(
+            f"- {research_session.title} ({report.status}): "
+            f"{report.executive_summary} {report_items}".strip()
+        )
+    if reports:
+        sections.append(
+            "Reviewed or approved Session Reports:\n" + "\n".join(reports[:12])
+        )
+    return "\n\n".join(sections)
+
+
+def _mock_record_answer(question: str, citations: list[ChatCitation]) -> str:
+    summary = " ".join(
+        chat_service._short_sentence(citation.text)
+        for citation in citations
+    )
+    references = " ".join(
+        f"[{index}]" for index in range(1, len(citations) + 1)
+    )
+    return (
+        f"Across this Record, the available transcript evidence for '{question}' "
+        f"shows: {summary} {references}"
+    )
+
+
+def _speaker_and_excerpt(text: str) -> tuple[str, str]:
+    first_line, separator, remainder = text.partition("\n")
+    if separator and ":" in first_line and len(first_line) <= 120:
+        speaker, _, opening = first_line.partition(":")
+        excerpt = " ".join(
+            value for value in (opening.strip(), remainder.strip()) if value
+        )
+        return speaker.strip(), excerpt
+    return "Transcript", text.strip()
+
+
+def _chunk_location(chunk: Chunk) -> str:
+    metadata = chunk.extra_metadata or {}
+    return str(metadata.get("timestamp") or f"Excerpt {chunk.chunk_index + 1}")
 
 
 def _run_select():
