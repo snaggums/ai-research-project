@@ -58,11 +58,11 @@ describe("SessionDetailView", () => {
     const onEditSession = vi.fn();
     render(<SessionDetailView activeTab="overview" onEditSession={onEditSession} projectId="alpha-project" projectName="Alpha Project" session={session} />);
     expect(screen.getByRole("heading", { level: 1, name: session.title })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Relationships" })).toBeInTheDocument();
+    const summary = screen.getByRole("region", { name: "Session summary" });
+    expect(within(summary).getByRole("button", { name: "Edit session" })).toBeInTheDocument();
     const navigation = screen.getByRole("navigation", { name: "Session sections" });
     expect(within(navigation).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
     expect(within(navigation).getAllByRole("link")).toHaveLength(6);
-    expect(screen.getByRole("button", { name: "Edit session" })).toBeInTheDocument();
   });
 
   it("uses the canonical Participant, Role, Organization, and Notes columns", () => {

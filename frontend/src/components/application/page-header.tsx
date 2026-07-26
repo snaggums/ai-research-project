@@ -19,7 +19,7 @@ export function PageHeader({
   ...props
 }: PageHeaderProps) {
   return (
-    <header className={cn("grid gap-4", className)} {...props}>
+    <header className={cn("grid min-w-0 gap-4", className)} {...props}>
       {breadcrumbs?.length ? <Breadcrumbs items={breadcrumbs} /> : null}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="min-w-0">

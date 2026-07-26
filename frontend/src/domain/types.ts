@@ -185,6 +185,19 @@ export type SessionReportItemType =
   | "open-question"
   | "key-insight";
 
+export type SessionReportOwnershipStatus =
+  | "ai-suggested"
+  | "confirmed"
+  | "confirmed-empty"
+  | "needs-review";
+
+export type SessionReportItemOwnership = {
+  role: "decision-maker" | "assignee";
+  value?: string;
+  status: SessionReportOwnershipStatus;
+  rationale?: string;
+};
+
 export type ThemeEvidenceDetail = {
   id: EntityId;
   documentId: EntityId;
@@ -215,6 +228,8 @@ export type SessionReportItem = {
   summary: string;
   provenance: string;
   evidence: ThemeEvidenceDetail[];
+  ownership?: SessionReportItemOwnership;
+  position?: number;
 };
 
 export type SessionReportParticipant = {

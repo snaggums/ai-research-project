@@ -63,6 +63,12 @@ export function toSessionReport(value: SessionReportApi): SessionReport {
       summary: item.summary,
       provenance: item.provenance,
       evidence: item.evidence.map(toThemeEvidence),
+      ownership: item.ownership ? {
+        role: item.ownership.role,
+        value: item.ownership.value ?? undefined,
+        status: item.ownership.status,
+        rationale: item.ownership.rationale ?? undefined,
+      } : undefined,
     })),
     detailedNotes: value.detailed_notes,
     generatedAt: value.generated_at,

@@ -17,6 +17,7 @@ from app.schemas.synthesis import (
     SessionConversationTurnRead,
     SessionEvidenceRead,
     SessionReportItemRead,
+    SessionReportOwnershipRead,
     SessionReportParticipantRead,
     SessionReportRead,
     SessionReportItemUpdate,
@@ -145,6 +146,8 @@ def generate_session_report(db: Session, research_session: ResearchSession) -> S
             item_type=item_type,
             title=_report_item_title(item_type, theme.name),
             summary=theme.summary,
+            ownership_role="decision-maker" if item_type == "decision" else "assignee" if item_type == "action-item" else None,
+            ownership_status="needs-review" if item_type in ("decision", "action-item") else None,
             provenance=f"AI Generated · {len(theme.evidence)} supporting excerpt{'s' if len(theme.evidence) != 1 else ''}",
             position=position,
         )
@@ -204,6 +207,17 @@ def update_session_report_item(
         item.title = values["title"].strip()
     if values.get("summary") is not None:
         item.summary = values["summary"].strip()
+    ownership = values.get("ownership")
+    if ownership is not None:
+        if item.item_type not in ("decision", "action-item"):
+            raise ValueError("Ownership only applies to Decisions and Action Items.")
+        item.ownership_role = "decision-maker" if item.item_type == "decision" else "assignee"
+        item.ownership_status = ownership["status"]
+        item.ownership_value = (
+            ownership.get("value", "").strip()
+            if ownership["status"] == "confirmed"
+            else None
+        )
     item.provenance = f"Researcher Edited · {len(item.evidence)} supporting excerpt{'s' if len(item.evidence) != 1 else ''}"
     item.updated_at = datetime.now(timezone.utc)
     report.updated_at = datetime.now(timezone.utc)
@@ -235,6 +249,10 @@ def create_session_report_revision(db: Session, research_session: ResearchSessio
             title=source_item.title,
             summary=source_item.summary,
             provenance=source_item.provenance,
+            ownership_role=source_item.ownership_role,
+            ownership_value=source_item.ownership_value,
+            ownership_status=source_item.ownership_status,
+            ownership_rationale=source_item.ownership_rationale,
             position=source_item.position,
         )
         db.add(item)
@@ -420,6 +438,14 @@ def _report_to_read(report: SessionReport, research_session: ResearchSession) ->
                 summary=item.summary,
                 provenance=item.provenance,
                 evidence=[_report_evidence_to_read(evidence) for evidence in item.evidence],
+                ownership=SessionReportOwnershipRead(
+                    role=item.ownership_role,
+                    value=item.ownership_value,
+                    status=item.ownership_status,
+                    rationale=item.ownership_rationale,
+                )
+                if item.ownership_role and item.ownership_status
+                else None,
             )
             for item in report.items
         ],

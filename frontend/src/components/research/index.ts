@@ -25,6 +25,7 @@ export * from "./session-summary";
 export * from "./ask-this-session";
 export * from "./session-report";
 export * from "./session-report-item";
+export * from "./session-report-ownership-editor";
 export * from "./theme-card";
 export * from "./theme-evidence-detail";
 export * from "./transcript-code-chip";

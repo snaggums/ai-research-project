@@ -72,7 +72,11 @@ def update_session_report(project_id: str, session_id: str, payload: SessionRepo
 @router.patch("/projects/{project_id}/sessions/{session_id}/report/items/{item_id}", response_model=SessionReportRead)
 def update_session_report_item(project_id: str, session_id: str, item_id: str, payload: SessionReportItemUpdate, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
-    report = synthesis_service.update_session_report_item(db, research_session, item_id, payload)
+    try:
+        report = synthesis_service.update_session_report_item(db, research_session, item_id, payload)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if report is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session Report item not found")
     return report

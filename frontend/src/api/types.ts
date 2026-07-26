@@ -405,6 +405,12 @@ export type SessionReportItem = {
   summary: string;
   provenance: string;
   evidence: SessionThemeEvidence[];
+  ownership: {
+    role: "decision-maker" | "assignee";
+    value: string | null;
+    status: "ai-suggested" | "confirmed" | "confirmed-empty" | "needs-review";
+    rationale: string | null;
+  } | null;
 };
 
 export type SessionReportParticipant = {
@@ -432,7 +438,12 @@ export type SessionReport = {
 };
 
 export type SessionReportPayload = Partial<Pick<SessionReport, "status" | "executive_summary" | "detailed_notes">>;
-export type SessionReportItemPayload = Partial<Pick<SessionReportItem, "title" | "summary">>;
+export type SessionReportItemPayload = Partial<Pick<SessionReportItem, "title" | "summary">> & {
+  ownership?: {
+    status: "confirmed" | "confirmed-empty";
+    value?: string | null;
+  };
+};
 
 export type SessionReportGenerateResponse = {
   report: SessionReport;

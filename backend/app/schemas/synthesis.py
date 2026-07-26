@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 ThemeStatus = Literal["ai-generated", "researcher-reviewed", "approved", "rejected"]
 ReportStatus = Literal["ai-generated", "researcher-reviewed", "approved", "superseded"]
+OwnershipRole = Literal["decision-maker", "assignee"]
+OwnershipStatus = Literal["ai-suggested", "confirmed", "confirmed-empty", "needs-review"]
 
 
 class SessionEvidenceRead(BaseModel):
@@ -50,6 +52,24 @@ class SessionReportParticipantRead(BaseModel):
     notes: str | None
 
 
+class SessionReportOwnershipRead(BaseModel):
+    role: OwnershipRole
+    value: str | None
+    status: OwnershipStatus
+    rationale: str | None
+
+
+class SessionReportOwnershipUpdate(BaseModel):
+    status: Literal["confirmed", "confirmed-empty"]
+    value: str | None = Field(default=None, max_length=180)
+
+    @model_validator(mode="after")
+    def validate_confirmed_value(self):
+        if self.status == "confirmed" and not (self.value and self.value.strip()):
+            raise ValueError("A Decision maker or Assignee value is required.")
+        return self
+
+
 class SessionReportItemRead(BaseModel):
     id: str
     type: Literal["requirement", "decision", "action-item", "open-question", "key-insight"]
@@ -57,6 +77,7 @@ class SessionReportItemRead(BaseModel):
     summary: str
     provenance: str
     evidence: list[SessionEvidenceRead]
+    ownership: SessionReportOwnershipRead | None
 
 
 class SessionReportRead(BaseModel):
@@ -88,7 +109,8 @@ class SessionReportUpdate(BaseModel):
 
 class SessionReportItemUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=180)
-    summary: str | None = Field(default=None, min_length=1)
+    summary: str | None = None
+    ownership: SessionReportOwnershipUpdate | None = None
 
 
 class SessionCitationRead(BaseModel):

@@ -25,7 +25,7 @@ export function SectionNavigation({
   return (
     <nav
       aria-label={label}
-      className={cn("overflow-x-auto border-b border-[var(--air-color-border-default)]", className)}
+      className={cn("min-w-0 max-w-full overflow-x-auto border-b border-[var(--air-color-border-default)]", className)}
       {...props}
     >
       <div className="flex min-w-max gap-1">

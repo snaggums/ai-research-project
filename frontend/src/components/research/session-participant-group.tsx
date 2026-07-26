@@ -25,7 +25,7 @@ export function SessionParticipantGroup({ className, onAddParticipant, onRetry, 
     : visibleNames.join(", ");
   return (
     <section className={cn("rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5", className)} aria-labelledby="session-participants-title" {...props}>
-      <header className="flex flex-wrap items-center gap-3"><h3 className="text-base font-semibold" id="session-participants-title">Participants</h3>{state === "ready" ? <Badge showIcon={false}>{participants.length}</Badge> : null}<div className="ml-auto">{onAddParticipant ? <Button onClick={onAddParticipant} size="small" variant="gray-subtle">Add participant</Button> : null}</div></header>
+      <header className="flex flex-wrap items-center gap-3"><h2 className="text-base font-semibold" id="session-participants-title">Participants</h2>{state === "ready" ? <Badge showIcon={false}>{participants.length}</Badge> : null}<div className="ml-auto">{onAddParticipant ? <Button onClick={onAddParticipant} size="small" variant="gray-subtle">Add participant</Button> : null}</div></header>
       {state === "loading" ? <div className="mt-5 flex items-center gap-3 text-sm text-[var(--air-color-text-secondary)]"><Spinner label="Loading participants" size="small" />Loading participants</div> : null}
       {state === "error" ? <Alert className="mt-5" message={onRetry ? <Button onClick={onRetry} size="small" variant="gray-subtle">Try again</Button> : undefined} size={onRetry ? "large" : "small"} title="Participants could not be loaded" tone="error" /> : null}
       {empty ? <p className="mt-5 text-sm text-[var(--air-color-text-secondary)]">No participants are assigned to this Session.</p> : null}
