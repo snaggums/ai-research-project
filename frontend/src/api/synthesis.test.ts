@@ -29,6 +29,15 @@ describe("Session synthesis API contracts", () => {
     expect(report?.items.map(({ type }) => type)).toEqual(["requirement", "decision", "action-item", "open-question", "key-insight"]);
     expect((await updateSessionReport("alpha-project", "mobile-checkout-test", { executive_summary: "Updated report summary" })).executive_summary).toBe("Updated report summary");
     expect((await updateSessionReportItem("alpha-project", "mobile-checkout-test", report!.items[0].id, { title: "Updated requirement" })).items[0].title).toBe("Updated requirement");
+    const decision = report!.items.find((item) => item.type === "decision")!;
+    const ownedReport = await updateSessionReportItem("alpha-project", "mobile-checkout-test", decision.id, {
+      summary: "",
+      ownership: { status: "confirmed", value: "Research operations" },
+    });
+    expect(ownedReport.items.find((item) => item.id === decision.id)).toMatchObject({
+      summary: "",
+      ownership: { role: "decision-maker", status: "confirmed", value: "Research operations" },
+    });
     expect((await updateSessionReportStatus("alpha-project", "mobile-checkout-test", "approved")).status).toBe("approved");
     expect((await createSessionReportRevision("alpha-project", "mobile-checkout-test")).status).toBe("ai-generated");
     expect((await generateSessionReport("alpha-project", "mobile-checkout-test")).report.status).toBe("ai-generated");

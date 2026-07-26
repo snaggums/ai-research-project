@@ -83,7 +83,9 @@ test("researcher completes the V2 Session evidence workflow", async ({ page, req
     expect(sessionResponse.ok()).toBeTruthy();
     const sessionId = ((await sessionResponse.json()) as { id: string }).id;
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/${sessionId}/overview$`));
-    await expect(page.getByText(participantName, { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Participants", { exact: true }).getByText(participantName, { exact: true }),
+    ).toBeVisible();
 
     await page.goto(`/projects/${projectId}/sessions/${sessionId}/transcript`);
     const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "golden-path-interview.txt");

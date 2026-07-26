@@ -21,6 +21,7 @@ export interface DialogProps {
   onPrimary?: () => void;
   onSecondary?: () => void;
   open?: boolean;
+  primaryDisabled?: boolean;
   primaryLabel?: React.ReactNode;
   secondaryLabel?: React.ReactNode;
   showActions?: boolean;
@@ -43,6 +44,7 @@ function Dialog({
   onPrimary,
   onSecondary,
   open: controlledOpen,
+  primaryDisabled = false,
   primaryLabel = "Continue",
   secondaryLabel,
   showActions = true,
@@ -114,6 +116,7 @@ function Dialog({
                 onCancel={() => completeAction(onCancel)}
                 onPrimary={() => completeAction(onPrimary)}
                 onSecondary={() => completeAction(onSecondary)}
+                primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
                 primaryVariant={intent === "destructive" ? "danger" : "brand"}
                 secondaryLabel={secondaryLabel}

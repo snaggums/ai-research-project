@@ -17,10 +17,10 @@ export function participantInitials(participant: SessionSummary["participants"][
   return `${participant.firstName.at(0) ?? ""}${participant.lastName.at(0) ?? ""}`.toUpperCase();
 }
 
-export function formatSessionDate(value?: string, includeTime = true) {
+export function formatSessionDate(value?: string, includeTime = true, month: "short" | "long" = "short") {
   if (!value) return "Not scheduled";
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
+    month,
     day: "numeric",
     year: "numeric",
     ...(includeTime ? { hour: "numeric", minute: "2-digit" } : {}),
@@ -33,7 +33,7 @@ export function formatUpdatedAt(value: string) {
 
 export function formatDuration(minutes?: number) {
   if (minutes === undefined) return "Not recorded";
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
   return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;

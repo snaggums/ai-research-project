@@ -24,6 +24,7 @@ describe("Session synthesis Research Objects", () => {
   it("renders Session Report sections in the approved canonical order", () => {
     render(<SessionReport report={toSessionReport(sessionReportFixture)} />);
     const headings = screen.getAllByRole("heading").map((heading) => heading.textContent);
+    expect(screen.queryByRole("heading", { name: "Session Information" })).not.toBeInTheDocument();
     expect(headings.indexOf("Requirements")).toBeLessThan(headings.indexOf("Decisions"));
     expect(headings.indexOf("Decisions")).toBeLessThan(headings.indexOf("Action Items"));
     expect(headings.indexOf("Action Items")).toBeLessThan(headings.indexOf("Open Questions"));

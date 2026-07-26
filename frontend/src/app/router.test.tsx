@@ -274,12 +274,13 @@ describe("application router foundation", () => {
     expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/edit");
   });
 
-  it("opens Edit session from the Session workspace header", async () => {
+  it("opens Edit session from the Session summary strip", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/overview"] });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
-    await user.click(await screen.findByRole("button", { name: "Edit session" }));
+    const summary = await screen.findByRole("region", { name: "Session summary" });
+    await user.click(within(summary).getByRole("button", { name: "Edit session" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Edit session" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/edit");
   });
@@ -367,12 +368,15 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { name: "Session Report" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Key Insights" })).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    await user.click(screen.getByRole("button", { name: "Use a persistent progress indicator" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
     const editDialog = await screen.findByRole("dialog", { name: "Edit report item" });
     expect(editDialog).toBeInTheDocument();
     const summary = within(editDialog).getAllByRole("textbox")[1];
     await user.clear(summary);
     await user.type(summary, "Updated by the researcher during report review.");
+    await user.click(within(editDialog).getByRole("combobox", { name: "Decision maker (required)" }));
+    await user.click(screen.getByRole("option", { name: "Alex Morgan" }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
     expect(await screen.findByText("Updated by the researcher during report review.")).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Open evidence" })[0]);

@@ -269,7 +269,7 @@ export function ApplicationShell({
         </div>
       ) : null}
 
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-[100rem] lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full min-w-0 max-w-[100rem] lg:grid-cols-[16rem_minmax(0,1fr)]">
         <aside className="hidden border-r border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-4 lg:block">
           {project ? (
             <div className="mb-4 border-b border-[var(--air-color-border-default)] px-3 pb-4">
@@ -286,7 +286,7 @@ export function ApplicationShell({
             label={context === "project" ? "Project navigation" : "Global navigation"}
           />
         </aside>
-        <main className="min-w-0 px-4 py-6 md:px-8 md:py-8" id="main-content" tabIndex={-1}>
+        <main className="w-full min-w-0 max-w-full px-4 py-6 md:px-8 md:py-8" id="main-content" tabIndex={-1}>
           {children}
         </main>
       </div>

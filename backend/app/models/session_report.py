@@ -34,7 +34,11 @@ class SessionReport(Base):
 
 class SessionReportItem(Base):
     __tablename__ = "session_report_items"
-    __table_args__ = (CheckConstraint("item_type IN ('requirement','decision','action-item','open-question','key-insight')", name="ck_session_report_items_type"),)
+    __table_args__ = (
+        CheckConstraint("item_type IN ('requirement','decision','action-item','open-question','key-insight')", name="ck_session_report_items_type"),
+        CheckConstraint("ownership_role IS NULL OR ownership_role IN ('decision-maker','assignee')", name="ck_session_report_items_ownership_role"),
+        CheckConstraint("ownership_status IS NULL OR ownership_status IN ('ai-suggested','confirmed','confirmed-empty','needs-review')", name="ck_session_report_items_ownership_status"),
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     report_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("session_reports.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -42,6 +46,10 @@ class SessionReportItem(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     provenance: Mapped[str] = mapped_column(Text, nullable=False)
+    ownership_role: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), server_default=func.now())

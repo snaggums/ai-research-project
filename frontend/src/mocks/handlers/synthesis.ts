@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-import type { SessionConversation, SessionReport, SessionTheme } from "@/api/types";
+import type { SessionConversation, SessionReport, SessionReportItemPayload, SessionTheme } from "@/api/types";
 import { sessionConversationFixture, sessionReportFixture, sessionThemeFixtures, synthesisEvidenceFixtures } from "@/mocks/fixtures/synthesis";
 
 export const SYNTHESIS_API_BASE_URL = "http://localhost:8000/api";
@@ -50,7 +50,16 @@ export const synthesisHandlers = [
     if (!reportStore || reportStore.project_id !== String(params.projectId) || reportStore.session_id !== String(params.sessionId)) return new HttpResponse("Session Report not found", { status: 404 });
     const item = reportStore.items.find((candidate) => candidate.id === String(params.itemId));
     if (!item) return new HttpResponse("Session Report item not found", { status: 404 });
-    Object.assign(item, await request.json());
+    const { ownership, ...payload } = await request.json() as SessionReportItemPayload;
+    Object.assign(item, payload);
+    if (ownership && (item.type === "decision" || item.type === "action-item")) {
+      item.ownership = {
+        role: item.type === "decision" ? "decision-maker" : "assignee",
+        value: ownership.status === "confirmed-empty" ? null : ownership.value?.trim() || null,
+        status: ownership.status,
+        rationale: item.ownership?.rationale ?? null,
+      };
+    }
     item.provenance = `Researcher Edited · ${item.evidence.length} supporting excerpt${item.evidence.length === 1 ? "" : "s"}`;
     return HttpResponse.json(reportStore);
   }),

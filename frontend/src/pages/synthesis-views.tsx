@@ -5,6 +5,7 @@ import { EmptyState, SharedRouteState } from "@/components/application";
 import { AskThisSession } from "@/components/research/ask-this-session";
 import { SessionReport } from "@/components/research/session-report";
 import { SessionReportEvidence } from "@/components/research/session-report-evidence";
+import { SessionReportOwnershipEditor } from "@/components/research/session-report-ownership-editor";
 import { ThemeCard } from "@/components/research/theme-card";
 import { ThemeEvidenceDetail } from "@/components/research/theme-evidence-detail";
 import { Alert } from "@/components/ui/alert";
@@ -48,7 +49,7 @@ export interface SessionReportWorkspaceViewProps {
   generating?: boolean;
   onApprove?: () => void;
   onCreateRevision?: () => void;
-  onEditItem?: (itemId: string, payload: { title: string; summary: string }) => void;
+  onEditItem?: (itemId: string, payload: { title: string; summary: string; ownership?: { status: "confirmed" | "confirmed-empty"; value?: string } }) => void;
   onEditReport?: (payload: { executiveSummary: string; detailedNotes: string }) => void;
   onGenerate: () => void;
   onRegenerate?: () => void;
@@ -62,6 +63,8 @@ export function SessionReportWorkspaceView({ errorMessage, generating = false, o
   const [editingItem, setEditingItem] = React.useState<SessionReportItem>();
   const [itemTitle, setItemTitle] = React.useState("");
   const [itemSummary, setItemSummary] = React.useState("");
+  const [itemOwnershipValue, setItemOwnershipValue] = React.useState("");
+  const [itemOwnershipConfirmedEmpty, setItemOwnershipConfirmedEmpty] = React.useState(false);
   const [editingReport, setEditingReport] = React.useState(false);
   const [executiveSummary, setExecutiveSummary] = React.useState("");
   const [detailedNotes, setDetailedNotes] = React.useState("");
@@ -73,6 +76,8 @@ export function SessionReportWorkspaceView({ errorMessage, generating = false, o
     setEditingItem(item);
     setItemTitle(item.title);
     setItemSummary(item.summary);
+    setItemOwnershipValue(item.ownership?.value ?? "");
+    setItemOwnershipConfirmedEmpty(item.ownership?.status === "confirmed-empty");
   };
   const beginReportEdit = () => {
     if (!report) return;
@@ -98,6 +103,11 @@ export function SessionReportWorkspaceView({ errorMessage, generating = false, o
   if (generating) return <div aria-live="polite" className="grid justify-items-center gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] px-6 py-16 text-center"><Spinner label="Generating Session Report" size="medium" /><div><h2 className="text-xl font-semibold">Generating Session Report…</h2><p className="mt-1 text-sm text-[var(--air-color-text-secondary)]">AIR is organizing requirements, decisions, actions, questions, and insights.</p></div></div>;
   if (!report) return <EmptyState description="Generate a structured Session Report from reviewed research evidence." primaryAction={<Button onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate Session Report</Button>} title="No Session Report yet" />;
   const evidenceItem = report.items.find((item) => item.id === evidenceItemId);
+  const editingItemHasOwnership = editingItem?.type === "decision" || editingItem?.type === "action-item";
+  const editingOwnershipIsValid = !editingItemHasOwnership
+    || itemOwnershipConfirmedEmpty
+    || Boolean(itemOwnershipValue.trim());
+  const itemFormIsValid = Boolean(editingItem && itemTitle.trim() && editingOwnershipIsValid);
   return <div className="grid gap-4" ref={workspaceRef}>
     {evidenceItem ? <>
       <Button className="justify-self-start" onClick={closeEvidenceReview} size="small" variant="text"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to Session Report</Button>
@@ -105,15 +115,40 @@ export function SessionReportWorkspaceView({ errorMessage, generating = false, o
     </> : <SessionReport onApprove={onApprove} onCreateRevision={onCreateRevision} onEditItem={onEditItem ? beginItemEdit : undefined} onEditReport={onEditReport ? beginReportEdit : undefined} onOpenContext={beginEvidenceReview} onRegenerate={onRegenerate} onReview={onReview} report={report} />}
     <Dialog
       className="w-[42rem]"
-      description="Update the researcher-facing title and summary. Supporting transcript evidence is preserved."
+      description="Update the report item. Supporting transcript evidence is preserved."
       onOpenChange={(open) => { if (!open) setEditingItem(undefined); }}
-      onPrimary={() => { if (editingItem && itemTitle.trim() && itemSummary.trim()) onEditItem?.(editingItem.id, { title: itemTitle.trim(), summary: itemSummary.trim() }); }}
+      onPrimary={() => {
+        if (!editingItem || !itemFormIsValid) return;
+        const hasOwnership = editingItem.type === "decision" || editingItem.type === "action-item";
+        onEditItem?.(editingItem.id, {
+          title: itemTitle.trim(),
+          summary: itemSummary.trim(),
+          ownership: hasOwnership ? {
+            status: itemOwnershipConfirmedEmpty ? "confirmed-empty" : "confirmed",
+            value: itemOwnershipConfirmedEmpty ? undefined : itemOwnershipValue.trim(),
+          } : undefined,
+        });
+      }}
       open={Boolean(editingItem)}
+      primaryDisabled={!itemFormIsValid}
       primaryLabel="Save changes"
       size="large"
       title="Edit report item"
     >
-      <div className="grid gap-4 py-2"><InputField label="Title" onChange={(event) => setItemTitle(event.currentTarget.value)} required value={itemTitle} /><TextareaField label="Summary" onChange={(event) => setItemSummary(event.currentTarget.value)} required value={itemSummary} /></div>
+      <div className="grid gap-4 py-2">
+        <InputField label="Title" onChange={(event) => setItemTitle(event.currentTarget.value)} required value={itemTitle} />
+        <TextareaField label="Summary" onChange={(event) => setItemSummary(event.currentTarget.value)} optional value={itemSummary} />
+        {editingItem && (editingItem.type === "decision" || editingItem.type === "action-item") ? (
+          <SessionReportOwnershipEditor
+            confirmedEmpty={itemOwnershipConfirmedEmpty}
+            item={editingItem}
+            onConfirmedEmptyChange={setItemOwnershipConfirmedEmpty}
+            onValueChange={setItemOwnershipValue}
+            participantNames={report.participants.map((participant) => participant.name)}
+            value={itemOwnershipValue}
+          />
+        ) : null}
+      </div>
     </Dialog>
     <Dialog
       className="w-[42rem]"

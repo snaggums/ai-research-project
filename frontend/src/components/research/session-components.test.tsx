@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -120,11 +120,38 @@ describe("SessionParticipantGroup", () => {
 });
 
 describe("SessionSummary", () => {
-  it("keeps duration under Session details and labels Relationships", () => {
+  it("renders one summary surface without the legacy cards", () => {
     render(<SessionSummary session={sessions[0]} />);
-    expect(screen.getByRole("heading", { name: "Session details" })).toBeInTheDocument();
-    expect(screen.getByText("45 min")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Relationships" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Session summary" })).toBeInTheDocument();
+    expect(screen.getByText("45 minutes")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Session details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Relationships" })).not.toBeInTheDocument();
     expect(screen.queryByText("Moderator")).not.toBeInTheDocument();
+  });
+
+  it("renders the responsive summary contract and delegates editing", async () => {
+    const user = userEvent.setup();
+    const onEditSession = vi.fn();
+    render(<SessionSummary onEditSession={onEditSession} session={sessions[1]} />);
+    const summary = screen.getByRole("region", { name: "Session summary" });
+    expect(summary.querySelector("dl")).toHaveClass("flex", "flex-wrap");
+    expect(summary.querySelectorAll("dl > div")).toHaveLength(5);
+    expect(within(summary).getByText("Usability test")).toBeInTheDocument();
+    expect(within(summary).getByText("July 10, 2026")).toBeInTheDocument();
+    expect(within(summary).getByText("1 hr")).toBeInTheDocument();
+    expect(within(summary).getByText("Alex Morgan +2 more")).toBeInTheDocument();
+    expect(within(summary).getByText("Record 1")).toBeInTheDocument();
+    await user.click(within(summary).getByRole("button", { name: "Edit session" }));
+    expect(onEditSession).toHaveBeenCalledOnce();
+  });
+
+  it("exposes full shortened values and documented empty fallbacks", () => {
+    const { rerender } = render(<SessionSummary session={sessions[1]} />);
+    expect(screen.getByLabelText("Alex Morgan, Jordan Lee, Sam Rivera")).toHaveTextContent("Alex Morgan +2 more");
+    rerender(<SessionSummary session={{ ...sessions[1], durationMinutes: undefined, participants: [], relatedRecords: [], startsAt: undefined }} />);
+    expect(screen.getByText("Not scheduled")).toBeInTheDocument();
+    expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.getByText("No participants")).toBeInTheDocument();
+    expect(screen.getByText("No related Record")).toBeInTheDocument();
   });
 });

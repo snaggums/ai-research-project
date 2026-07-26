@@ -93,6 +93,43 @@ def test_session_theme_report_and_conversation_contracts(client: TestClient) -> 
     assert report["participants"][0]["name"] == "Jordan Moore"
     assert report["detailed_notes"].startswith("Across ")
     assert "detailed patterns" in report["detailed_notes"].lower()
+    decision = next(item for item in report["items"] if item["type"] == "decision")
+    action_item = next(item for item in report["items"] if item["type"] == "action-item")
+    assert decision["ownership"] == {
+        "role": "decision-maker",
+        "value": None,
+        "status": "needs-review",
+        "rationale": None,
+    }
+    assert action_item["ownership"]["role"] == "assignee"
+    owned_decision = client.patch(
+        f"{root}/report/items/{decision['id']}",
+        json={
+            "summary": "",
+            "ownership": {"status": "confirmed", "value": "Research operations"},
+        },
+    )
+    assert owned_decision.status_code == 200
+    saved_decision = next(item for item in owned_decision.json()["items"] if item["id"] == decision["id"])
+    assert saved_decision["summary"] == ""
+    assert saved_decision["ownership"] == {
+        "role": "decision-maker",
+        "value": "Research operations",
+        "status": "confirmed",
+        "rationale": None,
+    }
+    owned_action = client.patch(
+        f"{root}/report/items/{action_item['id']}",
+        json={
+            "ownership": {"status": "confirmed", "value": "Content design"},
+        },
+    )
+    assert owned_action.status_code == 200
+    saved_action = next(item for item in owned_action.json()["items"] if item["id"] == action_item["id"])
+    assert saved_action["ownership"]["value"] == "Content design"
+    persisted_report = client.get(f"{root}/report").json()
+    persisted_decision = next(item for item in persisted_report["items"] if item["id"] == decision["id"])
+    assert persisted_decision["ownership"]["value"] == "Research operations"
     edited_item = client.patch(
         f"{root}/report/items/{report['items'][0]['id']}",
         json={"title": "Require a persistent order summary", "summary": "Keep the order summary visible throughout checkout."},
@@ -111,6 +148,8 @@ def test_session_theme_report_and_conversation_contracts(client: TestClient) -> 
     revision = client.post(f"{root}/report/revisions")
     assert revision.status_code == 201
     assert revision.json()["status"] == "ai-generated"
+    revised_decision = next(item for item in revision.json()["items"] if item["type"] == "decision")
+    assert revised_decision["ownership"]["value"] == "Research operations"
 
     conversation = client.get(f"{root}/conversations")
     assert conversation.status_code == 200
