@@ -10,6 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { alphaProject } from "@/mocks/fixtures/domain";
 import { useProjects } from "@/hooks/useProjects";
+import { useRecords } from "@/hooks/useRecords";
+import { useSessions } from "@/hooks/useSessions";
+import { projectNavigationItems } from "@/components/application/navigation-model";
 
 const routeCopy: Record<string, { description: string; title: string }> = {
   "/projects": {
@@ -37,6 +40,7 @@ const routeCopy: Record<string, { description: string; title: string }> = {
 function activeProjectItem(pathname: string): ProjectNavigationItem {
   if (pathname.includes("/participants")) return "participants";
   if (pathname.includes("/sessions")) return "sessions";
+  if (pathname.includes("/records")) return "records";
   if (pathname.includes("/ask")) return "ask-project";
   return "overview";
 }
@@ -64,12 +68,31 @@ export function ProjectLayout() {
   const { projectId = alphaProject.id } = useParams();
   const location = useLocation();
   const projects = useProjects();
+  const sessions = useSessions(projectId);
+  const records = useRecords();
   const projectName = projects.data?.find((project) => project.id === projectId)?.name ?? alphaProject.name;
+  const activeSessionId = location.pathname.match(/\/sessions\/([^/]+)/)?.[1];
+  const activeRecordId = location.pathname.match(/\/records\/([^/]+)/)?.[1];
+  const navigationEntries = projectNavigationItems(
+    projectId,
+    (sessions.data ?? []).map((session) => ({
+      href: `/projects/${projectId}/sessions/${session.id}/overview`,
+      id: session.id,
+      label: session.title,
+    })),
+    records.data?.map((record) => ({
+      href: `/projects/${projectId}/records/${record.id}`,
+      id: record.id,
+      label: record.name,
+    })),
+  );
   return (
     <ApplicationShell
+      activeProjectChildId={activeSessionId ?? activeRecordId}
       activeProjectItem={activeProjectItem(location.pathname)}
       context="project"
       project={{ id: projectId, name: projectName }}
+      projectNavigationEntries={navigationEntries}
       showProjectSearch={false}
     >
       <Outlet />

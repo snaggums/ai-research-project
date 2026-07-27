@@ -6,6 +6,7 @@ import { EmptyState, EntityCollection, PageHeader, SectionNavigation, SharedRout
 import { SessionCollectionItem } from "@/components/research/session-collection-item";
 import { SessionForm, type SessionFormProps } from "@/components/research/session-form";
 import { SessionParticipantGroup } from "@/components/research/session-participant-group";
+import { RecordSynthesisRequirementsNote } from "@/components/research/record-synthesis-requirements-note";
 import { SessionSummary } from "@/components/research/session-summary";
 import { Avatar } from "@/components/ui/avatar";
 import { Alert } from "@/components/ui/alert";
@@ -144,13 +145,14 @@ export interface SessionDetailViewProps {
   onRetry?: () => void;
   projectId: string;
   projectName: string;
+  recordSynthesisRequirementsNote?: React.ReactNode;
   routeState?: "ready" | "loading" | "error" | "not-found";
   session?: SessionSummaryValue;
   transcriptContent?: React.ReactNode;
   workspaceContent?: React.ReactNode;
 }
 
-export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipant, onEditSession, onRetry, projectId, projectName, routeState = "ready", session, transcriptContent, workspaceContent }: SessionDetailViewProps) {
+export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipant, onEditSession, onRetry, projectId, projectName, recordSynthesisRequirementsNote, routeState = "ready", session, transcriptContent, workspaceContent }: SessionDetailViewProps) {
   const root = session ? `/projects/${projectId}/sessions/${session.id}` : `/projects/${projectId}/sessions`;
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
@@ -163,7 +165,11 @@ export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipa
     report: "Review the structured requirements, decisions, actions, questions, and insights from this Session.",
     ask: "Ask grounded questions using only this Session’s transcript and evidence.",
   };
-  const content = activeTab === "overview" ? <div className="grid min-w-0 gap-4 lg:grid-cols-2 [&>*]:min-w-0"><SessionParticipantGroup onAddParticipant={onAddParticipant} participants={session.participants} /><SessionProcessingSummary session={session} /></div> : activeTab === "participants" ? <SessionParticipants onAdd={onAddParticipant} onEdit={onEditParticipant} participants={session.participants} /> : activeTab === "transcript" ? transcriptContent : workspaceContent;
+  const overviewContent = <div className="grid min-w-0 gap-4 lg:grid-cols-2 [&>*]:min-w-0"><SessionParticipantGroup onAddParticipant={onAddParticipant} participants={session.participants} /><SessionProcessingSummary session={session} /></div>;
+  const resolvedRecordSynthesisRequirementsNote = recordSynthesisRequirementsNote === undefined
+    ? <RecordSynthesisRequirementsNote />
+    : recordSynthesisRequirementsNote;
+  const content = activeTab === "overview" ? <div className="grid min-w-0 gap-6">{overviewContent}{resolvedRecordSynthesisRequirementsNote}</div> : activeTab === "participants" ? <SessionParticipants onAdd={onAddParticipant} onEdit={onEditParticipant} participants={session.participants} /> : activeTab === "transcript" ? transcriptContent : workspaceContent;
   return <div className="grid min-w-0 gap-6 [&>*]:min-w-0"><PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { label: session.title }]} description={descriptions[activeTab]} title={session.title} /><SessionSummary onEditSession={onEditSession} session={session} /><SectionNavigation activeId={activeTab} items={sessionTabs(root)} label="Session sections" />{content}</div>;
 }
 

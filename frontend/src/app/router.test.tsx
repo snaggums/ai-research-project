@@ -30,6 +30,10 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Mobile checkout usability test" })).toBeInTheDocument();
     const sessionNavigation = screen.getByRole("navigation", { name: "Session sections" });
     expect(within(sessionNavigation).getByRole("link", { name: "Transcript" })).toHaveAttribute("aria-current", "page");
+    const projectNavigation = screen.getByRole("navigation", { name: "Project navigation" });
+    expect(within(projectNavigation).getByRole("button", { name: "Collapse Sessions" })).toHaveAttribute("aria-expanded", "true");
+    expect(await within(projectNavigation).findByRole("link", { name: "Mobile checkout usability test" })).toHaveAttribute("aria-current", "page");
+    expect(within(projectNavigation).getByRole("link", { name: "Records, 3 items" })).toHaveAttribute("href", "/projects/alpha-project/records");
     expect(await screen.findByRole("searchbox", { name: "Search this transcript" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Transcript coding" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Suggestions awaiting review" })).toBeInTheDocument();
@@ -414,6 +418,25 @@ describe("application router foundation", () => {
     await user.click((await screen.findAllByRole("button", { name: /Open evidence/ }))[0]);
     expect(await screen.findByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeInTheDocument();
     expect(router.state.location.pathname).toContain("/records/record-1/synthesis/items/");
+  });
+
+  it("preserves Project navigation when opening a Record from a Project", async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/records"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Records" })).toBeInTheDocument();
+    const projectNavigation = screen.getByRole("navigation", { name: "Project navigation" });
+    expect(await within(projectNavigation).findByRole("link", { name: "Records, 3 items" })).toHaveAttribute("aria-current", "page");
+    expect(within(projectNavigation).getByRole("button", { name: "Expand Records" })).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(await screen.findByRole("link", { name: "Open Record 1" }));
+
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/records/record-1");
+    expect(await within(projectNavigation).findByRole("link", { name: "Record 1" })).toHaveAttribute("aria-current", "page");
+    expect(within(projectNavigation).getByRole("button", { name: "Collapse Records" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("keeps the Record shell available when Knowledge cannot load", async () => {

@@ -10,12 +10,17 @@ import {
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { globalNavigationItems, projectNavigationItems } from "@/components/application/navigation-model";
+import {
+  ProjectNavigation,
+  type ProjectNavigationEntry,
+} from "@/components/application/project-navigation";
 import { cn } from "@/lib/utils";
 
 export type ProjectNavigationItem =
   | "overview"
   | "participants"
   | "sessions"
+  | "records"
   | "ask-project";
 
 export type NavigationItem<T extends string = string> = {
@@ -184,26 +189,30 @@ export function Navigation<T extends string>({
 export interface ApplicationShellProps {
   activeGlobalItem?: "projects" | "records" | null;
   activeGlobalSubItem?: string;
+  activeProjectChildId?: string;
   activeProjectItem?: ProjectNavigationItem;
   children: React.ReactNode;
   context: "workspace" | "project";
   project?: { id: string; name: string };
+  projectNavigationEntries?: ProjectNavigationEntry[];
   showProjectSearch?: boolean;
 }
 
 export function ApplicationShell({
   activeGlobalItem = "projects",
   activeGlobalSubItem,
+  activeProjectChildId,
   activeProjectItem,
   children,
   context,
   project,
+  projectNavigationEntries,
   showProjectSearch = false,
 }: ApplicationShellProps) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = React.useState(false);
-  const navItems = context === "project" && project
-    ? projectNavigationItems(project.id)
-    : globalNavigationItems;
+  const resolvedProjectNavigationEntries = project && context === "project"
+    ? projectNavigationEntries ?? projectNavigationItems(project.id)
+    : undefined;
   const activeId = context === "project" ? activeProjectItem : activeGlobalItem ?? undefined;
 
   React.useEffect(() => {
@@ -258,13 +267,22 @@ export function ApplicationShell({
                 <div className="mt-1 font-semibold">{project.name}</div>
               </div>
             ) : null}
-            <Navigation
-              activeChildId={context === "workspace" ? activeGlobalSubItem : undefined}
-              activeId={activeId}
-              items={navItems}
-              label={context === "project" ? "Project navigation" : "Global navigation"}
-              onNavigate={() => setMobileNavigationOpen(false)}
-            />
+            {resolvedProjectNavigationEntries ? (
+              <ProjectNavigation
+                activeChildId={activeProjectChildId}
+                activeId={activeProjectItem}
+                items={resolvedProjectNavigationEntries}
+                onNavigate={() => setMobileNavigationOpen(false)}
+              />
+            ) : (
+              <Navigation
+                activeChildId={activeGlobalSubItem}
+                activeId={activeId}
+                items={globalNavigationItems}
+                label="Global navigation"
+                onNavigate={() => setMobileNavigationOpen(false)}
+              />
+            )}
           </aside>
         </div>
       ) : null}
@@ -279,12 +297,20 @@ export function ApplicationShell({
               <div className="mt-1 font-semibold">{project.name}</div>
             </div>
           ) : null}
-          <Navigation
-            activeChildId={context === "workspace" ? activeGlobalSubItem : undefined}
-            activeId={activeId}
-            items={navItems}
-            label={context === "project" ? "Project navigation" : "Global navigation"}
-          />
+          {resolvedProjectNavigationEntries ? (
+            <ProjectNavigation
+              activeChildId={activeProjectChildId}
+              activeId={activeProjectItem}
+              items={resolvedProjectNavigationEntries}
+            />
+          ) : (
+            <Navigation
+              activeChildId={activeGlobalSubItem}
+              activeId={activeId}
+              items={globalNavigationItems}
+              label="Global navigation"
+            />
+          )}
         </aside>
         <main className="w-full min-w-0 max-w-full px-4 py-6 md:px-8 md:py-8" id="main-content" tabIndex={-1}>
           {children}

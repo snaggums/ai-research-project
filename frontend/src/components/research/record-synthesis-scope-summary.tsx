@@ -8,16 +8,23 @@ import { lifecycleStatusLabels } from "./record-presentation";
 
 export interface RecordSynthesisScopeSummaryProps extends React.HTMLAttributes<HTMLElement> {
   layout?: "default" | "compact";
+  requirementsDescription?: React.ReactNode;
   scope: RecordSynthesisScope;
 }
 
-export function RecordSynthesisScopeSummary({ className, layout = "default", scope, ...props }: RecordSynthesisScopeSummaryProps) {
+export const RECORD_SYNTHESIS_REQUIREMENTS_DESCRIPTION = "To begin Record synthesis, this Record needs at least two related Sessions whose latest Session Report is Researcher Reviewed or Approved and contains at least one evidence-linked Requirement, Decision, or Action Item.";
+
+export function RecordSynthesisScopeSummary({ className, layout = "default", requirementsDescription, scope, ...props }: RecordSynthesisScopeSummaryProps) {
   const ready = scope.includedSessions.length >= scope.minimumEligibleSessions;
   const compact = layout === "compact";
+  const resolvedRequirementsDescription = requirementsDescription === undefined && !compact
+    ? RECORD_SYNTHESIS_REQUIREMENTS_DESCRIPTION
+    : requirementsDescription;
   return (
     <section className={cn("rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5 md:p-6", className)} {...props}>
       <h2 className="text-2xl font-semibold">Synthesis scope</h2>
       <p className="mt-2 text-sm leading-6 text-[var(--air-color-text-secondary)]">{scope.description}</p>
+      {resolvedRequirementsDescription ? <p className="mt-2 text-sm leading-6 text-[var(--air-color-text-secondary)]">{resolvedRequirementsDescription}</p> : null}
       <div className={cn("mt-5 flex items-start gap-3 p-4", ready ? "bg-[var(--air-color-status-success-bg)] text-[var(--air-color-status-success-text)]" : "bg-[var(--air-color-status-warning-bg)] text-[var(--air-color-status-warning-text)]")}>
         {ready ? <CircleCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" /> : <Info aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />}
         <div><div className="font-semibold">{ready ? "Ready to generate" : "More eligible Sessions required"}</div><div className="mt-1 text-sm">{scope.includedSessions.length} eligible {scope.includedSessions.length === 1 ? "Session" : "Sessions"} will be included automatically.</div></div>

@@ -31,7 +31,7 @@ const recordAskSessions = sessionApiFixtures
 
 function RecordAskStoryPage(props: AskRecordWorkspaceProps) {
   const [activeView, setActiveView] = React.useState<
-    "overview" | "knowledge" | "ask-record"
+    "overview" | "knowledge" | "transcript-codes" | "ask-record"
   >("ask-record");
   return (
     <div

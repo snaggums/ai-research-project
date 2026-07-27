@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import { toSessionSummary } from "@/adapters/sessions";
+import { recordCodeDetails } from "@/components/research/record-code-story-data";
 import { askRecordSuggestedQuestions } from "@/mocks/fixtures/ask-record";
 import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
@@ -56,7 +57,7 @@ describe("Record page compositions", () => {
     expect(onViewChange).toHaveBeenCalledWith("overview");
   });
 
-  it("integrates Ask Record as the third Record Detail view without synthesis actions", () => {
+  it("integrates Ask Record as a Record Detail view without synthesis actions", () => {
     render(
       <RecordDetailView
         activeView="ask-record"
@@ -84,6 +85,55 @@ describe("Record page compositions", () => {
     expect(
       screen.queryByRole("heading", { name: "Ready to synthesize" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("integrates the approved Transcript codes workspace with local exploration state", async () => {
+    const user = userEvent.setup();
+    const onOpenInTranscriptCoding = vi.fn();
+    const onViewChange = vi.fn();
+    render(
+      <RecordDetailView
+        activeView="transcript-codes"
+        onOpenInTranscriptCoding={onOpenInTranscriptCoding}
+        onViewChange={onViewChange}
+        record={recordSummaries[0]}
+        recordCodeEligibleSessionCount={5}
+        recordCodes={recordCodeDetails}
+        scope={readyRecordScope}
+        sessions={[]}
+      />,
+    );
+
+    expect(screen.getByRole("tab", { name: "Transcript codes" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Transcript codes" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+
+    const codeList = screen.getByRole("list", { name: "Accepted Record Codes" });
+    await user.click(screen.getByRole("combobox", { name: "Sort by" }));
+    await user.click(screen.getByRole("option", { name: "Name Z–A" }));
+    expect(within(codeList).getAllByRole("button")[0]).toHaveTextContent(
+      "Table navigation",
+    );
+
+    await user.type(screen.getByRole("searchbox", { name: "Search" }), "focus feedback");
+    expect(within(codeList).getAllByRole("button")).toHaveLength(1);
+    await user.click(within(codeList).getByRole("button"));
+    expect(
+      screen.getByRole("heading", { name: "Focus feedback" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open in Transcript Coding" }));
+    expect(onOpenInTranscriptCoding).toHaveBeenCalledWith(
+      recordCodeDetails[1].evidenceGroups[0].highlights[0],
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Overview" }));
+    expect(onViewChange).toHaveBeenCalledWith("overview");
   });
 
   it("prevents synthesis when fewer than two Session Reports are eligible", () => {

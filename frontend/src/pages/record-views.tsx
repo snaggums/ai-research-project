@@ -10,10 +10,20 @@ import {
   RecordKnowledgeWorkspace,
   type RecordKnowledgeWorkspaceState,
 } from "@/components/research/record-knowledge-workspace";
+import {
+  RecordCodeWorkspace,
+} from "@/components/research/record-code-workspace";
+import type { RecordCodeCollectionState } from "@/components/research/record-code-collection";
 import { RecordListItem } from "@/components/research/record-list-item";
 import { RecordSummary } from "@/components/research/record-summary";
 import { RecordSynthesisResults } from "@/components/research/record-synthesis-results";
 import { RecordSynthesisScopeSummary } from "@/components/research/record-synthesis-scope-summary";
+import type {
+  RecordCodeDetailValue,
+  RecordCodeSortValue,
+  RecordCodeSupportingHighlightValue,
+} from "@/components/research/record-code-types";
+import { sortRecordCodeValues } from "@/components/research/record-code-utils";
 import { SessionCollectionItem } from "@/components/research/session-collection-item";
 import { TranscriptContextPassage } from "@/components/research/transcript-context-passage";
 import { Alert } from "@/components/ui/alert";
@@ -32,11 +42,12 @@ import type {
 export interface RecordsCollectionViewProps {
   onOpenRecord?: (recordId: string) => void;
   onRetry?: () => void;
+  recordRootPath?: string;
   records: RecordSummaryValue[];
   state?: "ready" | "loading" | "empty" | "error";
 }
 
-export function RecordsCollectionView({ onOpenRecord, onRetry, records, state = "ready" }: RecordsCollectionViewProps) {
+export function RecordsCollectionView({ onOpenRecord, onRetry, recordRootPath = "/records", records, state = "ready" }: RecordsCollectionViewProps) {
   return <div className="grid gap-6">
     <PageHeader breadcrumbs={[{ label: "Records" }]} description="Review the fixed Record catalog and synthesize eligible research across Sessions." title="Records" />
     <EntityCollection
@@ -50,24 +61,30 @@ export function RecordsCollectionView({ onOpenRecord, onRetry, records, state = 
           : undefined}
       title="All records"
     >
-      <div className="grid gap-4">{records.map((record) => <RecordListItem href={`/records/${record.id}`} key={record.id} onOpen={onOpenRecord ? (event) => { event.preventDefault(); onOpenRecord(record.id); } : undefined} record={record} />)}</div>
+      <div className="grid gap-4">{records.map((record) => <RecordListItem href={`${recordRootPath}/${record.id}`} key={record.id} onOpen={onOpenRecord ? (event) => { event.preventDefault(); onOpenRecord(record.id); } : undefined} record={record} />)}</div>
     </EntityCollection>
   </div>;
 }
 
 export interface RecordDetailViewProps {
-  activeView?: "overview" | "knowledge" | "ask-record";
+  activeView?: "overview" | "knowledge" | "transcript-codes" | "ask-record";
   askRecordProps?: AskRecordWorkspaceProps;
   generating?: boolean;
   knowledgeState?: RecordKnowledgeWorkspaceState;
   onGenerate?: () => void;
+  onOpenInTranscriptCoding?: (highlight: RecordCodeSupportingHighlightValue) => void;
   onOpenSynthesis?: () => void;
   onOpenEvidence?: (itemId: string) => void;
+  onRetryRecordCodes?: () => void;
   onRetryKnowledge?: () => void;
   onStatusChange?: (itemId: string, status: LifecycleStatus) => void;
   onRetry?: () => void;
-  onViewChange?: (view: "overview" | "knowledge" | "ask-record") => void;
+  onViewChange?: (view: "overview" | "knowledge" | "transcript-codes" | "ask-record") => void;
   record?: RecordSummaryValue;
+  recordCodeEligibleSessionCount?: number;
+  recordCodes?: RecordCodeDetailValue[];
+  recordCodeState?: RecordCodeCollectionState;
+  recordRootPath?: string;
   routeState?: "ready" | "loading" | "error" | "not-found";
   scope?: RecordSynthesisScope;
   sessions: SessionSummary[];
@@ -82,12 +99,18 @@ export function RecordDetailView({
   knowledgeState,
   onGenerate,
   onOpenEvidence,
+  onOpenInTranscriptCoding,
   onOpenSynthesis,
   onRetry,
   onRetryKnowledge,
+  onRetryRecordCodes,
   onStatusChange,
   onViewChange,
   record,
+  recordCodeEligibleSessionCount = 0,
+  recordCodes = [],
+  recordCodeState,
+  recordRootPath = "/records",
   routeState = "ready",
   scope,
   sessions,
@@ -95,12 +118,17 @@ export function RecordDetailView({
   synthesis,
 }: RecordDetailViewProps) {
   const [knowledgeQuery, setKnowledgeQuery] = React.useState("");
+  const [recordCodeQuery, setRecordCodeQuery] = React.useState("");
+  const [recordCodeSort, setRecordCodeSort] = React.useState<RecordCodeSortValue>(
+    "most-highlights",
+  );
+  const [selectedRecordCodeId, setSelectedRecordCodeId] = React.useState<string>();
   const [expandedItemIds, setExpandedItemIds] = React.useState<Set<string>>(
     () => new Set(),
   );
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
-  if (routeState === "not-found" || !record || !scope) return <SharedRouteState returnHref="/records" state="not-found" />;
+  if (routeState === "not-found" || !record || !scope) return <SharedRouteState returnHref={recordRootPath} state="not-found" />;
   const eligible = scope.includedSessions.length >= scope.minimumEligibleSessions;
   const resolvedKnowledgeState = knowledgeState
     ?? (synthesis?.status === "complete"
@@ -108,6 +136,20 @@ export function RecordDetailView({
         ? "ready"
         : "empty"
       : "empty");
+  const resolvedRecordCodeState = recordCodeState
+    ?? (recordCodes.length ? "ready" : "empty");
+  const normalizedRecordCodeQuery = recordCodeQuery.trim().toLocaleLowerCase();
+  const visibleRecordCodes = resolvedRecordCodeState === "ready"
+    ? sortRecordCodeValues(
+        recordCodes.filter((code) =>
+          code.name.toLocaleLowerCase().includes(normalizedRecordCodeQuery),
+        ),
+        recordCodeSort,
+      )
+    : [];
+  const selectedRecordCode = recordCodes.find(
+    (code) => code.id === selectedRecordCodeId,
+  ) ?? recordCodes[0];
 
   function toggleKnowledgeItem(itemId: string) {
     setExpandedItemIds((current) => {
@@ -158,6 +200,27 @@ export function RecordDetailView({
       statusUpdatingItemId={statusUpdatingItemId}
     />
   );
+  const transcriptCodes = (
+    <RecordCodeWorkspace
+      codes={visibleRecordCodes}
+      collectionState={resolvedRecordCodeState}
+      comparisonState={resolvedRecordCodeState === "error" ? "error" : "ready"}
+      eligibleSessionCount={recordCodeEligibleSessionCount}
+      headingLevel="h2"
+      onClearSearch={() => setRecordCodeQuery("")}
+      onOpenInTranscriptCoding={onOpenInTranscriptCoding}
+      onQueryChange={setRecordCodeQuery}
+      onRetryCollection={onRetryRecordCodes}
+      onRetryComparison={onRetryRecordCodes}
+      onSelectCode={setSelectedRecordCodeId}
+      onSortChange={setRecordCodeSort}
+      onViewRelatedSessions={() => onViewChange?.("overview")}
+      query={recordCodeQuery}
+      selectedCode={selectedRecordCode}
+      sort={recordCodeSort}
+      totalCodeCount={recordCodes.length}
+    />
+  );
   const askRecord = askRecordProps ? (
     <AskRecordWorkspace
       {...askRecordProps}
@@ -167,7 +230,7 @@ export function RecordDetailView({
 
   return <div className="grid gap-6">
     <PageHeader
-      breadcrumbs={[{ href: "/records", label: "Records" }, { label: record.name }]}
+      breadcrumbs={[{ href: recordRootPath, label: "Records" }, { label: record.name }]}
       description="Cross-session synthesis of requirements, decisions, and action items."
       title={record.name}
     />
@@ -190,7 +253,7 @@ export function RecordDetailView({
         </Button>
       ) : eligible ? (
         <Button asChild size="small">
-          <a href={`/records/${record.id}/synthesis`}>
+          <a href={`${recordRootPath}/${record.id}/synthesis`}>
             <Sparkles aria-hidden="true" className="h-4 w-4" />
             Generate synthesis
           </a>
@@ -207,12 +270,19 @@ export function RecordDetailView({
       items={[
         { content: overview, label: "Overview", value: "overview" },
         { content: knowledge, label: "Knowledge", value: "knowledge" },
+        {
+          content: transcriptCodes,
+          label: "Transcript codes",
+          value: "transcript-codes",
+        },
         ...(askRecord
           ? [{ content: askRecord, label: "Ask Record", value: "ask-record" }]
           : []),
       ]}
       onValueChange={(value) =>
-        onViewChange?.(value as "overview" | "knowledge" | "ask-record")
+        onViewChange?.(
+          value as "overview" | "knowledge" | "transcript-codes" | "ask-record",
+        )
       }
       value={activeView}
     />
@@ -227,21 +297,22 @@ export interface RecordSynthesisViewProps {
   onStatusChange?: (itemId: string, status: LifecycleStatus) => void;
   onRetry?: () => void;
   record: RecordSummaryValue;
+  recordRootPath?: string;
   scope: RecordSynthesisScope;
   state: RecordSynthesisViewState;
   synthesis?: RecordSynthesis;
   statusUpdatingItemId?: string;
 }
 
-export function RecordSynthesisView({ onGenerate, onOpenEvidence, onRetry, onStatusChange, record, scope, state, statusUpdatingItemId, synthesis }: RecordSynthesisViewProps) {
-  const header = <PageHeader breadcrumbs={[{ href: "/records", label: "Records" }, { href: `/records/${record.id}`, label: record.name }, { label: "Synthesis" }]} description="Generate and review consolidated Requirements, Decisions, and Action Items across eligible Sessions." title={`${record.name} synthesis`} />;
+export function RecordSynthesisView({ onGenerate, onOpenEvidence, onRetry, onStatusChange, record, recordRootPath = "/records", scope, state, statusUpdatingItemId, synthesis }: RecordSynthesisViewProps) {
+  const header = <PageHeader breadcrumbs={[{ href: recordRootPath, label: "Records" }, { href: `${recordRootPath}/${record.id}`, label: record.name }, { label: "Synthesis" }]} description="Generate and review consolidated Requirements, Decisions, and Action Items across eligible Sessions." title={`${record.name} synthesis`} />;
   const generateLabel = synthesis ? "Regenerate synthesis" : "Generate synthesis";
   return <div className="grid gap-6">
     {header}
     <RecordSummary layout="compact" record={record} />
     <RecordSynthesisScopeSummary scope={scope} />
     {state === "processing" ? <section aria-live="polite" className="grid min-h-64 place-items-center rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6" role="status"><div className="grid max-w-lg justify-items-center gap-4 text-center"><Spinner label="Generating Record synthesis" size="medium" /><h2 className="text-xl font-semibold">Generating Record synthesis</h2><p className="text-sm leading-6 text-[var(--air-color-text-secondary)]">AIR is consolidating eligible Session Reports. You can leave this page without losing the run.</p></div></section> : null}
-    {state === "insufficient" ? <section className="grid gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6"><Alert message={`At least ${scope.minimumEligibleSessions} eligible Session Reports are required. This Record currently has ${scope.includedSessions.length}.`} size="large" title="More research is required" tone="warning" /><Button asChild className="justify-self-start" size="small" variant="gray-subtle"><a href={`/records/${record.id}`}>Return to record</a></Button></section> : null}
+    {state === "insufficient" ? <section className="grid gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6"><Alert message={`At least ${scope.minimumEligibleSessions} eligible Session Reports are required. This Record currently has ${scope.includedSessions.length}.`} size="large" title="More research is required" tone="warning" /><Button asChild className="justify-self-start" size="small" variant="gray-subtle"><a href={`${recordRootPath}/${record.id}`}>Return to record</a></Button></section> : null}
     {state === "empty" ? <EmptyState description="AIR will automatically use every eligible Session Report related to this Record." primaryAction={<Button onClick={onGenerate} size="small"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate synthesis</Button>} title="No Record synthesis yet" /> : null}
     {state === "failed" ? <section className="grid gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-6"><Alert message={synthesis?.errorMessage ?? "The synthesis run failed. Eligible Session Reports remain unchanged and can be retried."} size="large" title="Record synthesis failed" tone="error" /><Button className="justify-self-start" onClick={onRetry ?? onGenerate} size="small"><RefreshCw aria-hidden="true" className="h-4 w-4" />Retry synthesis</Button></section> : null}
     {state === "results" && synthesis ? <><div className="flex justify-end"><Button onClick={onGenerate} size="small" variant="gray-subtle"><Sparkles aria-hidden="true" className="h-4 w-4" />{generateLabel}</Button></div><RecordSynthesisResults onOpenEvidence={onOpenEvidence} onStatusChange={onStatusChange} statusUpdatingItemId={statusUpdatingItemId} synthesis={synthesis} /></> : null}
@@ -254,17 +325,18 @@ export interface RecordEvidenceDetailViewProps {
   itemTitle?: string;
   onRetry?: () => void;
   record?: RecordSummaryValue;
+  recordRootPath?: string;
   sessionTitle?: string;
   state?: "ready" | "loading" | "error" | "not-found";
 }
 
-export function RecordEvidenceDetailView({ context, evidenceId, itemTitle, onRetry, record, sessionTitle, state = "ready" }: RecordEvidenceDetailViewProps) {
+export function RecordEvidenceDetailView({ context, evidenceId, itemTitle, onRetry, record, recordRootPath = "/records", sessionTitle, state = "ready" }: RecordEvidenceDetailViewProps) {
   if (state === "loading") return <SharedRouteState state="loading" />;
-  if (state === "error") return <SharedRouteState onRetry={onRetry} returnHref={record ? `/records/${record.id}/synthesis` : "/records"} state="recoverable-error" />;
-  if (state === "not-found" || !context || !record) return <SharedRouteState returnHref="/records" state="not-found" />;
+  if (state === "error") return <SharedRouteState onRetry={onRetry} returnHref={record ? `${recordRootPath}/${record.id}/synthesis` : recordRootPath} state="recoverable-error" />;
+  if (state === "not-found" || !context || !record) return <SharedRouteState returnHref={recordRootPath} state="not-found" />;
   return <div className="grid gap-6">
-    <PageHeader breadcrumbs={[{ href: "/records", label: "Records" }, { href: `/records/${record.id}`, label: record.name }, { href: `/records/${record.id}/synthesis`, label: "Synthesis" }, { label: "Evidence" }]} description="Review the cited source passage and its surrounding transcript context." title="Synthesis evidence" />
-    <Button asChild className="justify-self-start" size="small" variant="text"><a href={`/records/${record.id}/synthesis`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to Synthesis</a></Button>
+    <PageHeader breadcrumbs={[{ href: recordRootPath, label: "Records" }, { href: `${recordRootPath}/${record.id}`, label: record.name }, { href: `${recordRootPath}/${record.id}/synthesis`, label: "Synthesis" }, { label: "Evidence" }]} description="Review the cited source passage and its surrounding transcript context." title="Synthesis evidence" />
+    <Button asChild className="justify-self-start" size="small" variant="text"><a href={`${recordRootPath}/${record.id}/synthesis`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to Synthesis</a></Button>
     <article className="grid gap-5 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5 md:p-6">
       <header><p className="text-xs font-semibold uppercase tracking-wide text-[var(--air-color-text-secondary)]">{sessionTitle ?? "Source Session"}</p><h2 className="mt-1 text-2xl font-semibold">{itemTitle ?? "Synthesis item evidence"}</h2><p className="mt-2 text-sm text-[var(--air-color-text-secondary)]">Evidence ID: {evidenceId}</p></header>
       <TranscriptContextPassage context={context} />

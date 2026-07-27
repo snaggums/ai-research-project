@@ -22,6 +22,30 @@ const props = {
 };
 
 describe("Transcript Coding Workspace filters", () => {
+  it("focuses a Record-level supporting Highlight in the accepted list", async () => {
+    const highlight = transcriptCodingHighlights.find(
+      (candidate) => candidate.codes.length > 0,
+    );
+    if (!highlight) throw new Error("Expected an accepted coded Highlight fixture.");
+
+    render(
+      <TranscriptCodingWorkspaceView
+        {...props}
+        routeState={{
+          codeIds: [],
+          highlightId: highlight.id,
+          highlightStatus: "accepted-coded",
+          panel: "accepted",
+          view: "list",
+        }}
+      />,
+    );
+
+    const target = document.getElementById(`transcript-highlight-${highlight.id}`);
+    expect(target).toHaveAttribute("tabindex", "-1");
+    await waitFor(() => expect(target).toHaveFocus());
+  });
+
   it("renders imported DOCX turns as separate speaker and timestamp blocks", () => {
     render(
       <TranscriptCodingWorkspaceView
@@ -166,6 +190,8 @@ describe("Transcript Coding Workspace filters", () => {
     render(<TranscriptCodingWorkspaceView {...props} onCreateHighlight={onCreateHighlight} state="manual-selection" />);
 
     await user.click(screen.getByText(transcriptReaderBlocks[0].excerpt));
+    const toolbar = screen.getByRole("toolbar", { name: "Transcript selection actions" });
+    expect(within(toolbar).queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Highlight" }));
 
     expect(onCreateHighlight).toHaveBeenCalledWith(
@@ -261,34 +287,52 @@ describe("Transcript Coding Workspace filters", () => {
     );
   });
 
-  it("retains the whole-passage selection when applying a Code from a clicked reader block", async () => {
+  it("saves a clicked passage as Uncoded before applying a Code from the right rail", async () => {
     const user = userEvent.setup();
     const onApplyCodes = vi.fn();
-    render(<TranscriptCodingWorkspaceView {...props} onApplyCodes={onApplyCodes} state="manual-selection" />);
+    const onCreateHighlight = vi.fn();
+    render(
+      <TranscriptCodingWorkspaceView
+        {...props}
+        acceptedHighlights={[]}
+        onApplyCodes={onApplyCodes}
+        onCreateHighlight={onCreateHighlight}
+        state="manual-selection"
+      />,
+    );
 
     await user.click(screen.getByText(transcriptReaderBlocks[0].excerpt));
+    const toolbar = screen.getByRole("toolbar", { name: "Transcript selection actions" });
+    expect(within(toolbar).queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Highlight" }));
+    expect(screen.getByRole("heading", { name: "Uncoded highlights" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Apply code" }));
     await user.click(screen.getByRole("option", { name: /Information architecture/ }));
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
-    expect(onApplyCodes).toHaveBeenCalledWith(expect.objectContaining({
-      codeIds: ["code-information-architecture"],
-      selection: expect.objectContaining({
+    expect(onCreateHighlight).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "uncoded" }),
+      expect.objectContaining({
         blockId: transcriptReaderBlocks[0].id,
         method: "block",
         text: transcriptReaderBlocks[0].excerpt,
       }),
-    }));
+    );
+    expect(onApplyCodes).toHaveBeenCalledWith({
+      codeIds: ["code-information-architecture"],
+      highlightId: "manual-highlight-1",
+    });
     expect(screen.getAllByText("Information architecture", { selector: "span" }).length).toBeGreaterThan(0);
   });
 
-  it("keeps a pending passage through code creation and application", async () => {
+  it("creates a Code and applies it to a newly saved Uncoded highlight", async () => {
     const user = userEvent.setup();
     const onApplyCodes = vi.fn();
     const onCreateCode = vi.fn();
     render(
       <TranscriptCodingWorkspaceView
         {...props}
+        acceptedHighlights={[]}
         onApplyCodes={onApplyCodes}
         onCreateCode={onCreateCode}
         state="manual-selection"
@@ -297,6 +341,7 @@ describe("Transcript Coding Workspace filters", () => {
 
     await user.click(screen.getByRole("button", { name: "Select with keyboard" }));
     await user.keyboard("{ArrowUp}{Enter}");
+    await user.click(screen.getByRole("button", { name: "Highlight" }));
     await user.click(screen.getByRole("button", { name: "Apply code" }));
     await user.click(screen.getByRole("button", { name: "Create a new code" }));
     await user.type(screen.getByLabelText(/Code name/), "Research expectations");
@@ -309,13 +354,10 @@ describe("Transcript Coding Workspace filters", () => {
     expect(screen.getByRole("option", { name: /Research expectations/ })).toHaveAttribute("aria-selected", "true");
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
-    expect(onApplyCodes).toHaveBeenCalledWith(expect.objectContaining({
+    expect(onApplyCodes).toHaveBeenCalledWith({
       codeIds: ["code-research-expectations"],
-      selection: expect.objectContaining({
-        blockId: transcriptReaderBlocks[0].id,
-        text: transcriptReaderBlocks[0].excerpt,
-      }),
-    }));
+      highlightId: "manual-highlight-1",
+    });
     expect(screen.getByRole("heading", { name: "Accepted highlights" })).toBeInTheDocument();
     expect(screen.getAllByText("Research expectations", { selector: "span" }).length).toBeGreaterThan(0);
   });
