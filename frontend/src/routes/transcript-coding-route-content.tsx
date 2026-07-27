@@ -98,6 +98,7 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
     : suggestions;
   const blocks = React.useMemo(() => workspace ? toTranscriptReaderBlocks(workspace) : [], [workspace]);
   const routeState = React.useMemo<TranscriptCodingRouteState>(() => ({
+    highlightId: searchParams.get("highlight") ?? undefined,
     view: searchParams.get("view") === "list" ? "list" : "transcript",
     panel: searchParams.get("panel") === "accepted" ? "accepted" : "suggestions",
     highlightStatus: searchParams.get("highlight_status") === "uncoded"
@@ -196,10 +197,7 @@ export function TranscriptCodingRouteContent({ enabled, projectId, sessionId }: 
         canApplyCodes={Boolean(workspace.record)}
         codeUnavailableReason="Assign this Session to a Record before applying a Code."
         onAcceptSuggestion={(suggestionId) => acceptSuggestion.mutate(suggestionId)}
-        onApplyCodes={({ codeIds, highlightId, selection }) => {
-          // New selections are persisted atomically by onCreateHighlight with
-          // their selected Code IDs. Existing Highlights use assignment diffs.
-          if (selection) return;
+        onApplyCodes={({ codeIds, highlightId }) => {
           const previousCodeIds = workspace.highlights
             .find((highlight) => highlight.id === highlightId)
             ?.codes.map((code) => code.id) ?? [];

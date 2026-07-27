@@ -165,7 +165,6 @@ describe("Transcript Coding Research Objects", () => {
   it("composes transcript blocks, removable codes, keyboard selection, and match navigation", async () => {
     const user = userEvent.setup();
     const onHighlight = vi.fn();
-    const onApplyCode = vi.fn();
     const onRemoveCode = vi.fn();
     const onSelectWithKeyboard = vi.fn();
     const onNextMatch = vi.fn();
@@ -177,7 +176,6 @@ describe("Transcript Coding Research Objects", () => {
         ]}
         currentMatch={1}
         mode="filter-results"
-        onApplyCode={onApplyCode}
         onHighlight={onHighlight}
         onNextMatch={onNextMatch}
         onRemoveCode={onRemoveCode}
@@ -219,12 +217,10 @@ describe("Transcript Coding Research Objects", () => {
   it("creates an exact pointer range and keeps its toolbar beside the selected passage", async () => {
     const user = userEvent.setup();
     const onHighlight = vi.fn();
-    const onApplyCode = vi.fn();
     render(
       <TranscriptReader
         blocks={evidence}
         mode="manual-selection"
-        onApplyCode={onApplyCode}
         onHighlight={onHighlight}
       />,
     );
@@ -243,8 +239,9 @@ describe("Transcript Coding Research Objects", () => {
     const toolbar = screen.getByRole("toolbar", { name: "Transcript selection actions" });
     expect(toolbar).toHaveClass("absolute");
     expect(toolbar).toHaveStyle({ left: "96px" });
-    await user.click(screen.getByRole("button", { name: "Apply code" }));
-    expect(onApplyCode).toHaveBeenCalledWith({
+    expect(within(toolbar).queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Highlight" }));
+    expect(onHighlight).toHaveBeenCalledWith({
       blockId: evidence[0].id,
       endOffset: 34,
       location: evidence[0].location,
@@ -259,12 +256,10 @@ describe("Transcript Coding Research Objects", () => {
   it("selects a whole passage on click and exposes inline Highlight actions", async () => {
     const user = userEvent.setup();
     const onHighlight = vi.fn();
-    const onApplyCode = vi.fn();
     render(
       <TranscriptReader
         blocks={evidence}
         mode="manual-selection"
-        onApplyCode={onApplyCode}
         onHighlight={onHighlight}
       />,
     );
@@ -286,15 +281,13 @@ describe("Transcript Coding Research Objects", () => {
     });
   });
 
-  it("disables duplicate Highlight creation while keeping Apply code available", async () => {
+  it("disables duplicate Highlight creation without exposing a selection-level Apply code action", async () => {
     const user = userEvent.setup();
     const onHighlight = vi.fn();
-    const onApplyCode = vi.fn();
     render(
       <TranscriptReader
         blocks={[{ ...evidence[0], highlighted: true, state: "accepted-coded" }]}
         mode="manual-selection"
-        onApplyCode={onApplyCode}
         onHighlight={onHighlight}
       />,
     );
@@ -303,14 +296,8 @@ describe("Transcript Coding Research Objects", () => {
     const highlightedButton = screen.getByRole("button", { name: "Highlighted" });
     expect(highlightedButton).toBeDisabled();
     expect(highlightedButton.querySelector(".lucide-check")).toBeInTheDocument();
-    const applyCodeButton = screen.getByRole("button", { name: "Apply code" });
-    expect(applyCodeButton).toBeEnabled();
-    await user.click(applyCodeButton);
+    expect(screen.queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
     expect(onHighlight).not.toHaveBeenCalled();
-    expect(onApplyCode).toHaveBeenCalledWith(expect.objectContaining({
-      blockId: evidence[0].id,
-      text: evidence[0].excerpt,
-    }));
   });
 
   it("clears the selected-block indicator with Escape for pointer and keyboard selection", async () => {
@@ -323,7 +310,6 @@ describe("Transcript Coding Research Objects", () => {
           activeHighlightId={activeBlockId}
           blocks={evidence}
           mode="manual-selection"
-          onApplyCode={() => undefined}
           onClearSelection={() => setActiveBlockId(undefined)}
           onHighlight={() => undefined}
           onSelectBlock={setActiveBlockId}

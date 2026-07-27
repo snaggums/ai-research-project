@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { TranscriptCodeChip } from "./transcript-code-chip";
 import type { TranscriptHighlightValue } from "./transcript-coding-types";
 
-export interface TranscriptHighlightListItemProps {
-  className?: string;
+export interface TranscriptHighlightListItemProps
+  extends React.HTMLAttributes<HTMLElement> {
   highlight: TranscriptHighlightValue;
   onDelete?: () => void;
   onEditCodes?: () => void;
@@ -24,6 +24,7 @@ export function TranscriptHighlightListItem({
   onEditCodes,
   onOpenInTranscript,
   onRemoveCode,
+  ...props
 }: TranscriptHighlightListItemProps) {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
@@ -33,6 +34,7 @@ export function TranscriptHighlightListItem({
         "grid gap-4 rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5",
         className,
       )}
+      {...props}
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>

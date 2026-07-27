@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import { toSessionSummary } from "@/adapters/sessions";
+import { SESSION_RECORD_SYNTHESIS_REQUIREMENTS_DESCRIPTION } from "@/components/research/record-synthesis-requirements-note";
 import { sessionApiFixtures, sessionRecordOptions } from "@/mocks/fixtures/sessions";
 import { emptySessionFilters } from "./session-view-data";
 import { SessionDetailView, SessionsCollectionView } from "./session-views";
@@ -63,6 +64,8 @@ describe("SessionDetailView", () => {
     const navigation = screen.getByRole("navigation", { name: "Session sections" });
     expect(within(navigation).getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
     expect(within(navigation).getAllByRole("link")).toHaveLength(6);
+    expect(screen.getByText("Record synthesis requirements")).toBeInTheDocument();
+    expect(screen.getByText(SESSION_RECORD_SYNTHESIS_REQUIREMENTS_DESCRIPTION)).toBeInTheDocument();
   });
 
   it("uses the canonical Participant, Role, Organization, and Notes columns", () => {

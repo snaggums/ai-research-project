@@ -7,6 +7,7 @@ export * from "./file-dropzone";
 export * from "./metadata-list";
 export * from "./page-header";
 export * from "./processing-status";
+export * from "./project-navigation";
 export * from "./section-navigation";
 export * from "./shared-route-state";
 

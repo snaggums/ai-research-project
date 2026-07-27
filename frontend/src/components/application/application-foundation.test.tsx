@@ -26,7 +26,8 @@ describe("ApplicationShell", () => {
     );
 
     expect(screen.getByRole("link", { name: "Skip to main content" })).toHaveAttribute("href", "#main-content");
-    expect(screen.getAllByRole("link", { name: "Sessions" })[0]).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Sessions, 0 items" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Records, 3 items" })).toHaveAttribute("href", "/projects/alpha-project/records");
     expect(screen.queryByRole("searchbox", { name: "Search Alpha Project" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings/ai");
     expect(screen.getByRole("banner").firstElementChild).toHaveClass("mx-auto", "max-w-[100rem]");

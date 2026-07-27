@@ -2,6 +2,7 @@ import axe from "axe-core";
 import { render } from "@testing-library/react";
 
 import { readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
+import { recordCodeDetails } from "@/components/research/record-code-story-data";
 import { RecordDetailView, RecordsCollectionView, RecordSynthesisView } from "./record-views";
 
 describe("Record page accessibility", () => {
@@ -23,6 +24,19 @@ describe("Record page accessibility", () => {
         scope={readyRecordScope}
         sessions={[]}
         synthesis={recordSynthesis}
+      />,
+    );
+    expect((await axe.run(container, options)).violations).toEqual([]);
+  });
+  it("has no automated violations in the Record Transcript codes workspace", async () => {
+    const { container } = render(
+      <RecordDetailView
+        activeView="transcript-codes"
+        record={recordSummaries[0]}
+        recordCodeEligibleSessionCount={5}
+        recordCodes={recordCodeDetails}
+        scope={readyRecordScope}
+        sessions={[]}
       />,
     );
     expect((await axe.run(container, options)).violations).toEqual([]);

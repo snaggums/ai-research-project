@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Check, Highlighter, Tag } from "lucide-react";
+import { Check, Highlighter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 export interface TranscriptSelectionToolbarProps {
   className?: string;
   highlighted?: boolean;
-  onApplyCode: () => void;
   onHighlight: () => void;
   style?: CSSProperties;
 }
@@ -15,7 +14,6 @@ export interface TranscriptSelectionToolbarProps {
 export function TranscriptSelectionToolbar({
   className,
   highlighted = false,
-  onApplyCode,
   onHighlight,
   style,
 }: TranscriptSelectionToolbarProps) {
@@ -37,10 +35,6 @@ export function TranscriptSelectionToolbar({
           <Highlighter aria-hidden="true" className="h-4 w-4" />
         )}
         {highlighted ? "Highlighted" : "Highlight"}
-      </Button>
-      <Button onClick={onApplyCode} size="small" variant="text">
-        <Tag aria-hidden="true" className="h-4 w-4" />
-        Apply code
       </Button>
     </div>
   );

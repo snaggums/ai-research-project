@@ -19,7 +19,6 @@ export interface TranscriptReaderProps {
   currentMatch?: number;
   focusHighlightId?: string;
   mode?: TranscriptReaderMode;
-  onApplyCode?: (selection: TranscriptTextSelectionValue) => void;
   onClearSelection?: () => void;
   onHighlight?: (selection: TranscriptTextSelectionValue) => void;
   onNextMatch?: () => void;
@@ -70,7 +69,6 @@ export function TranscriptReader({
   currentMatch = 0,
   focusHighlightId,
   mode = "default",
-  onApplyCode,
   onClearSelection,
   onHighlight,
   onNextMatch,
@@ -312,7 +310,7 @@ export function TranscriptReader({
         <div>
           <h3 id="transcript-reader-title" className="text-xl font-semibold leading-7">Transcript</h3>
           <p className="mt-1 text-sm leading-5 text-[var(--air-color-text-secondary)]">
-            Select text or click a passage to save a Highlight or apply a Record code.
+            Select text or click a passage to save a Highlight. Apply a Record code from Uncoded highlights.
           </p>
         </div>
         {onSelectWithKeyboard ? (
@@ -335,7 +333,7 @@ export function TranscriptReader({
           className="rounded-[var(--air-radius-md)] bg-[var(--air-color-status-information-bg)] px-3 py-2 text-sm text-[var(--air-color-status-information-text)]"
         >
           {activeSelection?.method === "keyboard"
-            ? "Passage selected. Use Highlight or Apply code, or press Escape to cancel."
+            ? "Passage selected. Use Highlight, or press Escape to cancel."
             : "Keyboard selection active. Use Up and Down arrows to move, then press Enter or Space to select a passage. Press Escape to cancel."}
         </p>
       ) : null}
@@ -368,7 +366,7 @@ export function TranscriptReader({
                 block={inlineSelected ? { ...block, state: "selection-active" } : block}
                 onKeyDown={(event) => handleKeyboardSelection(event, block.id, index)}
                 onRemoveCode={onRemoveCode ? (codeId) => onRemoveCode(block.id, codeId) : undefined}
-                onSelect={keyboardSelectionActive || (onHighlight && onApplyCode) ? () => {
+                onSelect={keyboardSelectionActive || onHighlight ? () => {
                   setKeyboardFocusIndex(index);
                   setKeyboardSelectionActive(false);
                   setActiveSelection(selectEntireBlock(blocks[index], keyboardSelectionActive ? "keyboard" : "block"));
@@ -379,11 +377,10 @@ export function TranscriptReader({
                 }}
                 selected={inlineSelected || activeHighlightId === block.id}
               />
-              {inlineSelected && onHighlight && onApplyCode ? (
+              {inlineSelected && onHighlight ? (
                 <TranscriptSelectionToolbar
                   className="ml-6"
                   highlighted={selectionAlreadyHighlighted(activeSelection)}
-                  onApplyCode={() => completeSelection(onApplyCode)}
                   onHighlight={() => completeSelection(onHighlight)}
                 />
               ) : null}
@@ -392,11 +389,10 @@ export function TranscriptReader({
         })}
       </div>
 
-      {activeSelection?.method === "pointer" && pointerToolbarAnchor && onHighlight && onApplyCode ? (
+      {activeSelection?.method === "pointer" && pointerToolbarAnchor && onHighlight ? (
         <TranscriptSelectionToolbar
           className="absolute z-20"
           highlighted={selectionAlreadyHighlighted(activeSelection)}
-          onApplyCode={() => completeSelection(onApplyCode)}
           onHighlight={() => completeSelection(onHighlight)}
           style={{
             left: pointerToolbarAnchor.left,

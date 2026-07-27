@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
 
 import { ApplicationShell } from "@/components/application";
+import { recordCodeDetails } from "@/components/research/record-code-story-data";
 import { toSessionSummary } from "@/adapters/sessions";
 import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
@@ -50,6 +51,30 @@ export const KnowledgeError: Story = {
     knowledgeState: "error",
     onRetryKnowledge: () => undefined,
     synthesis: undefined,
+  },
+};
+export const TranscriptCodesReady: Story = {
+  args: {
+    activeView: "transcript-codes",
+    onOpenInTranscriptCoding: fn(),
+    recordCodeEligibleSessionCount: 5,
+    recordCodes: recordCodeDetails,
+  },
+};
+export const TranscriptCodesEmpty: Story = {
+  args: {
+    activeView: "transcript-codes",
+    recordCodeEligibleSessionCount: 5,
+    recordCodeState: "empty",
+    recordCodes: [],
+  },
+};
+export const TranscriptCodesError: Story = {
+  args: {
+    activeView: "transcript-codes",
+    onRetryRecordCodes: fn(),
+    recordCodeState: "error",
+    recordCodes: [],
   },
 };
 export const InsufficientData: Story = { args: { record: recordSummaries[1], scope: insufficientRecordScope, sessions: sessionApiFixtures.slice(0, 1).map(toSessionSummary), synthesis: undefined } };

@@ -115,7 +115,9 @@ export const ClickPassageAndHighlight: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByText(transcriptReaderBlocks[0].excerpt));
-    await expect(canvas.getByRole("toolbar", { name: "Transcript selection actions" })).toBeInTheDocument();
+    const toolbar = canvas.getByRole("toolbar", { name: "Transcript selection actions" });
+    await expect(toolbar).toBeInTheDocument();
+    await expect(within(toolbar).queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Highlight" }));
     await expect(args.onCreateHighlight).toHaveBeenCalledWith(
       expect.objectContaining({ status: "uncoded" }),
@@ -127,22 +129,29 @@ export const ClickPassageAndHighlight: Story = {
     );
   },
 };
-export const ClickPassageAndApplyCode: Story = {
-  args: { state: "manual-selection" },
+export const HighlightThenApplyCode: Story = {
+  args: { acceptedHighlights: [], state: "manual-selection" },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByText(transcriptReaderBlocks[0].excerpt));
+    const toolbar = canvas.getByRole("toolbar", { name: "Transcript selection actions" });
+    await expect(within(toolbar).queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Highlight" }));
     await userEvent.click(canvas.getByRole("button", { name: "Apply code" }));
     await userEvent.click(canvas.getByRole("option", { name: /Information architecture/ }));
     await userEvent.click(canvas.getByRole("button", { name: "Apply" }));
-    await expect(args.onApplyCodes).toHaveBeenCalledWith(expect.objectContaining({
-      codeIds: ["code-information-architecture"],
-      selection: expect.objectContaining({
+    await expect(args.onCreateHighlight).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "uncoded" }),
+      expect.objectContaining({
         blockId: transcriptReaderBlocks[0].id,
         method: "block",
         text: transcriptReaderBlocks[0].excerpt,
       }),
-    }));
+    );
+    await expect(args.onApplyCodes).toHaveBeenCalledWith({
+      codeIds: ["code-information-architecture"],
+      highlightId: "manual-highlight-1",
+    });
   },
 };
 export const ApplyCodeToUncodedHighlight: Story = {
@@ -178,12 +187,13 @@ export const Processing: Story = { args: { state: "processing" } };
 export const NoSuggestions: Story = { args: { state: "no-suggestions", suggestions: [] } };
 export const RecoverableError: Story = { args: { state: "error" } };
 
-export const CreateAndApplyCodeToSelection: Story = {
-  args: { state: "manual-selection" },
+export const CreateAndApplyCodeToHighlight: Story = {
+  args: { acceptedHighlights: [], state: "manual-selection" },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Select with keyboard" }));
     await userEvent.keyboard("{ArrowUp}{Enter}");
+    await userEvent.click(canvas.getByRole("button", { name: "Highlight" }));
     await userEvent.click(canvas.getByRole("button", { name: "Apply code" }));
     await userEvent.click(canvas.getByRole("button", { name: "Create a new code" }));
     await userEvent.type(canvas.getByRole("textbox", { name: /Code name/ }), "Research expectations");
@@ -191,10 +201,10 @@ export const CreateAndApplyCodeToSelection: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Create code" }));
     await expect(canvas.getByRole("option", { name: /Research expectations/ })).toHaveAttribute("aria-selected", "true");
     await userEvent.click(canvas.getByRole("button", { name: "Apply" }));
-    await expect(args.onApplyCodes).toHaveBeenCalledWith(expect.objectContaining({
+    await expect(args.onApplyCodes).toHaveBeenCalledWith({
       codeIds: ["code-research-expectations"],
-      selection: expect.objectContaining({ text: transcriptReaderBlocks[0].excerpt }),
-    }));
+      highlightId: "manual-highlight-1",
+    });
     await expect(canvas.getByRole("heading", { name: "Accepted highlights" })).toBeInTheDocument();
   },
 };

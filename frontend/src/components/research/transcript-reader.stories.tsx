@@ -3,9 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 
 import { transcriptCodingCodes, transcriptReaderBlocks } from "@/mocks/fixtures/transcript-coding";
-import { TranscriptCodePanel } from "./transcript-code-panel";
 import type {
-  TranscriptCodeValue,
   TranscriptHighlightValue,
   TranscriptTextSelectionValue,
 } from "./transcript-coding-types";
@@ -24,57 +22,27 @@ function evidenceFromSelection(selection: TranscriptTextSelectionValue) {
 }
 
 function ManualSelectionExample(props: TranscriptReaderStoryProps) {
-  const [availableCodes, setAvailableCodes] = React.useState<TranscriptCodeValue[]>(transcriptCodingCodes);
-  const [codePanelMode, setCodePanelMode] = React.useState<"apply" | "create">("apply");
-  const [pendingSelection, setPendingSelection] = React.useState<TranscriptTextSelectionValue>();
   const [savedHighlight, setSavedHighlight] = React.useState<TranscriptHighlightValue>();
 
-  function saveHighlight(selection: TranscriptTextSelectionValue, codes: TranscriptCodeValue[]) {
+  function saveHighlight(selection: TranscriptTextSelectionValue) {
     setSavedHighlight({
-      codes,
+      codes: [],
       evidence: evidenceFromSelection(selection),
       id: `highlight-${selection.blockId}-${selection.startOffset}-${selection.endOffset}`,
       provenance: "Researcher highlighted",
-      status: codes.length ? "accepted" : "uncoded",
+      status: "uncoded",
     });
-    setPendingSelection(undefined);
   }
 
   return (
     <div className="grid gap-6">
       <TranscriptReader
         {...props}
-        onApplyCode={(selection) => {
-          props.onApplyCode?.(selection);
-          setPendingSelection(selection);
-          setCodePanelMode("apply");
-        }}
         onHighlight={(selection) => {
           props.onHighlight?.(selection);
-          saveHighlight(selection, []);
+          saveHighlight(selection);
         }}
       />
-      {pendingSelection ? (
-        <TranscriptCodePanel
-          availableCodes={availableCodes}
-          mode={codePanelMode}
-          onApply={(codeIds) => {
-            saveHighlight(
-              pendingSelection,
-              availableCodes.filter((code) => codeIds.includes(code.id)),
-            );
-          }}
-          onCancel={() => setPendingSelection(undefined)}
-          onCreateCode={({ name, description }) => {
-            const id = `code-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
-            setAvailableCodes((current) => current.some((code) => code.id === id)
-              ? current
-              : [...current, { description, id, name }]);
-            return id;
-          }}
-          onModeChange={setCodePanelMode}
-        />
-      ) : null}
       {savedHighlight ? (
         <section aria-labelledby="saved-highlight-title" className="grid gap-3">
           <h3 className="text-xl font-semibold" id="saved-highlight-title">Saved Highlight</h3>
@@ -91,7 +59,7 @@ const meta = {
   tags: ["autodocs"],
   decorators: [(Story) => <div className="mx-auto w-[44rem] p-6"><Story /></div>],
   parameters: { docs: { description: { component: "The continuous transcript reading surface. Selection, suggestions, accepted codes, and filters change passage emphasis without removing surrounding context." } } },
-  args: { blocks: transcriptReaderBlocks, onApplyCode: fn(), onHighlight: fn(), onSelectWithKeyboard: fn() },
+  args: { blocks: transcriptReaderBlocks, onHighlight: fn(), onSelectWithKeyboard: fn() },
 } satisfies Meta<typeof TranscriptReader>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -138,7 +106,7 @@ export const AlreadyHighlightedSelection: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByText(transcriptReaderBlocks[1].excerpt));
     await expect(canvas.getByRole("button", { name: "Highlighted" })).toBeDisabled();
-    await expect(canvas.getByRole("button", { name: "Apply code" })).toBeEnabled();
+    await expect(canvas.queryByRole("button", { name: "Apply code" })).not.toBeInTheDocument();
   },
 };
 export const EscapeClearsSelection: Story = {
