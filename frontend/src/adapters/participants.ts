@@ -2,6 +2,19 @@ import type { Participant, ParticipantPayload } from "@/api/types";
 import type { ParticipantFormValues } from "@/components/research/participant-form";
 import type { ParticipantSummary } from "@/domain/types";
 
+const participantNameCollator = new Intl.Collator("en", {
+  sensitivity: "base",
+});
+
+export function compareParticipantsByLastName(
+  left: Pick<ParticipantSummary, "firstName" | "id" | "lastName">,
+  right: Pick<ParticipantSummary, "firstName" | "id" | "lastName">,
+) {
+  return participantNameCollator.compare(left.lastName, right.lastName)
+    || participantNameCollator.compare(left.firstName, right.firstName)
+    || participantNameCollator.compare(left.id, right.id);
+}
+
 export function toParticipantSummary(participant: Participant): ParticipantSummary {
   return {
     id: participant.id,

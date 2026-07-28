@@ -141,4 +141,24 @@ describe("field components", () => {
     expect(trigger).toHaveTextContent("Active");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
+
+  it("supports arrow-key navigation from the single-select combobox", async () => {
+    const user = userEvent.setup();
+    render(
+      <SelectField
+        label="Project participant"
+        options={[
+          { label: "Avery Chen", value: "avery-chen" },
+          { label: "Marcus Reed", value: "marcus-reed" },
+        ]}
+      />,
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Project participant" });
+    trigger.focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+
+    expect(trigger).toHaveTextContent("Marcus Reed");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
 });

@@ -6,7 +6,13 @@ import { describe, expect, it, vi } from "vitest";
 import { ParticipantForm } from "@/components/research/participant-form";
 import { ParticipantListItem } from "@/components/research/participant-list-item";
 import { ParticipantPicker } from "@/components/research/participant-picker";
+import { SessionParticipantForm } from "@/components/research/session-participant-form";
 import { jordanMoore, participantOptions, recordOptions } from "@/mocks/fixtures/participants";
+
+const eligibleSessionParticipants = [
+  { label: "Avery Chen", value: "avery-chen" },
+  { label: "Jordan Moore", value: "jordan-moore" },
+];
 
 describe("ParticipantListItem", () => {
   it("derives the participant identity and exposes direct actions", async () => {
@@ -118,5 +124,112 @@ describe("ParticipantPicker", () => {
     render(<ControlledPicker />);
     await user.type(screen.getByRole("combobox", { name: "Participants" }), "Morgan");
     expect(screen.getByRole("status")).toHaveTextContent("No participants found");
+  });
+});
+
+describe("SessionParticipantForm", () => {
+  it("begins with the existing-participant section without repeating the route title", () => {
+    render(
+      <SessionParticipantForm
+        eligibleParticipants={eligibleSessionParticipants}
+        onSubmitExisting={() => undefined}
+        onSubmitNew={() => undefined}
+        recordOptions={recordOptions}
+      />,
+    );
+
+    expect(screen.queryByRole("heading", { name: "Add participant" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Add an existing participant" })).toBeInTheDocument();
+    expect(
+      screen.queryByText("Add an existing Project participant to this Session, or add a new participant."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("assigns an eligible existing participant without validating the new-participant path", async () => {
+    const user = userEvent.setup();
+    const onSubmitExisting = vi.fn();
+    const onSubmitNew = vi.fn();
+    render(
+      <SessionParticipantForm
+        eligibleParticipants={eligibleSessionParticipants}
+        onSubmitExisting={onSubmitExisting}
+        onSubmitNew={onSubmitNew}
+        recordOptions={recordOptions}
+      />,
+    );
+
+    await user.type(screen.getByRole("combobox", { name: "Project participant" }), "avery");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    await user.click(screen.getByRole("option", { name: "Avery Chen" }));
+    expect(screen.getByRole("combobox", { name: "Project participant" })).toHaveValue("Avery Chen");
+    expect(screen.getByRole("textbox", { name: /First name/ })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Add participant" }));
+
+    expect(onSubmitExisting).toHaveBeenCalledWith("avery-chen");
+    expect(onSubmitNew).not.toHaveBeenCalled();
+    expect(screen.queryByText("Enter a first name.")).not.toBeInTheDocument();
+  });
+
+  it("filters eligible Project participants and reports when none match", async () => {
+    const user = userEvent.setup();
+    render(
+      <SessionParticipantForm
+        eligibleParticipants={eligibleSessionParticipants}
+        onSubmitExisting={() => undefined}
+        onSubmitNew={() => undefined}
+        recordOptions={recordOptions}
+      />,
+    );
+
+    const combobox = screen.getByRole("combobox", { name: "Project participant" });
+    await user.type(combobox, "jordan");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Jordan Moore"]);
+    await user.clear(combobox);
+    await user.type(combobox, "missing");
+    expect(screen.getByRole("status")).toHaveTextContent("No matching Project participants.");
+  });
+
+  it("creates a new Project participant when no existing participant is selected", async () => {
+    const user = userEvent.setup();
+    const onSubmitExisting = vi.fn();
+    const onSubmitNew = vi.fn();
+    render(
+      <SessionParticipantForm
+        eligibleParticipants={eligibleSessionParticipants}
+        onSubmitExisting={onSubmitExisting}
+        onSubmitNew={onSubmitNew}
+        recordOptions={recordOptions}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: /First name/ }), "Amina");
+    await user.type(screen.getByRole("textbox", { name: /Last name/ }), "Patel");
+    await user.click(screen.getByRole("button", { name: "Add participant" }));
+
+    expect(onSubmitNew).toHaveBeenCalledWith({
+      firstName: "Amina",
+      lastName: "Patel",
+      email: "",
+      recordIds: [],
+      organization: "",
+      role: "",
+      researcherNotes: "",
+    }, expect.anything());
+    expect(onSubmitExisting).not.toHaveBeenCalled();
+  });
+
+  it("keeps new participant creation available when no Project participants are eligible", () => {
+    render(
+      <SessionParticipantForm
+        eligibleParticipants={[]}
+        onSubmitExisting={() => undefined}
+        onSubmitNew={() => undefined}
+        recordOptions={recordOptions}
+      />,
+    );
+
+    expect(screen.getByRole("combobox", { name: "Project participant" })).toBeDisabled();
+    expect(screen.getByText("All Project participants are already assigned to this Session.")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: /First name/ })).toBeEnabled();
   });
 });

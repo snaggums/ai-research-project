@@ -1,10 +1,14 @@
 import * as React from "react";
-import { Filter, Pencil, Plus } from "lucide-react";
+import { Filter, Pencil, Plus, Trash2 } from "lucide-react";
 
 import type { SessionFilters } from "@/api/types";
 import { EmptyState, EntityCollection, PageHeader, SectionNavigation, SharedRouteState } from "@/components/application";
 import { SessionCollectionItem } from "@/components/research/session-collection-item";
 import { SessionForm, type SessionFormProps } from "@/components/research/session-form";
+import {
+  SessionParticipantForm,
+  type SessionParticipantFormProps,
+} from "@/components/research/session-participant-form";
 import { SessionParticipantGroup } from "@/components/research/session-participant-group";
 import { RecordSynthesisRequirementsNote } from "@/components/research/record-synthesis-requirements-note";
 import { SessionSummary } from "@/components/research/session-summary";
@@ -117,42 +121,75 @@ function SessionProcessingSummary({ session }: { session: SessionSummaryValue })
 function initials(participant: ParticipantSummary) { return `${participant.firstName.at(0) ?? ""}${participant.lastName.at(0) ?? ""}`.toUpperCase(); }
 function fullName(participant: ParticipantSummary) { return `${participant.firstName} ${participant.lastName}`.trim(); }
 
-function ParticipantEditAction({ onEdit, participant }: { onEdit?: (participantId: string) => void; participant: ParticipantSummary }) {
+function ParticipantEditAction({ opensDownward = false, onEdit, participant }: { opensDownward?: boolean; onEdit?: (participantId: string) => void; participant: ParticipantSummary }) {
   if (!onEdit) return null;
   const name = fullName(participant);
   return (
-    <Tooltip content="Edit participant">
+    <Tooltip content="Edit participant" placement={opensDownward ? "bottom-end" : "top-end"}>
       <IconButton icon={<Pencil aria-hidden="true" className="h-4 w-4" />} label={`Edit participant: ${name}`} onClick={() => onEdit(participant.id)} />
     </Tooltip>
   );
 }
 
-function SessionParticipants({ onAdd, onEdit, participants }: { onAdd?: () => void; onEdit?: (participantId: string) => void; participants: ParticipantSummary[] }) {
-  return <section aria-labelledby="session-participants-heading" className="overflow-hidden rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)]">
-    <header className="flex flex-wrap items-center gap-3 p-5"><h2 className="text-xl font-semibold" id="session-participants-heading">Session participants</h2><span className="text-sm text-[var(--air-color-text-secondary)]">{participants.length} participants</span>{onAdd ? <Button className="ml-auto" onClick={onAdd} size="small" variant="gray-subtle">Add participant</Button> : null}</header>
-    {!participants.length ? <EmptyState className="border-0" description="Assign Project participants to this Session." title="No participants assigned" /> : <>
-      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[52rem] text-left text-sm"><thead className="bg-[var(--air-color-bg-subtle)]"><tr><th className="p-4 font-medium">Participant</th><th className="p-4 font-medium">Role</th><th className="p-4 font-medium">Organization</th><th className="p-4 font-medium">Notes</th><th className="p-4 text-right font-medium">Actions</th></tr></thead><tbody>{participants.map((participant) => <tr className="border-t border-[var(--air-color-border-default)]" key={participant.id}><th className="p-4 font-medium"><span className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" />{fullName(participant)}</span></th><td className="p-4">{participant.role ?? "Not provided"}</td><td className="p-4">{participant.organization ?? "Not provided"}</td><td className="max-w-xs truncate p-4 text-[var(--air-color-text-secondary)]">{participant.researcherNotes ?? "No notes"}</td><td className="p-4"><div className="flex justify-end"><ParticipantEditAction onEdit={onEdit} participant={participant} /></div></td></tr>)}</tbody></table></div>
-      <div className="grid divide-y divide-[var(--air-color-border-default)] md:hidden">{participants.map((participant) => <article className="grid gap-3 p-4" key={participant.id}><div className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" /><h3 className="font-semibold">{fullName(participant)}</h3><div className="ml-auto"><ParticipantEditAction onEdit={onEdit} participant={participant} /></div></div><dl className="grid gap-2 text-sm"><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Role</dt><dd>{participant.role ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Organization</dt><dd>{participant.organization ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Notes</dt><dd>{participant.researcherNotes ?? "No notes"}</dd></div></dl></article>)}</div>
-    </>}
-  </section>;
+function ParticipantRemoveAction({ disabled = false, opensDownward = false, onRemove, participant }: { disabled?: boolean; opensDownward?: boolean; onRemove?: (participant: ParticipantSummary) => void; participant: ParticipantSummary }) {
+  if (!onRemove) return null;
+  const name = fullName(participant);
+  return (
+    <Tooltip content="Remove participant from Session" placement={opensDownward ? "bottom-end" : "top-end"}>
+      <IconButton disabled={disabled} icon={<Trash2 aria-hidden="true" className="h-4 w-4" />} label={`Remove participant from Session: ${name}`} onClick={() => onRemove(participant)} />
+    </Tooltip>
+  );
+}
+
+function ParticipantActions({ disabled = false, opensDownward = false, onEdit, onRemove, participant }: { disabled?: boolean; opensDownward?: boolean; onEdit?: (participantId: string) => void; onRemove?: (participant: ParticipantSummary) => void; participant: ParticipantSummary }) {
+  return <div className="flex justify-end gap-2"><ParticipantEditAction opensDownward={opensDownward} onEdit={onEdit} participant={participant} /><ParticipantRemoveAction disabled={disabled} opensDownward={opensDownward} onRemove={onRemove} participant={participant} /></div>;
+}
+
+function SessionParticipants({ actionError, actionPending = false, onAdd, onEdit, onRemove, participants }: { actionError?: React.ReactNode; actionPending?: boolean; onAdd?: () => void; onEdit?: (participantId: string) => void; onRemove?: (participantId: string) => void; participants: ParticipantSummary[] }) {
+  const [participantToRemove, setParticipantToRemove] = React.useState<ParticipantSummary>();
+  const participantName = participantToRemove ? fullName(participantToRemove) : "";
+  return <>
+    <section aria-labelledby="session-participants-heading" className="overflow-hidden rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)]">
+      <header className="flex flex-wrap items-center gap-3 p-5"><h2 className="text-xl font-semibold" id="session-participants-heading">Session participants</h2><span className="text-sm text-[var(--air-color-text-secondary)]">{participants.length} participants</span>{onAdd ? <Button className="ml-auto" onClick={onAdd} size="small" variant="gray-subtle">Add participant</Button> : null}</header>
+      {actionError ? <Alert className="mx-5 mb-5 w-auto" message={actionError} size="large" title="Participant could not be removed" tone="error" /> : null}
+      {!participants.length ? <EmptyState className="border-0" description="Assign Project participants to this Session." title="No participants assigned" /> : <>
+        <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[56rem] text-left text-sm"><thead className="bg-[var(--air-color-bg-subtle)]"><tr><th className="p-4 font-medium">Participant</th><th className="p-4 font-medium">Role</th><th className="p-4 font-medium">Organization</th><th className="p-4 font-medium">Notes</th><th className="w-28 p-4 text-right font-medium">Actions</th></tr></thead><tbody>{participants.map((participant, index) => <tr className="border-t border-[var(--air-color-border-default)]" key={participant.id}><th className="p-4 font-medium"><span className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" />{fullName(participant)}</span></th><td className="p-4">{participant.role ?? "Not provided"}</td><td className="p-4">{participant.organization ?? "Not provided"}</td><td className="max-w-xs truncate p-4 text-[var(--air-color-text-secondary)]">{participant.researcherNotes ?? "No notes"}</td><td className="w-28 p-4"><ParticipantActions disabled={actionPending} opensDownward={index === 0} onEdit={onEdit} onRemove={onRemove ? setParticipantToRemove : undefined} participant={participant} /></td></tr>)}</tbody></table></div>
+        <div className="grid divide-y divide-[var(--air-color-border-default)] md:hidden">{participants.map((participant, index) => <article className="grid gap-3 p-4" key={participant.id}><div className="flex items-center gap-3"><Avatar alt={fullName(participant)} initials={initials(participant)} size="large" /><h3 className="font-semibold">{fullName(participant)}</h3><div className="ml-auto"><ParticipantActions disabled={actionPending} opensDownward={index === 0} onEdit={onEdit} onRemove={onRemove ? setParticipantToRemove : undefined} participant={participant} /></div></div><dl className="grid gap-2 text-sm"><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Role</dt><dd>{participant.role ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Organization</dt><dd>{participant.organization ?? "Not provided"}</dd></div><div><dt className="text-xs font-semibold uppercase text-[var(--air-color-text-secondary)]">Notes</dt><dd>{participant.researcherNotes ?? "No notes"}</dd></div></dl></article>)}</div>
+      </>}
+    </section>
+    <Dialog
+      description={<>Remove {participantName} from this Session? They will remain in Project participants and can be added again.</>}
+      intent="destructive"
+      onOpenChange={(open) => { if (!open) setParticipantToRemove(undefined); }}
+      onPrimary={() => { if (participantToRemove) onRemove?.(participantToRemove.id); }}
+      open={Boolean(participantToRemove)}
+      primaryDisabled={actionPending}
+      primaryLabel="Remove participant"
+      title="Remove participant from Session?"
+    />
+  </>;
 }
 
 export interface SessionDetailViewProps {
   activeTab: "overview" | "participants" | "transcript" | "themes" | "report" | "ask";
   onAddParticipant?: () => void;
   onEditParticipant?: (participantId: string) => void;
+  onRemoveParticipant?: (participantId: string) => void;
   onEditSession?: () => void;
   onRetry?: () => void;
+  participantActionError?: React.ReactNode;
+  participantActionPending?: boolean;
   projectId: string;
   projectName: string;
   recordSynthesisRequirementsNote?: React.ReactNode;
   routeState?: "ready" | "loading" | "error" | "not-found";
   session?: SessionSummaryValue;
+  participantsContent?: React.ReactNode;
   transcriptContent?: React.ReactNode;
   workspaceContent?: React.ReactNode;
 }
 
-export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipant, onEditSession, onRetry, projectId, projectName, recordSynthesisRequirementsNote, routeState = "ready", session, transcriptContent, workspaceContent }: SessionDetailViewProps) {
+export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipant, onEditSession, onRemoveParticipant, onRetry, participantActionError, participantActionPending = false, participantsContent, projectId, projectName, recordSynthesisRequirementsNote, routeState = "ready", session, transcriptContent, workspaceContent }: SessionDetailViewProps) {
   const root = session ? `/projects/${projectId}/sessions/${session.id}` : `/projects/${projectId}/sessions`;
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
@@ -169,8 +206,48 @@ export function SessionDetailView({ activeTab, onAddParticipant, onEditParticipa
   const resolvedRecordSynthesisRequirementsNote = recordSynthesisRequirementsNote === undefined
     ? <RecordSynthesisRequirementsNote />
     : recordSynthesisRequirementsNote;
-  const content = activeTab === "overview" ? <div className="grid min-w-0 gap-6">{overviewContent}{resolvedRecordSynthesisRequirementsNote}</div> : activeTab === "participants" ? <SessionParticipants onAdd={onAddParticipant} onEdit={onEditParticipant} participants={session.participants} /> : activeTab === "transcript" ? transcriptContent : workspaceContent;
+  const content = activeTab === "overview" ? <div className="grid min-w-0 gap-6">{overviewContent}{resolvedRecordSynthesisRequirementsNote}</div> : activeTab === "participants" ? participantsContent ?? <SessionParticipants actionError={participantActionError} actionPending={participantActionPending} onAdd={onAddParticipant} onEdit={onEditParticipant} onRemove={onRemoveParticipant} participants={session.participants} /> : activeTab === "transcript" ? transcriptContent : workspaceContent;
   return <div className="grid min-w-0 gap-6 [&>*]:min-w-0"><PageHeader breadcrumbs={[{ href: "/projects", label: "Projects" }, { href: `/projects/${projectId}/overview`, label: projectName }, { href: `/projects/${projectId}/sessions`, label: "Sessions" }, { label: session.title }]} description={descriptions[activeTab]} title={session.title} /><SessionSummary onEditSession={onEditSession} session={session} /><SectionNavigation activeId={activeTab} items={sessionTabs(root)} label="Session sections" />{content}</div>;
+}
+
+export interface SessionParticipantCreateViewProps
+  extends SessionParticipantFormProps {
+  onEditSession?: () => void;
+  onRetry?: () => void;
+  projectId: string;
+  projectName: string;
+  routeState?: "ready" | "loading" | "error" | "not-found";
+  session?: SessionSummaryValue;
+}
+
+export function SessionParticipantCreateView({
+  onEditSession,
+  onRetry,
+  projectId,
+  projectName,
+  routeState = "ready",
+  session,
+  ...formProps
+}: SessionParticipantCreateViewProps) {
+  const form = (
+    <section aria-labelledby="add-participant-heading" className="grid gap-4">
+      <h2 className="text-xl font-semibold" id="add-participant-heading">Add participant</h2>
+      <SessionParticipantForm {...formProps} existingParticipantHeadingLevel={3} />
+    </section>
+  );
+
+  return (
+    <SessionDetailView
+      activeTab="participants"
+      onEditSession={onEditSession}
+      onRetry={onRetry}
+      participantsContent={form}
+      projectId={projectId}
+      projectName={projectName}
+      routeState={routeState}
+      session={session}
+    />
+  );
 }
 
 export interface SessionFormViewProps extends SessionFormProps { projectId: string; projectName: string; }

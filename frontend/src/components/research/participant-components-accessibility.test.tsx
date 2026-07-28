@@ -4,6 +4,7 @@ import { render } from "@testing-library/react";
 import { ParticipantForm } from "@/components/research/participant-form";
 import { ParticipantListItem } from "@/components/research/participant-list-item";
 import { ParticipantPicker } from "@/components/research/participant-picker";
+import { SessionParticipantForm } from "@/components/research/session-participant-form";
 import { jordanMoore, participantOptions, recordOptions } from "@/mocks/fixtures/participants";
 
 describe("Participant components accessibility", () => {
@@ -22,6 +23,15 @@ describe("Participant components accessibility", () => {
           onValueChange={() => undefined}
           participants={participantOptions}
           value={["jordan-moore", "avery-chen"]}
+        />
+        <SessionParticipantForm
+          eligibleParticipants={[
+            { label: "Avery Chen", value: "avery-chen" },
+            { label: "Jordan Moore", value: "jordan-moore" },
+          ]}
+          onSubmitExisting={() => undefined}
+          onSubmitNew={() => undefined}
+          recordOptions={recordOptions}
         />
       </main>,
     );

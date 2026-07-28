@@ -338,19 +338,115 @@ describe("application router foundation", () => {
     expect(within(screen.getByRole("navigation", { name: "Session sections" })).getByRole("link", { name: "Participants" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("removes a participant from the Session while preserving the Project participant", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/checkout-interview/participants"] });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    const removeActions = await screen.findAllByRole("button", { name: "Remove participant from Session: Alex Morgan" });
+    await user.click(removeActions[0]);
+    const dialog = screen.getByRole("dialog", { name: "Remove participant from Session?" });
+    expect(within(dialog).getByText(/remain in Project participants/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Remove participant" }));
+
+    await waitFor(() => {
+      expect(screen.queryAllByRole("button", { name: "Remove participant from Session: Alex Morgan" })).toHaveLength(0);
+    });
+    expect(screen.getByText("0 participants")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add participant" }));
+    const participantSelect = await screen.findByRole("combobox", { name: "Project participant" });
+    await user.click(participantSelect);
+    expect(screen.getByRole("option", { name: "Alex Morgan" })).toBeInTheDocument();
+  });
+
+  it("keeps the participant assigned and shows feedback when Session removal fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])),
+      http.patch(`${API_BASE_URL}/projects/:projectId/sessions/:sessionId`, () =>
+        HttpResponse.json({ detail: "The Session could not be updated." }, { status: 500 }),
+      ),
+    );
+    const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/checkout-interview/participants"] });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    await user.click((await screen.findAllByRole("button", { name: "Remove participant from Session: Alex Morgan" }))[0]);
+    await user.click(within(screen.getByRole("dialog", { name: "Remove participant from Session?" })).getByRole("button", { name: "Remove participant" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Participant could not be removed");
+    expect(screen.getAllByRole("button", { name: "Remove participant from Session: Alex Morgan" })).not.toHaveLength(0);
+    expect(screen.getByText("1 participants")).toBeInTheDocument();
+  });
+
   it("adds a participant from a Session and returns to that Session Participants tab", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/checkout-interview/participants"] });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
     await user.click(await screen.findByRole("button", { name: "Add participant" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Add participant" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/checkout-interview/participants/new");
+    expect(await screen.findByRole("heading", { level: 1, name: "Checkout workflow interview" })).toBeInTheDocument();
+    const projectNavigation = screen.getByRole("navigation", { name: "Project navigation" });
+    expect(within(projectNavigation).getByRole("button", { name: "Collapse Sessions" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(projectNavigation).getByRole("link", { name: "Checkout workflow interview" })).toHaveAttribute("aria-current", "page");
+    expect(
+      within(screen.getByRole("navigation", { name: "Session sections" }))
+        .getByRole("link", { name: "Participants" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("heading", { level: 2, name: "Add participant" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Add an existing participant" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Project participant" })).toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: /First name/ }), "Taylor");
     await user.type(screen.getByRole("textbox", { name: /Last name/ }), "Reed");
     await user.click(screen.getByRole("button", { name: "Add participant" }));
     expect(await screen.findByRole("heading", { name: "Session participants" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/checkout-interview/participants");
     expect(within(screen.getByRole("navigation", { name: "Session sections" })).getByRole("link", { name: "Participants" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("redirects the legacy Session returnTo participant URL to the Session-owned route", async () => {
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const legacyReturnTo = encodeURIComponent("/projects/alpha-project/sessions/checkout-interview/participants");
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [`/projects/alpha-project/participants/new?returnTo=${legacyReturnTo}`],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Add participant" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/checkout-interview/participants/new");
+    expect(router.state.location.search).toBe("");
+  });
+
+  it("assigns an eligible Project participant from a Session and excludes existing Session participants", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/checkout-interview/participants"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    await user.click(await screen.findByRole("button", { name: "Add participant" }));
+    const participantSelect = await screen.findByRole("combobox", { name: "Project participant" });
+    await user.click(participantSelect);
+
+    expect(screen.queryByRole("option", { name: "Alex Morgan" })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("listbox", { name: "Project participant" }))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Riley Chen", "Samir Kaur", "Jordan Lee"]);
+    await user.type(participantSelect, "samir");
+    expect(within(screen.getByRole("listbox", { name: "Project participant" })).getAllByRole("option")).toHaveLength(1);
+    await user.click(screen.getByRole("option", { name: "Samir Kaur" }));
+    expect(participantSelect).toHaveValue("Samir Kaur");
+    expect(screen.getByRole("textbox", { name: /First name/ })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Add participant" }));
+
+    expect(await screen.findByRole("heading", { name: "Session participants" })).toBeInTheDocument();
+    expect(await screen.findAllByText("Samir Kaur")).not.toHaveLength(0);
+    expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/checkout-interview/participants");
   });
 
   it("loads the Session Themes workspace and opens evidence review", async () => {
