@@ -38,11 +38,11 @@ function replaceParticipantInSessionCache(value: unknown, participant: Participa
   return value;
 }
 
-export function useParticipants(projectId: string, search = "") {
+export function useParticipants(projectId: string, search = "", enabled = true) {
   return useQuery({
     queryKey: queryKeys.participants(projectId, search),
     queryFn: () => listParticipants(projectId, search),
-    enabled: Boolean(projectId),
+    enabled: Boolean(projectId) && enabled,
   });
 }
 

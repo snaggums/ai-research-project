@@ -44,6 +44,7 @@ Legend:
 |       |   +-- :sessionId                       S8
 |       |       +-- overview                     Sessions workspace
 |       |       +-- participants                 Sessions workspace
+|       |       |   +-- new                      Session-scoped participant assignment
 |       |       +-- transcript                   Sessions workspace + Transcript Coding
 |       |       +-- themes                       Sessions workspace
 |       |       +-- report                       Sessions workspace
@@ -199,6 +200,12 @@ The selected Session tab is represented by its child route so links and browser
 history preserve workspace location. Transcript Coding extends the existing
 `transcript` child route; it does not add a competing top-level Session tab or a
 second Transcript route.
+
+`/projects/:projectId/sessions/:sessionId/participants/new` is a Session-owned
+task route. It preserves the active Session in Project navigation, the Session
+summary, and the active Participants tab while replacing the participant
+collection with the Add participant form. Cancel and successful assignment
+return to `/projects/:projectId/sessions/:sessionId/participants`.
 
 ### 3.9 `/projects/:projectId/sessions/:sessionId/documents/:documentId`
 

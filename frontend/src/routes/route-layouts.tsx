@@ -38,8 +38,8 @@ const routeCopy: Record<string, { description: string; title: string }> = {
 };
 
 function activeProjectItem(pathname: string): ProjectNavigationItem {
-  if (pathname.includes("/participants")) return "participants";
   if (pathname.includes("/sessions")) return "sessions";
+  if (pathname.includes("/participants")) return "participants";
   if (pathname.includes("/records")) return "records";
   if (pathname.includes("/ask")) return "ask-project";
   return "overview";

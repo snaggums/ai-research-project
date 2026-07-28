@@ -1,9 +1,14 @@
 import * as React from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import type { AISettingsPayload, Project, Session, SessionPayload } from "@/api/types";
 import { toProjectSummary } from "@/adapters/projects";
-import { toParticipantFormValues, toParticipantPayload, toParticipantSummary } from "@/adapters/participants";
+import {
+  compareParticipantsByLastName,
+  toParticipantFormValues,
+  toParticipantPayload,
+  toParticipantSummary,
+} from "@/adapters/participants";
 import { ParticipantApiError } from "@/api/participants";
 import { SessionApiError } from "@/api/sessions";
 import { TranscriptApiError } from "@/api/transcripts";
@@ -30,9 +35,17 @@ import {
   ProjectsIndexView,
   SettingsView,
 } from "@/pages/project-views";
-import { ParticipantDetailView, ParticipantsCollectionView } from "@/pages/participant-views";
+import {
+  ParticipantDetailView,
+  ParticipantsCollectionView,
+} from "@/pages/participant-views";
 import { emptySessionFilters } from "@/pages/session-view-data";
-import { SessionDetailView, SessionFormView, SessionsCollectionView } from "@/pages/session-views";
+import {
+  SessionDetailView,
+  SessionFormView,
+  SessionParticipantCreateView,
+  SessionsCollectionView,
+} from "@/pages/session-views";
 import { SessionTranscriptWorkspaceView, TranscriptContextView } from "@/pages/transcript-views";
 import { toTranscriptContext, toTranscriptDocumentDetail, toTranscriptSearchResult } from "@/adapters/transcripts";
 import { toSessionConversation, toSessionReport, toSessionTheme } from "@/adapters/synthesis";
@@ -147,6 +160,19 @@ function assignParticipantPayload(session: Session, participantId: string): Sess
     duration_minutes: session.duration_minutes,
     description: session.description,
     participant_ids: Array.from(new Set([...session.participant_ids, participantId])),
+    related_record_ids: session.related_records.map((record) => record.id),
+    related_common_component_ids: session.related_common_components.map((component) => component.id),
+  };
+}
+
+function removeParticipantPayload(session: Session, participantId: string): SessionPayload {
+  return {
+    title: session.title,
+    type: session.type,
+    starts_at: session.starts_at,
+    duration_minutes: session.duration_minutes,
+    description: session.description,
+    participant_ids: session.participant_ids.filter((id) => id !== participantId),
     related_record_ids: session.related_records.map((record) => record.id),
     related_common_component_ids: session.related_common_components.map((component) => component.id),
   };
@@ -334,27 +360,32 @@ export function ParticipantCreateRoute() {
   const records = useRecords();
   const createParticipant = useCreateParticipant(projectId);
   const returnTarget = participantReturnTarget(searchParams, projectId);
-  const returnSession = useSession(projectId, returnTarget.sessionId);
-  const updateReturnSession = useUpdateSession(projectId, returnTarget.sessionId);
   const project = projects.data?.find((item) => item.id === projectId);
-  const routeState = projects.isPending || records.isPending || (Boolean(returnTarget.sessionId) && returnSession.isPending)
-    ? "loading"
-    : projects.isError || records.isError || (Boolean(returnTarget.sessionId) && returnSession.isError)
+  const projectMissing = !projects.isPending && !projects.isError && !project;
+  const routeState = projectMissing
+    ? "not-found"
+    : projects.isPending || records.isPending
+      ? "loading"
+      : projects.isError || records.isError
       ? "error"
-      : project
-        ? "ready"
-        : "not-found";
+      : "ready";
+
+  if (returnTarget.sessionId) {
+    return (
+      <Navigate
+        replace
+        to={`/projects/${projectId}/sessions/${returnTarget.sessionId}/participants/new`}
+      />
+    );
+  }
 
   return (
     <ParticipantDetailView
-      isSubmitting={createParticipant.isPending || updateReturnSession.isPending}
+      isSubmitting={createParticipant.isPending}
       mode="create"
       onCancel={() => navigate(returnTarget.path)}
       onSubmit={async (values) => {
-        const created = await createParticipant.mutateAsync(toParticipantPayload(values));
-        if (returnTarget.sessionId && returnSession.data) {
-          await updateReturnSession.mutateAsync(assignParticipantPayload(returnSession.data, created.id));
-        }
+        await createParticipant.mutateAsync(toParticipantPayload(values));
         navigate(returnTarget.path);
       }}
       onRetry={() => void Promise.all([projects.refetch(), records.refetch()])}
@@ -362,11 +393,78 @@ export function ParticipantCreateRoute() {
       projectName={project?.name ?? "Project"}
       recordOptions={participantRecordOptions(records.data)}
       routeState={routeState}
-      submitError={createParticipant.error
-        ? errorMessage(createParticipant.error)
-        : updateReturnSession.error
-          ? errorMessage(updateReturnSession.error)
-          : undefined}
+      submitError={createParticipant.error ? errorMessage(createParticipant.error) : undefined}
+    />
+  );
+}
+
+export function SessionParticipantCreateRoute() {
+  const navigate = useNavigate();
+  const { projectId = "", sessionId = "" } = useParams();
+  const projects = useProjects();
+  const records = useRecords();
+  const projectParticipants = useParticipants(projectId);
+  const session = useSession(projectId, sessionId);
+  const createParticipant = useCreateParticipant(projectId);
+  const updateSession = useUpdateSession(projectId, sessionId);
+  const project = projects.data?.find((item) => item.id === projectId);
+  const summary = session.data ? toSessionSummary(session.data) : undefined;
+  const returnTo = `/projects/${projectId}/sessions/${sessionId}/participants`;
+  const eligibleParticipants = React.useMemo(() => {
+    const assignedIds = new Set(session.data?.participant_ids ?? []);
+    return (projectParticipants.data ?? [])
+      .filter((participant) => !assignedIds.has(participant.id))
+      .map(toParticipantSummary)
+      .sort(compareParticipantsByLastName)
+      .map((participant) => ({
+        label: participantName(participant.firstName, participant.lastName),
+        value: participant.id,
+      }));
+  }, [projectParticipants.data, session.data?.participant_ids]);
+  const projectMissing = !projects.isPending && !projects.isError && !project;
+  const routeState = projectMissing || isNotFound(session.error)
+    ? "not-found"
+    : projects.isPending || records.isPending || projectParticipants.isPending || session.isPending
+      ? "loading"
+      : projects.isError || records.isError || projectParticipants.isError || session.isError
+        ? "error"
+        : "ready";
+  const submitError = createParticipant.error
+    ? errorMessage(createParticipant.error)
+    : updateSession.error
+      ? errorMessage(updateSession.error)
+      : undefined;
+
+  return (
+    <SessionParticipantCreateView
+      eligibleParticipants={eligibleParticipants}
+      isSubmitting={createParticipant.isPending || updateSession.isPending}
+      onCancel={() => navigate(returnTo)}
+      onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)}
+      onRetry={() => void Promise.all([
+        projects.refetch(),
+        records.refetch(),
+        projectParticipants.refetch(),
+        session.refetch(),
+      ])}
+      onSubmitExisting={async (participantId) => {
+        if (!session.data) return;
+        await updateSession.mutateAsync(assignParticipantPayload(session.data, participantId));
+        navigate(returnTo);
+      }}
+      onSubmitNew={async (values) => {
+        const created = await createParticipant.mutateAsync(toParticipantPayload(values));
+        if (session.data) {
+          await updateSession.mutateAsync(assignParticipantPayload(session.data, created.id));
+        }
+        navigate(returnTo);
+      }}
+      projectId={projectId}
+      projectName={project?.name ?? "Project"}
+      recordOptions={participantRecordOptions(records.data)}
+      routeState={routeState}
+      session={summary}
+      submitError={submitError}
     />
   );
 }
@@ -438,13 +536,14 @@ export function SessionDetailRoute({ activeTab = "overview" }: { activeTab?: "ov
   const { projectId = "", sessionId = "" } = useParams();
   const projects = useProjects();
   const session = useSession(projectId, sessionId);
+  const updateSession = useUpdateSession(projectId, sessionId);
   const project = projects.data?.find((item) => item.id === projectId);
   const summary = session.data ? toSessionSummary(session.data) : undefined;
   const projectMissing = !projects.isPending && !projects.isError && !project;
   const routeState = projectMissing || isNotFound(session.error) ? "not-found" : projects.isPending || session.isPending ? "loading" : projects.isError || session.isError ? "error" : "ready";
   const returnTo = `/projects/${projectId}/sessions/${sessionId}/participants`;
   const returnQuery = `?returnTo=${encodeURIComponent(returnTo)}`;
-  return <SessionDetailView activeTab={activeTab} onAddParticipant={() => navigate(`/projects/${projectId}/participants/new${returnQuery}`)} onEditParticipant={(participantId) => navigate(`/projects/${projectId}/participants/${participantId}${returnQuery}`)} onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} />;
+  return <SessionDetailView activeTab={activeTab} onAddParticipant={() => navigate(`/projects/${projectId}/sessions/${sessionId}/participants/new`)} onEditParticipant={(participantId) => navigate(`/projects/${projectId}/participants/${participantId}${returnQuery}`)} onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRemoveParticipant={(participantId) => { if (session.data) updateSession.mutate(removeParticipantPayload(session.data, participantId)); }} onRetry={() => void session.refetch()} participantActionError={updateSession.error ? errorMessage(updateSession.error) : undefined} participantActionPending={updateSession.isPending} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} />;
 }
 
 export function SessionTranscriptRoute() {

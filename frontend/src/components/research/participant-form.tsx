@@ -1,8 +1,12 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
 
+import {
+  emptyParticipantFormValues,
+  participantFormSchema,
+  type ParticipantFormValues,
+} from "@/components/research/participant-form-contract";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/input";
@@ -10,27 +14,7 @@ import { MultiSelectField, type MultiSelectOption } from "@/components/ui/multi-
 import { TextareaField } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-const participantFormSchema = z.object({
-  firstName: z.string().trim().min(1, "Enter a first name."),
-  lastName: z.string().trim().min(1, "Enter a last name."),
-  email: z.string().trim().refine((value) => !value || z.string().email().safeParse(value).success, "Enter a valid email address."),
-  recordIds: z.array(z.string()),
-  organization: z.string().trim(),
-  role: z.string().trim(),
-  researcherNotes: z.string().trim(),
-});
-
-export type ParticipantFormValues = z.infer<typeof participantFormSchema>;
-
-const emptyValues: ParticipantFormValues = {
-  firstName: "",
-  lastName: "",
-  email: "",
-  recordIds: [],
-  organization: "",
-  role: "",
-  researcherNotes: "",
-};
+export type { ParticipantFormValues } from "@/components/research/participant-form-contract";
 
 export interface ParticipantFormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, "onSubmit"> {
   defaultValues?: ParticipantFormValues;
@@ -45,7 +29,7 @@ export interface ParticipantFormProps extends Omit<React.FormHTMLAttributes<HTML
 
 export function ParticipantForm({
   className,
-  defaultValues = emptyValues,
+  defaultValues = emptyParticipantFormValues,
   isSubmitting = false,
   mode,
   onCancel,

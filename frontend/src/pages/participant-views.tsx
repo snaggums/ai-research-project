@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -146,6 +147,40 @@ export interface ParticipantDetailViewProps extends Omit<ParticipantFormProps, "
   routeState?: "ready" | "loading" | "error" | "not-found";
 }
 
+interface ParticipantFormShellProps {
+  children: ReactNode;
+  description: string;
+  onRetry?: () => void;
+  projectId: string;
+  projectName: string;
+  routeState: "ready" | "loading" | "error" | "not-found";
+  title: string;
+}
+
+function ParticipantFormShell({
+  children,
+  description,
+  onRetry,
+  projectId,
+  projectName,
+  routeState,
+  title,
+}: ParticipantFormShellProps) {
+  return (
+    <div className="grid gap-6">
+      <PageHeader description={description} title={title} />
+      <ProjectSections activeId="participants" projectId={projectId} />
+      {routeState === "loading" ? <SharedRouteState state="loading" /> : null}
+      {routeState === "error" ? <SharedRouteState onRetry={onRetry} state="recoverable-error" /> : null}
+      {routeState === "not-found" ? (
+        <SharedRouteState returnHref={`/projects/${projectId}/participants`} state="not-found" />
+      ) : null}
+      {routeState === "ready" ? children : null}
+      <span className="sr-only">Current project: {projectName}</span>
+    </div>
+  );
+}
+
 export function ParticipantDetailView({
   mode,
   onRetry,
@@ -159,23 +194,17 @@ export function ParticipantDetailView({
   const name = participant ? participantName(participant) : "participant";
 
   return (
-    <div className="grid gap-6">
-      <PageHeader
-        description={isCreate
-          ? "Add a participant to this project's research directory."
-          : `View and update ${name}'s participant profile.`}
-        title={isCreate ? "Add participant" : "Participant Details"}
-      />
-      <ProjectSections activeId="participants" projectId={projectId} />
-      {routeState === "loading" ? <SharedRouteState state="loading" /> : null}
-      {routeState === "error" ? <SharedRouteState onRetry={onRetry} state="recoverable-error" /> : null}
-      {routeState === "not-found" ? (
-        <SharedRouteState returnHref={`/projects/${projectId}/participants`} state="not-found" />
-      ) : null}
-      {routeState === "ready" ? (
-        <ParticipantForm mode={mode} showHeader {...formProps} />
-      ) : null}
-      <span className="sr-only">Current project: {projectName}</span>
-    </div>
+    <ParticipantFormShell
+      description={isCreate
+        ? "Add a participant to this project's research directory."
+        : `View and update ${name}'s participant profile.`}
+      onRetry={onRetry}
+      projectId={projectId}
+      projectName={projectName}
+      routeState={routeState}
+      title={isCreate ? "Add participant" : "Participant Details"}
+    >
+      <ParticipantForm mode={mode} showHeader {...formProps} />
+    </ParticipantFormShell>
   );
 }

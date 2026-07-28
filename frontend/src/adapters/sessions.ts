@@ -1,7 +1,7 @@
 import type { Session, SessionPayload } from "@/api/types";
 import type { SessionFormValues } from "@/components/research/session-form";
 import type { SessionSummary } from "@/domain/types";
-import { toParticipantSummary } from "./participants";
+import { compareParticipantsByLastName, toParticipantSummary } from "./participants";
 
 export function toSessionSummary(session: Session): SessionSummary {
   return {
@@ -11,7 +11,9 @@ export function toSessionSummary(session: Session): SessionSummary {
     type: session.type,
     startsAt: session.starts_at ?? undefined,
     durationMinutes: session.duration_minutes ?? undefined,
-    participants: session.participants.map(toParticipantSummary),
+    participants: session.participants
+      .map(toParticipantSummary)
+      .sort(compareParticipantsByLastName),
     documentCount: session.document_count,
     transcriptStatus: session.transcript_status,
     hasPrimaryTranscript: session.has_primary_transcript,

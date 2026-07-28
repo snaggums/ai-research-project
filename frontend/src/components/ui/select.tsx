@@ -104,12 +104,28 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
     const fieldRef = React.useRef<HTMLDivElement>(null);
     const [internalValue, setInternalValue] = React.useState(defaultValue);
     const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+    const [activeOptionIndex, setActiveOptionIndex] = React.useState<number | null>(null);
     const selectedValue = value ?? internalValue;
     const isOpen = controlledOpen ?? internalOpen;
     const selectedOption = options.find((option) => option.value === selectedValue);
+    const enabledOptionIndexes = React.useMemo(
+      () => options.reduce<number[]>((indexes, option, index) => {
+        if (!option.disabled) indexes.push(index);
+        return indexes;
+      }, []),
+      [options],
+    );
 
     function setOpen(nextOpen: boolean) {
       if (controlledOpen === undefined) setInternalOpen(nextOpen);
+      if (nextOpen) {
+        const selectedIndex = options.findIndex(
+          (option) => !option.disabled && option.value === selectedValue,
+        );
+        setActiveOptionIndex(selectedIndex >= 0 ? selectedIndex : (enabledOptionIndexes[0] ?? null));
+      } else {
+        setActiveOptionIndex(null);
+      }
       onOpenChange?.(nextOpen);
     }
 
@@ -117,6 +133,17 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
       if (value === undefined) setInternalValue(nextValue);
       onValueChange?.(nextValue);
       setOpen(false);
+    }
+
+    function moveActiveOption(direction: 1 | -1) {
+      if (enabledOptionIndexes.length === 0) return;
+      const currentPosition = activeOptionIndex === null
+        ? -1
+        : enabledOptionIndexes.indexOf(activeOptionIndex);
+      const nextPosition = direction === 1
+        ? (currentPosition + 1) % enabledOptionIndexes.length
+        : (currentPosition <= 0 ? enabledOptionIndexes.length - 1 : currentPosition - 1);
+      setActiveOptionIndex(enabledOptionIndexes[nextPosition]);
     }
 
     React.useEffect(() => {
@@ -133,6 +160,18 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
       return () => document.removeEventListener("pointerdown", handlePointerDown);
     }, [controlledOpen, isOpen, onOpenChange]);
 
+    React.useEffect(() => {
+      if (!isOpen) return;
+      const selectedIndex = options.findIndex(
+        (option) => !option.disabled && option.value === selectedValue,
+      );
+      setActiveOptionIndex((currentIndex) => (
+        currentIndex !== null && !options[currentIndex]?.disabled
+          ? currentIndex
+          : (selectedIndex >= 0 ? selectedIndex : (enabledOptionIndexes[0] ?? null))
+      ));
+    }, [enabledOptionIndexes, isOpen, options, selectedValue]);
+
     return (
       <Field ref={fieldRef} className={className}>
         {label ? (
@@ -146,6 +185,11 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
             id={id}
             type="button"
             aria-controls={isOpen ? menuId : undefined}
+            aria-activedescendant={
+              isOpen && activeOptionIndex !== null
+                ? `${menuId}-option-${activeOptionIndex}`
+                : undefined
+            }
             aria-describedby={describedBy}
             aria-expanded={isOpen}
             aria-haspopup="listbox"
@@ -162,7 +206,36 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
             disabled={disabled}
             onClick={() => setOpen(!isOpen)}
             onKeyDown={(event) => {
-              if (event.key === "Escape") setOpen(false);
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                if (!isOpen) {
+                  setOpen(true);
+                } else {
+                  moveActiveOption(event.key === "ArrowDown" ? 1 : -1);
+                }
+                return;
+              }
+              if (isOpen && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                if (activeOptionIndex !== null) {
+                  const option = options[activeOptionIndex];
+                  if (option && !option.disabled) selectValue(option.value);
+                }
+                return;
+              }
+              if (isOpen && (event.key === "Home" || event.key === "End")) {
+                event.preventDefault();
+                setActiveOptionIndex(
+                  event.key === "Home"
+                    ? (enabledOptionIndexes[0] ?? null)
+                    : (enabledOptionIndexes[enabledOptionIndexes.length - 1] ?? null),
+                );
+                return;
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setOpen(false);
+              }
             }}
           >
             <span
@@ -190,15 +263,18 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
               role="listbox"
               aria-label={typeof label === "string" ? label : "Options"}
             >
-              {options.map((option) => {
+              {options.map((option, index) => {
                 const selected = option.value === selectedValue;
+                const active = index === activeOptionIndex;
                 return (
                   <div
                     key={option.value}
+                    id={`${menuId}-option-${index}`}
                     aria-disabled={option.disabled || undefined}
                     aria-selected={selected}
                     className={cn(
                       "flex cursor-pointer items-center justify-between gap-3 rounded-[var(--air-radius-sm)] px-3 py-2 text-sm outline-none hover:bg-[var(--air-color-bg-subtle)] focus:bg-[var(--air-color-bg-subtle)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--air-color-interaction-focus)]",
+                      active && "bg-[var(--air-color-bg-subtle)]",
                       option.disabled && "cursor-not-allowed text-[var(--air-color-text-disabled)]",
                     )}
                     role="option"
@@ -211,6 +287,9 @@ const SelectField = React.forwardRef<HTMLButtonElement, SelectFieldProps>(
                         event.preventDefault();
                         selectValue(option.value);
                       }
+                    }}
+                    onMouseEnter={() => {
+                      if (!option.disabled) setActiveOptionIndex(index);
                     }}
                   >
                     <span>{option.label}</span>

@@ -3,7 +3,13 @@ import { render } from "@testing-library/react";
 
 import { ApplicationShell } from "@/components/application";
 import { participantSummaries, recordOptions } from "@/mocks/fixtures/participants";
-import { ParticipantDetailView, ParticipantsCollectionView } from "@/pages/participant-views";
+import {
+  ParticipantDetailView,
+  ParticipantsCollectionView,
+} from "@/pages/participant-views";
+import { toSessionSummary } from "@/adapters/sessions";
+import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
+import { SessionParticipantCreateView } from "@/pages/session-views";
 
 const shellProject = { id: "alpha-project", name: "Alpha Project" };
 
@@ -43,6 +49,26 @@ describe("Participant page accessibility", () => {
           projectId="alpha-project"
           projectName="Alpha Project"
           recordOptions={recordOptions}
+        />
+      </ApplicationShell>,
+    );
+    expect((await axe.run(container, { rules: { "color-contrast": { enabled: false } } })).violations).toEqual([]);
+  });
+
+  it("has no automated semantic violations in the Session participant create route", async () => {
+    const { container } = render(
+      <ApplicationShell activeProjectItem="sessions" context="project" project={shellProject}>
+        <SessionParticipantCreateView
+          eligibleParticipants={[
+            { label: "Avery Chen", value: "avery-chen" },
+            { label: "Jordan Moore", value: "jordan-moore" },
+          ]}
+          onSubmitExisting={() => undefined}
+          onSubmitNew={() => undefined}
+          projectId="alpha-project"
+          projectName="Alpha Project"
+          recordOptions={recordOptions}
+          session={toSessionSummary(sessionApiFixtures[0])}
         />
       </ApplicationShell>,
     );

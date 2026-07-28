@@ -75,16 +75,47 @@ describe("SessionDetailView", () => {
     expect(screen.getByRole("columnheader", { name: "Organization" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Notes" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Persona" })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("table"))
+        .getAllByRole("img")
+        .map((avatar) => avatar.getAttribute("aria-label")),
+    ).toEqual([
+      "Riley Chen",
+      "Samir Kaur",
+      "Jordan Lee",
+      "Alex Morgan",
+    ]);
   });
 
-  it("delegates participant creation and row editing independently", async () => {
+  it("delegates participant creation, editing, and confirmed Session removal independently", async () => {
     const user = userEvent.setup();
     const onAddParticipant = vi.fn();
     const onEditParticipant = vi.fn();
-    render(<SessionDetailView activeTab="participants" onAddParticipant={onAddParticipant} onEditParticipant={onEditParticipant} projectId="alpha-project" projectName="Alpha Project" session={session} />);
+    const onRemoveParticipant = vi.fn();
+    render(<SessionDetailView activeTab="participants" onAddParticipant={onAddParticipant} onEditParticipant={onEditParticipant} onRemoveParticipant={onRemoveParticipant} projectId="alpha-project" projectName="Alpha Project" session={session} />);
     await user.click(screen.getByRole("button", { name: "Add participant" }));
     expect(onAddParticipant).toHaveBeenCalledOnce();
     await user.click(screen.getAllByRole("button", { name: `Edit participant: ${session.participants[0].firstName} ${session.participants[0].lastName}` })[0]);
     expect(onEditParticipant).toHaveBeenCalledWith(session.participants[0].id);
+    await user.click(screen.getAllByRole("button", { name: `Remove participant from Session: ${session.participants[0].firstName} ${session.participants[0].lastName}` })[0]);
+    const dialog = screen.getByRole("dialog", { name: "Remove participant from Session?" });
+    expect(within(dialog).getByText(/remain in Project participants and can be added again/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Remove participant" }));
+    expect(onRemoveParticipant).toHaveBeenCalledWith(session.participants[0].id);
+  });
+
+  it("positions the first participant action tooltip downward and inward from the table boundary", async () => {
+    const user = userEvent.setup();
+    render(<SessionDetailView activeTab="participants" onRemoveParticipant={() => undefined} projectId="alpha-project" projectName="Alpha Project" session={session} />);
+    await user.hover(screen.getAllByRole("button", { name: `Remove participant from Session: ${session.participants[0].firstName} ${session.participants[0].lastName}` })[0]);
+    expect(await screen.findByRole("tooltip")).toHaveClass("right-0", "top-full");
+  });
+
+  it("shows removal failure feedback without removing participant actions", () => {
+    render(<SessionDetailView activeTab="participants" onRemoveParticipant={() => undefined} participantActionError="The Session could not be updated." projectId="alpha-project" projectName="Alpha Project" session={session} />);
+    const alert = screen.getByRole("alert");
+    expect(within(alert).getByText("Participant could not be removed")).toBeInTheDocument();
+    expect(within(alert).getByText("The Session could not be updated.")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Remove participant from Session:/ })).not.toHaveLength(0);
   });
 });
