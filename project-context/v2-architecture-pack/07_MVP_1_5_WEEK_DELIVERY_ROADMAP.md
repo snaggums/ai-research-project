@@ -8,7 +8,7 @@ Capacity assumption: Eight focused working days with same-day approval feedback
 ## 1. Target outcome
 
 At the end of the delivery window, a researcher can assign each Session to
-Record 1, Record 2, or Record 3; upload one Primary Transcript; open that Record;
+Medicare Fraud Documenter, Medicaid Fraud Documenter, or Medicare Fraud Finder; upload one Primary Transcript; open that Record;
 automatically synthesize all eligible related Session Reports; review
 Requirements, Decisions, and Action Items; and trace every item to source
 evidence and transcript context.
@@ -26,7 +26,7 @@ Deliverables:
 - update the canonical Domain Map and Route Map for Record-centered synthesis;
 - audit existing Figma Record placeholders and reusable components;
 - add the Records and Record Synthesis page structure in Figma;
-- confirm the fixed Record 1, Record 2, and Record 3 catalog plus at least three
+- confirm the fixed Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder catalog plus at least three
   Sessions, one Primary Transcript per Session, reviewed Session Reports, and
   evidence excerpts.
 
@@ -200,10 +200,10 @@ Verification completed:
 
 Acceptance review workflow:
 
-1. Assign Record 1 to at least two Sessions.
+1. Assign Medicare Fraud Documenter to at least two Sessions.
 2. Upload one transcript to each Session.
 3. Generate and review or approve each Session Report.
-4. Open **Records > Record 1 > Synthesis**.
+4. Open **Records > Medicare Fraud Documenter > Synthesis**.
 5. Select **Generate synthesis**.
 6. Verify Requirements, Decisions, and Action Items appear with source counts.
 7. Mark an AI Generated item as Researcher Reviewed, then approve it.
@@ -233,8 +233,8 @@ Final checkpoint:
 
 Use synthetic data only:
 
-- Record 1 related to two eligible Sessions;
-- Record 2 related to one eligible and one ineligible Session;
+- Medicare Fraud Documenter related to two eligible Sessions;
+- Medicaid Fraud Documenter related to one eligible and one ineligible Session;
 - one Session related to two Records to verify item/source separation;
 - one revised Session Report to verify source snapshots;
 - evidence from distinct speakers and transcript locations; and
@@ -244,7 +244,7 @@ Use synthetic data only:
 
 The MVP is done when:
 
-- Record 1, Record 2, and Record 3 are always available and read-only;
+- Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder are always available and read-only;
 - each Session can select one Record through Session create/edit;
 - each Session exposes one Primary Transcript in the MVP interface;
 - a second transcript cannot be added until the existing transcript is deleted;

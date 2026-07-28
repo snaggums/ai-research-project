@@ -1,29 +1,33 @@
 import * as React from "react";
-import { ArrowLeft, Download, Search, Upload } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 import { EmptyState, PageHeader, SharedRouteState } from "@/components/application";
+import {
+  SessionTranscriptLifecycleWorkspace,
+  type TranscriptReplacementPresentation,
+} from "@/components/research/session-transcript-lifecycle-workspace";
 import { TranscriptContextPassage } from "@/components/research/transcript-context-passage";
-import { TranscriptDocumentItem } from "@/components/research/transcript-document-item";
+import type { TranscriptDependencySummary } from "@/components/research/transcript-lifecycle-dialog";
 import { TranscriptPreview } from "@/components/research/transcript-preview";
 import { TranscriptSearchResult } from "@/components/research/transcript-search-result";
-import { TranscriptUploader } from "@/components/research/transcript-uploader";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/search-field";
 import type { TranscriptContext, TranscriptDocumentDetail, TranscriptSearchResult as TranscriptSearchResultValue } from "@/domain/types";
 import { formatTranscriptDate, formatTranscriptSize, transcriptFormat } from "@/components/research/transcript-presentation";
 
 export interface SessionTranscriptWorkspaceViewProps {
   actionError?: string;
   deletePendingId?: string;
+  dependencies?: TranscriptDependencySummary;
+  dependenciesPending?: boolean;
   documents: TranscriptDocumentDetail[];
   errorMessage?: string;
   onDelete: (documentId: string) => void;
   onOpenContext?: (href: string) => void;
   onRetry: (documentId: string) => void;
   onRetryLoad?: () => void;
+  onReplace?: (file: File) => Promise<void> | void;
   onSearch: (documentId: string, query: string) => void;
-  onSetPrimary: (documentId: string) => void;
   onUpload: (file: File) => Promise<void> | void;
   projectId: string;
   retryingId?: string;
@@ -35,37 +39,107 @@ export interface SessionTranscriptWorkspaceViewProps {
   state?: "ready" | "loading" | "error";
   uploadError?: string;
   uploading?: boolean;
+  replacementError?: string;
+  replacing?: boolean;
 }
 
-export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, documents, errorMessage, onDelete, onOpenContext, onRetry, onRetryLoad, onSearch, onSetPrimary, onUpload, projectId, retryingId, searchError, searchQuery = "", searchResults, searching = false, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
+export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, dependencies, dependenciesPending = false, documents, errorMessage, onDelete, onOpenContext, onReplace, onRetry, onRetryLoad, onSearch, onUpload, projectId, replacementError, replacing = false, retryingId, searchError, searchQuery = "", searchResults, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
   const [selectedFile, setSelectedFile] = React.useState<File>();
-  const [showUploader, setShowUploader] = React.useState(false);
+  const [replacementFile, setReplacementFile] = React.useState<File>();
   const [viewingId, setViewingId] = React.useState<string>();
-  const [query, setQuery] = React.useState(searchQuery);
-  const primary = documents.find((document) => document.isPrimary && document.status === "complete") ?? documents.find((document) => document.status === "complete");
+  const replacementInputRef = React.useRef<HTMLInputElement>(null);
+  const replaceTranscript = onReplace ?? onUpload;
+  const activeDocument = documents.find((document) => document.isPrimary);
+  const replacementDocument = documents.find((document) =>
+    document.lifecycleStatus === "replacement-pending" || document.lifecycleStatus === "replacement-failed",
+  );
+  const legacyDocuments = documents.filter((document) => document.lifecycleStatus === "legacy");
+  const removedDocuments = documents.filter((document) => document.lifecycleStatus === "tombstoned");
   const viewing = documents.find((document) => document.id === viewingId);
   const contextHref = (result: TranscriptSearchResultValue) => `/projects/${projectId}/sessions/${sessionId}/documents/${result.documentId}?result=${result.id}`;
-  const submitUpload = async () => {
+  const submitInitialUpload = async () => {
     if (!selectedFile) return;
     try {
       await onUpload(selectedFile);
       setSelectedFile(undefined);
-      setShowUploader(false);
     } catch {
       // The mutation exposes the request error through uploadError so the
       // uploader can retain the selected file and offer a retry action.
+    }
+  };
+  const submitReplacement = async () => {
+    if (!replacementFile) return;
+    try {
+      await replaceTranscript(replacementFile);
+      setReplacementFile(undefined);
+    } catch {
+      // Recoverable request errors preserve the selected replacement.
     }
   };
   if (state === "loading") return <SharedRouteState state="loading" />;
   if (state === "error") return <div className="grid gap-3"><Alert message={errorMessage ?? "Check your connection and try again."} size="large" title="Transcripts could not be loaded" tone="error" />{onRetryLoad ? <Button className="justify-self-start" onClick={onRetryLoad} size="small">Retry</Button> : null}</div>;
   if (viewing) return <div className="grid gap-4"><Button className="justify-self-start" onClick={() => setViewingId(undefined)} size="small" variant="text"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to transcripts</Button><TranscriptPreview actions={<><Button asChild size="small" variant="gray-subtle"><a href={viewing.sourceUrl ?? "#open-source"}>Open source</a></Button><Button asChild size="small" variant="gray-subtle"><a download href={viewing.downloadUrl ?? "#download-source"}>Download source</a></Button></>} document={viewing} /></div>;
   const uploaderState = uploadError ? "request-error" : uploading ? "uploading" : selectedFile ? "file-selected" : "empty";
-  if (!documents.length || showUploader) return <div className="grid gap-4"><div className="flex justify-center"><TranscriptUploader file={selectedFile} onChooseDifferentFile={() => setSelectedFile(undefined)} onFilesSelected={(files) => setSelectedFile(files[0])} onRemove={() => setSelectedFile(undefined)} onRetryUpload={() => void submitUpload()} onUpload={() => void submitUpload()} progress={50} requestError={uploadError} state={uploaderState} /></div>{documents.length ? <Button className="justify-self-center" onClick={() => setShowUploader(false)} size="small" variant="text">Cancel</Button> : null}</div>;
-  return <section aria-labelledby="transcripts-heading" className="grid gap-4">
-    <header className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold" id="transcripts-heading">Transcripts</h2><Button onClick={() => { setSelectedFile(undefined); setShowUploader(true); }} size="small" variant="gray-subtle"><Upload aria-hidden="true" className="h-4 w-4" />Upload transcript</Button></header>
-    {actionError ? <Alert message={actionError} size="large" title="Transcript action could not be completed" tone="error" /> : null}
-    <div className="grid gap-4">{documents.map((document) => <TranscriptDocumentItem document={document} href="#view-transcript" isPrimary={document.isPrimary} key={document.id} onDelete={deletePendingId === document.id ? undefined : () => onDelete(document.id)} onRetry={() => onRetry(document.id)} onSetPrimary={() => onSetPrimary(document.id)} retrying={retryingId === document.id} viewLabel="View transcript" onClickCapture={(event) => { const anchor = (event.target as HTMLElement).closest("a[href='#view-transcript']"); if (anchor) { event.preventDefault(); setViewingId(document.id); } }} />)}</div>
-    {primary ? <form className="grid gap-2 sm:grid-cols-[1fr_auto]" onSubmit={(event) => { event.preventDefault(); if (query.trim()) onSearch(primary.id, query); }}><SearchField hint="Find relevant source excerpts by speaker, phrase, or topic." label="Search this transcript" onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search this transcript" value={query} /><Button className="sm:mt-7" disabled={!query.trim() || searching} size="large" type="submit"><Search aria-hidden="true" className="h-4 w-4" />{searching ? "Searching…" : "Search transcript"}</Button></form> : null}
+  if (!activeDocument) return (
+    <SessionTranscriptLifecycleWorkspace
+      initialFile={selectedFile}
+      initialProgress={50}
+      initialUploadError={uploadError}
+      initialUploaderState={uploaderState}
+      legacyDocuments={legacyDocuments}
+      onChooseDifferentInitial={() => setSelectedFile(undefined)}
+      onInitialFilesSelected={(files) => setSelectedFile(files[0])}
+      onInitialRemove={() => setSelectedFile(undefined)}
+      onInitialRetry={() => void submitInitialUpload()}
+      onInitialUpload={() => void submitInitialUpload()}
+      onViewTranscript={setViewingId}
+      removedDocuments={removedDocuments}
+    />
+  );
+  const replacement: TranscriptReplacementPresentation | undefined = replacementFile
+    ? {
+        error: replacementError,
+        file: replacementFile,
+        progress: 50,
+        state: replacementError ? "replacement-request-error" : replacing ? "replacement-uploading" : "replacement-selected",
+      }
+    : replacementDocument
+      ? {
+          error: replacementDocument.errorMessage,
+          file: {
+            name: replacementDocument.filename,
+            size: replacementDocument.sizeBytes ?? 0,
+            type: replacementDocument.mimeType ?? "",
+          },
+          progress: 75,
+          state: replacementDocument.lifecycleStatus === "replacement-failed"
+            ? "replacement-processing-error"
+            : "replacement-processing",
+        }
+      : undefined;
+  return <section className="grid gap-4">
+    <input accept=".txt,.md,.docx,.pdf" aria-label="Choose replacement transcript" className="sr-only" onChange={(event) => { setReplacementFile(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} ref={replacementInputRef} type="file" />
+    <SessionTranscriptLifecycleWorkspace
+      actionError={actionError}
+      activeDocument={activeDocument}
+      dependencies={dependencies}
+      legacyDocuments={legacyDocuments}
+      lifecyclePending={Boolean(deletePendingId) || uploading || replacing || dependenciesPending}
+      onChooseDifferentReplacement={() => replacementInputRef.current?.click()}
+      onConfirmDelete={() => onDelete(activeDocument.id)}
+      onConfirmReplacement={() => void submitReplacement()}
+      onRemoveReplacement={() => setReplacementFile(undefined)}
+      onRequestReplacement={() => replacementInputRef.current?.click()}
+      onRetryActive={() => onRetry(activeDocument.id)}
+      onRetryReplacement={() => void submitReplacement()}
+      onRetryReplacementProcessing={replacementDocument ? () => onRetry(replacementDocument.id) : undefined}
+      onSearch={(query) => onSearch(activeDocument.id, query)}
+      onViewTranscript={setViewingId}
+      replacement={replacement}
+      removedDocuments={removedDocuments}
+      retryingActive={retryingId === activeDocument.id}
+      searchQuery={searchQuery}
+    />
     {searchError ? <Alert message={searchError} size="large" title="Transcript search failed" tone="error" /> : null}
     {searchResults ? <div className="grid gap-2"><p className="text-sm font-medium">{searchResults.length} relevant {searchResults.length === 1 ? "excerpt" : "excerpts"}</p>{searchResults.length ? searchResults.map((result) => { const href = contextHref(result); return <TranscriptSearchResult href={href} key={result.id} onOpen={onOpenContext ? (event) => { event.preventDefault(); onOpenContext(href); } : undefined} result={result} />; }) : <EmptyState description="Try another speaker, phrase, or topic." title="No relevant excerpts" />}</div> : null}
   </section>;

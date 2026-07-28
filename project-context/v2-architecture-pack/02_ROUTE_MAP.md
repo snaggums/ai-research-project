@@ -233,7 +233,7 @@ Purpose: display the fixed workspace-level Record catalog.
 
 Primary content:
 
-- Record 1, Record 2, and Record 3;
+- Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder;
 - related Session count;
 - synthesis readiness and latest synthesis timestamp;
 - Open record action; and

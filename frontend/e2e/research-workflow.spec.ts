@@ -331,7 +331,7 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
     }
 
     await page.goto("/records/record-1/synthesis");
-    await expect(page.getByRole("heading", { level: 1, name: "Record 1 synthesis" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Medicare Fraud Documenter synthesis" })).toBeVisible();
     await page.getByRole("button", { name: "Generate synthesis" }).click();
     await expect(page.getByRole("heading", { name: "Requirements" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Decisions" })).toBeVisible();
@@ -344,7 +344,7 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
     await expect(firstItem.getByText("Researcher Reviewed", { exact: true })).toBeVisible();
 
     await page.goto("/records/record-1?view=knowledge");
-    await expect(page.getByRole("heading", { level: 1, name: "Record 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
     const search = page.getByRole("searchbox", { name: "Search" });
     await search.fill(firstItemTitle);

@@ -11,19 +11,19 @@ export const transcriptApiFixtures: TranscriptDocument[] = [
   {
     id: "checkout-transcript", project_id: "alpha-project", session_id: "mobile-checkout-test",
     filename: "mobile-checkout-interview.docx", mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", size_bytes: 1887436,
-    status: "complete", is_primary: true, uploaded_at: "2026-07-12T14:42:00Z", processed_at: "2026-07-12T14:44:00Z", error_message: null,
+    status: "complete", lifecycle_status: "active", is_primary: true, uploaded_at: "2026-07-12T14:42:00Z", processed_at: "2026-07-12T14:44:00Z", error_message: null,
     blocks: transcriptBlocks, source_url: "#open-source", download_url: "#download-source",
   },
   {
     id: "processing-transcript", project_id: "alpha-project", session_id: "checkout-interview",
     filename: "checkout-workflow-interview.txt", mime_type: "text/plain", size_bytes: 48211,
-    status: "processing", is_primary: false, uploaded_at: "2026-07-13T15:00:00Z", processed_at: null, error_message: null,
+    status: "processing", lifecycle_status: "legacy", is_primary: false, uploaded_at: "2026-07-13T15:00:00Z", processed_at: null, error_message: null,
     blocks: [], source_url: null, download_url: "#download-processing-source",
   },
   {
     id: "failed-transcript", project_id: "alpha-project", session_id: "checkout-working-session",
     filename: "synthesis-working-session.pdf", mime_type: "application/pdf", size_bytes: 822476,
-    status: "failed", is_primary: false, uploaded_at: "2026-07-14T09:00:00Z", processed_at: null, error_message: "AIR could not extract text from this source.",
+    status: "failed", lifecycle_status: "legacy", is_primary: false, uploaded_at: "2026-07-14T09:00:00Z", processed_at: null, error_message: "AIR could not extract text from this source.",
     blocks: [], source_url: null, download_url: "#download-failed-source",
   },
 ];

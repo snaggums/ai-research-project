@@ -88,7 +88,7 @@ export const WorkspaceRecords: Story = {
     <ApplicationShell {...args}>
       <PageHeader
         description="Review record-level research synthesis across related sessions."
-        title="Record 1"
+        title="Medicare Fraud Documenter"
       />
     </ApplicationShell>
   ),

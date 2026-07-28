@@ -1,0 +1,122 @@
+{
+  "session": {
+    "title": "Session P2-S03 - Meeting Recording",
+    "date": "August 12, 2026, 1:00PM",
+    "duration": "25m 42s"
+  },
+  "recording": {
+    "started_by": "Jesse Gilbert",
+    "stopped_by": "Jesse Gilbert",
+    "marker": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\backend\\scripts\\transcript_docx_assets\\transcription_event_marker.png"
+  },
+  "speakers": {
+    "Jesse Gilbert": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\jesse_gilbert.png"
+    },
+    "Sofia Martinez": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\p2-s03_sofia_martinez.png"
+    }
+  },
+  "turns": [
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "0:00",
+      "text": "Thanks for joining. This is a synthetic usability study of the redesigned Medicaid Fraud Documenter. Please describe your role and the state Medicaid context in which you work."
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "0:42",
+      "text": "I am a senior Medicaid caseworker with Southwest Benefits Integrity Group in the Southwest, and today I am working in the New Mexico Medicaid context. I manage documentation for rural transportation cases and providers operating near state borders. I routinely coordinate with state reviewers and document why a case meets program integrity requirements."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "2:03",
+      "text": "You will use one fictional case throughout: Community Care Transit, with overlapping trips and repeated mileage entries. What is your first impression of the redesigned workspace?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "2:51",
+      "text": "The redesign is easier to scan than the current product. I am using the synthetic Community Care Transit case, which includes overlapping trips and repeated mileage entries, and I expect every decision to stay anchored to the New Mexico Medicaid program."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "4:20",
+      "text": "Please create the case for your state Medicaid program. Think aloud about jurisdiction and the common case information."
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "5:18",
+      "text": "I entered the provider, service dates, transportation allegation, and affected members. The active state is not prominent after I enter the case, so I have to remember which program rules and reviewer path I am using. The state should behave like core case context, not a detail that disappears after setup."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "7:15",
+      "text": "Please complete the state-specific information. What helps you understand what the state Medicaid program requires?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "8:13",
+      "text": "I reached the state-specific section after the common case information. Several New Mexico-specific fields are marked required, but the prototype does not explain the policy source, acceptable value, or why the state reviewer needs them. I would also expect validation before I leave this step, because these values affect routing and review."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "10:27",
+      "text": "Now upload the trip logs, claim extract, vehicle roster, and member verification records. How well does the evidence step fit your state terminology?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "11:39",
+      "text": "I uploaded the trip logs, claim extract, vehicle roster, and member verification records. The evidence categories use generic federal language instead of the terms our New Mexico Medicaid program uses for transportation records and trip verification. Consistent terminology would make it easier for another state investigator to recognize what is present."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "13:48",
+      "text": "Please submit the case to the relevant state Medicaid program or reviewer. What do you expect to see before and after submission?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "14:53",
+      "text": "I reviewed the package and initiated state Medicaid review. The confirmation names the New Mexico Medicaid review unit and shows the case moving into state reviewer intake. I need a receipt that identifies the state program, package version, and submission time."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "17:01",
+      "text": "Assume the state Medicaid reviewer requests additional trip verification. Please update the case with that request and your response."
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "18:08",
+      "text": "I added the synthetic request for trip verification that came back from the state Medicaid reviewer. The update records the New Mexico Medicaid reviewer's name, received date, request, and our response as related entries. The case history should distinguish state communications from internal notes."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "20:02",
+      "text": "Now assume the state review is complete. Please close the Medicaid fraud case and describe the safeguards you expect."
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "21:05",
+      "text": "I selected a final outcome after the state Medicaid review was resolved. The close screen uses the New Mexico disposition and confirms that state review is complete before the case becomes read-only. That confirmation is important because closing the case changes what my team can do next."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "22:38",
+      "text": "How should the product handle a provider whose activity may involve more than one state Medicaid program?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "23:29",
+      "text": "I checked how this workflow would behave if the same transportation provider also had activity in a neighboring state. This provider operates across state lines, but the prototype forces the whole matter into one jurisdiction. I need related state cases with shared evidence and separate routing, deadlines, and outcomes. The shared facts should not blur each state's authority."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "24:47",
+      "text": "What are the first changes you would make before this redesign replaces the current product?"
+    },
+    {
+      "speaker": "Sofia Martinez",
+      "timestamp": "25:42",
+      "text": "My first changes would be to explain every state-specific required field, then keep the active state visible, then support linked cases across jurisdictions. The core workflow is understandable, but state identity, state policy, and state reviewer ownership have to remain visible at every consequential step."
+    }
+  ]
+}

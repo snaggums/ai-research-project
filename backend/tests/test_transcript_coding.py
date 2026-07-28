@@ -126,7 +126,11 @@ def test_manual_codes_assignments_filters_and_record_guard(client: TestClient) -
     document_id = workspace["document_id"]
     protected_delete = client.delete(f"{root}/documents/{document_id}")
     assert protected_delete.status_code == 409
-    assert protected_delete.json()["code"] == "transcript_has_coding_dependencies"
+    assert protected_delete.json()["code"] == "transcript_confirmation_required"
+    dependencies = client.get(f"{root}/documents/{document_id}/dependencies")
+    assert dependencies.status_code == 200
+    assert dependencies.json()["accepted_highlight_count"] == 1
+    assert dependencies.json()["uncoded_highlight_count"] == 0
 
     accepted = client.get(
         f"{root}/highlights",
@@ -167,6 +171,49 @@ def test_manual_codes_assignments_filters_and_record_guard(client: TestClient) -
     )
     assert unblocked.status_code == 200, unblocked.text
     assert unblocked.json()["related_records"][0]["id"] == "record-2"
+
+
+def test_replacement_preserves_codes_but_excludes_archived_highlights_from_current_counts(
+    client: TestClient,
+) -> None:
+    project = _project(client)
+    research_session = _session(client, project["id"])
+    workspace = _workspace(client, project["id"], research_session["id"])
+    root = f"/api/projects/{project['id']}/sessions/{research_session['id']}"
+    code = client.post(
+        "/api/records/record-1/codes",
+        json={"name": "Preserved Record code"},
+        headers={"Idempotency-Key": "preserved-code"},
+    ).json()
+    created = client.post(
+        f"{root}/highlights",
+        json={"anchor": _anchor(workspace, 0, 36), "code_ids": [code["id"]], "new_code": None},
+        headers={"Idempotency-Key": "archived-highlight"},
+    )
+    assert created.status_code == 201
+
+    replacement = client.post(
+        f"{root}/transcript-replacement",
+        headers={"Idempotency-Key": "replacement-with-history"},
+        files={"file": ("replacement.txt", b"Moderator: This replacement is the current source.", "text/plain")},
+    )
+    assert replacement.status_code == 201
+
+    current_workspace = client.get(f"{root}/coding")
+    assert current_workspace.status_code == 200
+    assert current_workspace.json()["document_id"] != workspace["document_id"]
+    assert current_workspace.json()["highlights"] == []
+
+    record_highlights = client.get(
+        "/api/records/record-1/highlights",
+        params={"status": "accepted-coded"},
+    )
+    assert record_highlights.status_code == 200
+    assert record_highlights.json() == []
+
+    record_codes = client.get("/api/records/record-1/codes")
+    assert record_codes.status_code == 200
+    assert any(value["id"] == code["id"] for value in record_codes.json())
 
 
 def test_stale_and_cross_record_anchors_are_rejected(client: TestClient) -> None:

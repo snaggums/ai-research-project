@@ -22,7 +22,7 @@ const items: ProjectNavigationEntry[] = [
   {
     href: "#records",
     id: "records",
-    items: [{ href: "#record-1", id: "record-1", label: "Record 1" }],
+    items: [{ href: "#record-1", id: "record-1", label: "Medicare Fraud Documenter" }],
     label: "Records",
     type: "group",
   },

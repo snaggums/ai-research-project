@@ -2,9 +2,9 @@ import type { Session } from "@/api/types";
 import { participantApiFixtures } from "./participants";
 
 const records = [
-  { id: "record-1", name: "Record 1" },
-  { id: "record-2", name: "Record 2" },
-  { id: "record-3", name: "Record 3" },
+  { id: "record-1", name: "Medicare Fraud Documenter" },
+  { id: "record-2", name: "Medicaid Fraud Documenter" },
+  { id: "record-3", name: "Medicare Fraud Finder" },
 ];
 const commonComponents = [
   { id: "component-payment", name: "Payment form" },

@@ -143,17 +143,18 @@ Product Knowledge is cross-Project and exists independently of a Project. A Reco
 represents functionality being designed and its workflow, for example:
 
 ```text
-Record 1
+Medicare Fraud Documenter
   +-- Requirements
   +-- Decision Log
   +-- Action Items
   +-- Chat Conversations
 ```
 
-A Record's display name remains generic by default, for example `Record 1`,
-`Record 2`, and `Record 3`. A Record may reference multiple Common Components,
-and a Common Component may be referenced by multiple Records. Examples of
-Common Components include
+A Record has a researcher-facing product name. The fixed MVP Records are
+`Medicare Fraud Documenter`, `Medicaid Fraud Documenter`, and
+`Medicare Fraud Finder`; their stable IDs remain `record-1`, `record-2`, and
+`record-3`. A Record may reference multiple Common Components, and a Common
+Component may be referenced by multiple Records. Examples of Common Components include
 Search, Document Upload, Timeline, Notes, Assignments, History, Comments, and
 Notifications.
 
@@ -175,8 +176,8 @@ The controlled Record Synthesis MVP implements the first narrow Product
 Knowledge workflow without changing the long-term domain model:
 
 - the workspace contains three seeded, read-only Records with stable IDs
-  `record-1`, `record-2`, and `record-3` and display names `Record 1`,
-  `Record 2`, and `Record 3`;
+  `record-1`, `record-2`, and `record-3` and display names `Medicare Fraud Documenter`,
+  `Medicaid Fraud Documenter`, and `Medicare Fraud Finder`;
 - the MVP interface assigns each Session to exactly one Record through a
   single-select field, while the persistence model may remain extensible;
 - a Record synthesis automatically includes every eligible related Session;
@@ -552,7 +553,7 @@ The migration must pass all of the following:
 
 ### Record Synthesis MVP includes
 
-- the fixed Record 1, Record 2, and Record 3 catalog;
+- the fixed Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder catalog;
 - one Record selection per Session in the interface;
 - one Primary Transcript per Session in the interface;
 - automatic synthesis across all eligible Sessions related to a Record;

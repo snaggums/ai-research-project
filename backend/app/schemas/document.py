@@ -35,6 +35,7 @@ class TranscriptDocumentRead(BaseModel):
     mime_type: str | None
     size_bytes: int | None
     status: str
+    lifecycle_status: str
     is_primary: bool
     uploaded_at: datetime
     processed_at: datetime | None
@@ -42,6 +43,17 @@ class TranscriptDocumentRead(BaseModel):
     blocks: list[TranscriptBlock]
     source_url: str | None
     download_url: str | None
+
+
+class TranscriptDependencySummary(BaseModel):
+    is_primary: bool
+    accepted_highlight_count: int
+    uncoded_highlight_count: int
+    code_suggestion_run_count: int
+    session_report_count: int
+    record_synthesis_count: int
+    retention_consequence: str
+    version: str
 
 
 class TranscriptSearchResult(BaseModel):

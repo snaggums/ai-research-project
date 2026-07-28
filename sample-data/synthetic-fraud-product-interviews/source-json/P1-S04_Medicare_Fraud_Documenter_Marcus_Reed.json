@@ -1,0 +1,122 @@
+{
+  "session": {
+    "title": "Session P1-S04 - Meeting Recording",
+    "date": "August 6, 2026, 11:00AM",
+    "duration": "25m 42s"
+  },
+  "recording": {
+    "started_by": "Maya Chen",
+    "stopped_by": "Maya Chen",
+    "marker": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\backend\\scripts\\transcript_docx_assets\\transcription_event_marker.png"
+  },
+  "speakers": {
+    "Maya Chen": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\maya_chen.png"
+    },
+    "Marcus Reed": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\p1-s04_marcus_reed.png"
+    }
+  },
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "0:00",
+      "text": "Thanks for joining. This is a synthetic usability study of the redesigned Medicare Fraud Documenter. Please describe your role and how you normally work with suspected Medicare fraud cases."
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "0:42",
+      "text": "I am a case documentation specialist with Southern Program Integrity Group in the South. I standardize case records, supporting files, and handoffs across several investigator teams. My work includes assembling claim evidence, coordinating review, and keeping a record that another investigator can follow."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "2:03",
+      "text": "You will use one fictional case throughout: Northstar Orthopedic Services, with suspected duplicate billing and possible upcoding. What is your first impression of the redesigned case workspace?"
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "2:51",
+      "text": "The redesign looks cleaner than the current product, and the case status is easier to locate. I am treating Northstar Orthopedic Services as a suspected duplicate-billing and upcoding case, using the same claim extract, provider profile, audit spreadsheet, and Medicare correspondence I would expect in a real review."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "4:20",
+      "text": "Please create a new case for the scenario and think aloud as you choose the case information and allegation."
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "5:18",
+      "text": "I would start with the provider, affected claims, service period, and allegation. The category choices overlap in this scenario, and the prototype does not explain whether duplicate billing or upcoding should be primary. I would save a draft before moving to evidence."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "7:15",
+      "text": "Now document the case and upload the claim extract, provider profile, audit spreadsheet, and Medicare correspondence. What helps or slows you down?"
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "8:13",
+      "text": "I uploaded the four synthetic supporting documents and added a short description to each. Once I add the claim extract, audit spreadsheet, provider profile, and correspondence, they appear as one flat list. I need evidence types, clearer labels, and a way to connect each file to the allegation it supports. I would expect every later reviewer to see the same evidence context."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "10:27",
+      "text": "Please prepare the case for Medicare review and submit it. How do you decide that the package is ready?"
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "11:39",
+      "text": "I reviewed the case summary and the destination before submitting. The review screen does not distinguish required information from recommended information, so I cannot tell whether Submit is safe or merely available. A submission receipt with the package version and timestamp would be important for our audit trail."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "13:48",
+      "text": "Assume Medicare has requested clarification and sent a response. Please update the case and attach the new material."
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "14:53",
+      "text": "I opened the submitted case and added the synthetic request for clarification from Medicare. I can record the Medicare response, its received date, and the follow-up attachment in a sequence that reads like a usable case history. I also want the original submission preserved while the new material becomes part of the active Record."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "17:01",
+      "text": "Now assume the review is complete. Please close the case and describe what you expect that action to do."
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "18:08",
+      "text": "After recording the final Medicare determination, I selected a disposition and reviewed the close action. Close case is too easy to reach, the disposition choices are not defined, and I do not see a final warning about unresolved actions or what becomes read-only. Closing should end active work without erasing the reasoning or evidence history."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "20:02",
+      "text": "Before we finish the task, please check for related cases and describe any review, ownership, or permission controls you would need."
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "21:05",
+      "text": "I checked how the prototype handles a similar existing case and how responsibilities are controlled. The duplicate check appears early enough to review without interrupting the rest of the workflow. Those controls matter because they prevent parallel investigations and unclear ownership."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "22:38",
+      "text": "Looking across the full workflow, where were you most and least confident?"
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "23:29",
+      "text": "I could complete the end-to-end path without outside help, and the redesigned status model is an improvement. My confidence drops wherever the interface asks me to make a legally meaningful decision without showing the supporting criteria, history, or consequence at that point."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "24:47",
+      "text": "What are the first changes you would make before this redesign replaces the current product?"
+    },
+    {
+      "speaker": "Marcus Reed",
+      "timestamp": "25:42",
+      "text": "My first changes would be to organize evidence by type and allegation, then make submission readiness explicit, then add safer, defined closure controls. With those changes, the workflow would be much closer to supporting a complete and reviewable Medicare fraud case. Thank you for walking through it with me."
+    }
+  ]
+}

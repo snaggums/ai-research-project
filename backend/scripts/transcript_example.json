@@ -1,0 +1,77 @@
+{
+  "session": {
+    "title": "Session S001 - Meeting Recording",
+    "date": "July 27, 2026, 10:00AM",
+    "duration": "8m 42s"
+  },
+  "recording": {
+    "started_by": "Maya Chen",
+    "stopped_by": "Maya Chen",
+    "marker": "transcript_docx_assets/transcription_event_marker.png"
+  },
+  "speakers": {
+    "Maya Chen": {
+      "avatar": "transcript_docx_assets/maya_chen_avatar.png"
+    },
+    "Elaine Montgomery": {
+      "avatar": "transcript_docx_assets/elaine_montgomery_avatar.png"
+    }
+  },
+  "turns": [
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "0:00",
+      "text": "Thanks for joining today. I would like you to imagine that you have just finished a research interview and need to add its transcript to your project. Please talk through what you expect to happen as you begin."
+    },
+    {
+      "speaker": "Elaine Montgomery",
+      "timestamp": "0:34",
+      "text": "I would first look for the Session I just completed. From there I would expect an obvious place to upload the transcript, and I would want confirmation that I selected the right Participant before anything is processed."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "1:22",
+      "text": "What information would help you feel confident that the upload is working?"
+    },
+    {
+      "speaker": "Elaine Montgomery",
+      "timestamp": "1:41",
+      "text": "A progress indicator would help, but the status language matters more. I want to know whether AIR is uploading, transcribing, or analyzing, because those are different steps and they may take different amounts of time."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "3:05",
+      "text": "Suppose the file finishes processing and AIR finds two speakers. What would you expect to do next?"
+    },
+    {
+      "speaker": "Elaine Montgomery",
+      "timestamp": "3:31",
+      "text": "I would expect to review the speaker names before coding. If AIR labels them as Speaker 1 and Speaker 2, I need a quick way to map those labels to the facilitator and Participant without editing every turn individually."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "5:16",
+      "text": "Is there anything that would make you hesitate before continuing to Transcript Coding?"
+    },
+    {
+      "speaker": "Elaine Montgomery",
+      "timestamp": "5:39",
+      "text": "Yes. I would hesitate if I could not tell whether the original file was preserved. I would also want to know that correcting a speaker name will not change timestamps or break the connection between a Highlight and the original Transcript."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "7:28",
+      "text": "What would a successful handoff into coding look like?"
+    },
+    {
+      "speaker": "Elaine Montgomery",
+      "timestamp": "8:02",
+      "text": "I would see the full Transcript, the corrected speaker names, and a clear indication that processing is complete. Then I could select a passage, create a Highlight, and apply a Code without wondering whether the content is still changing behind the scenes."
+    },
+    {
+      "speaker": "Maya Chen",
+      "timestamp": "8:42",
+      "text": "That covers everything I wanted to learn. Thank you."
+    }
+  ]
+}

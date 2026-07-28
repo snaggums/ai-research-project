@@ -212,7 +212,7 @@ export const transcriptCodingApiFixture: TranscriptCodingWorkspace = {
   project_id: "alpha-project",
   session_id: "mobile-checkout-test",
   document_id: "checkout-transcript",
-  record: { id: "record-1", name: "Record 1" },
+  record: { id: "record-1", name: "Medicare Fraud Documenter" },
   transcript: {
     content_checksum: fixtureChecksum,
     blocks: codingBlocks,

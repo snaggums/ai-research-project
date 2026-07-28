@@ -117,6 +117,7 @@ export type TranscriptDocument = {
   mime_type: string | null;
   size_bytes: number | null;
   status: "uploaded" | "processing" | "complete" | "failed";
+  lifecycle_status: "active" | "legacy" | "replacement-pending" | "replacement-failed" | "tombstoned";
   is_primary: boolean;
   uploaded_at: string;
   processed_at: string | null;
@@ -124,6 +125,17 @@ export type TranscriptDocument = {
   blocks: TranscriptBlock[];
   source_url: string | null;
   download_url: string | null;
+};
+
+export type TranscriptDependencySummary = {
+  is_primary: boolean;
+  accepted_highlight_count: number;
+  uncoded_highlight_count: number;
+  code_suggestion_run_count: number;
+  session_report_count: number;
+  record_synthesis_count: number;
+  retention_consequence: "preserve-lineage";
+  version: string;
 };
 
 export type TranscriptSearchResult = {

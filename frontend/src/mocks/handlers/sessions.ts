@@ -15,7 +15,7 @@ export function resetSessionStore() {
 resetSessionStore();
 
 const participantsFor = (ids: string[]) => mockParticipantsById(ids);
-const recordNames: Record<string, string> = { "record-1": "Record 1", "record-2": "Record 2", "record-3": "Record 3" };
+const recordNames: Record<string, string> = { "record-1": "Medicare Fraud Documenter", "record-2": "Medicaid Fraud Documenter", "record-3": "Medicare Fraud Finder" };
 const recordsFor = (ids: string[] = []) => ids.map((id) => ({ id, name: recordNames[id] ?? id }));
 
 export const sessionHandlers = [

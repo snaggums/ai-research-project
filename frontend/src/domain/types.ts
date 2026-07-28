@@ -134,6 +134,7 @@ export type TranscriptDocumentSummary = {
   mimeType?: string;
   sizeBytes?: number;
   status: ProcessingStatus;
+  lifecycleStatus: "active" | "legacy" | "replacement-pending" | "replacement-failed" | "tombstoned";
   isPrimary: boolean;
   uploadedAt: string;
   processedAt?: string;

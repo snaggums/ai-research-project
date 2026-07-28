@@ -1,5 +1,6 @@
 import type {
   TranscriptContext,
+  TranscriptDependencySummary,
   TranscriptDocument,
   TranscriptSearchResponse,
 } from "./types";
@@ -48,8 +49,30 @@ export function uploadSessionTranscript(projectId: string, sessionId: string, fi
   return request<TranscriptDocument>(root(projectId, sessionId), { method: "POST", body });
 }
 
+export function replaceSessionTranscript(
+  projectId: string,
+  sessionId: string,
+  file: File,
+  requestKey: string,
+) {
+  const body = new FormData();
+  body.append("file", file);
+  return request<TranscriptDocument>(
+    `/projects/${projectId}/sessions/${sessionId}/transcript-replacement`,
+    {
+      method: "POST",
+      body,
+      headers: { "Idempotency-Key": requestKey },
+    },
+  );
+}
+
 export function getSessionTranscript(projectId: string, sessionId: string, documentId: string) {
   return request<TranscriptDocument>(`${root(projectId, sessionId)}/${documentId}`);
+}
+
+export function getTranscriptDependencies(projectId: string, sessionId: string, documentId: string) {
+  return request<TranscriptDependencySummary>(`${root(projectId, sessionId)}/${documentId}/dependencies`);
 }
 
 export function retrySessionTranscript(projectId: string, sessionId: string, documentId: string) {
@@ -60,8 +83,19 @@ export function setPrimaryTranscript(projectId: string, sessionId: string, docum
   return request<TranscriptDocument>(`${root(projectId, sessionId)}/${documentId}/primary`, { method: "POST" });
 }
 
-export function deleteSessionTranscript(projectId: string, sessionId: string, documentId: string) {
-  return request<void>(`${root(projectId, sessionId)}/${documentId}`, { method: "DELETE" });
+export function deleteSessionTranscript(
+  projectId: string,
+  sessionId: string,
+  documentId: string,
+  dependencyVersion: string,
+) {
+  return request<void>(`${root(projectId, sessionId)}/${documentId}`, {
+    method: "DELETE",
+    headers: {
+      "If-Match": dependencyVersion,
+      "X-Transcript-Confirmation": "preserve-lineage",
+    },
+  });
 }
 
 export function searchSessionTranscript(projectId: string, sessionId: string, documentId: string, query: string) {

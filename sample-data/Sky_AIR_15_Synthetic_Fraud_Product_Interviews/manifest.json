@@ -1,0 +1,314 @@
+[
+  {
+    "session_id": "P1-S01",
+    "product": "Medicare Fraud Documenter",
+    "interviewer": "Maya Chen",
+    "participant": "Priya Nair",
+    "role": "senior program integrity investigator",
+    "organization": "Great Lakes Integrity Partners",
+    "region": "Midwest",
+    "state_context": "Illinois",
+    "date": "2026-08-03T09:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "evidence_organization",
+      "submission_readiness",
+      "update_chronology"
+    ],
+    "file": "product-1-medicare-fraud-documenter/P1-S01_Medicare_Fraud_Documenter_Priya_Nair.docx"
+  },
+  {
+    "session_id": "P1-S02",
+    "product": "Medicare Fraud Documenter",
+    "interviewer": "Maya Chen",
+    "participant": "Daniel Brooks",
+    "role": "Medicare fraud case analyst",
+    "organization": "Northeast Claims Review Collaborative",
+    "region": "Northeast",
+    "state_context": "Pennsylvania",
+    "date": "2026-08-04T10:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "evidence_organization",
+      "case_categories",
+      "closure_safeguards",
+      "duplicate_warning"
+    ],
+    "file": "product-1-medicare-fraud-documenter/P1-S02_Medicare_Fraud_Documenter_Daniel_Brooks.docx"
+  },
+  {
+    "session_id": "P1-S03",
+    "product": "Medicare Fraud Documenter",
+    "interviewer": "Maya Chen",
+    "participant": "Alicia Torres",
+    "role": "lead fraud investigator",
+    "organization": "Desert Health Integrity Services",
+    "region": "Southwest",
+    "state_context": "Arizona",
+    "date": "2026-08-05T13:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "evidence_organization",
+      "submission_readiness",
+      "update_chronology",
+      "duplicate_warning"
+    ],
+    "file": "product-1-medicare-fraud-documenter/P1-S03_Medicare_Fraud_Documenter_Alicia_Torres.docx"
+  },
+  {
+    "session_id": "P1-S04",
+    "product": "Medicare Fraud Documenter",
+    "interviewer": "Maya Chen",
+    "participant": "Marcus Reed",
+    "role": "case documentation specialist",
+    "organization": "Southern Program Integrity Group",
+    "region": "South",
+    "state_context": "Georgia",
+    "date": "2026-08-06T11:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "evidence_organization",
+      "submission_readiness",
+      "case_categories",
+      "closure_safeguards"
+    ],
+    "file": "product-1-medicare-fraud-documenter/P1-S04_Medicare_Fraud_Documenter_Marcus_Reed.docx"
+  },
+  {
+    "session_id": "P1-S05",
+    "product": "Medicare Fraud Documenter",
+    "interviewer": "Maya Chen",
+    "participant": "Heather Lawson",
+    "role": "investigation supervisor",
+    "organization": "Heartland Claims Oversight",
+    "region": "Midwest",
+    "state_context": "Ohio",
+    "date": "2026-08-07T14:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "submission_readiness",
+      "case_categories",
+      "update_chronology",
+      "closure_safeguards",
+      "supervisor_permissions"
+    ],
+    "file": "product-1-medicare-fraud-documenter/P1-S05_Medicare_Fraud_Documenter_Heather_Lawson.docx"
+  },
+  {
+    "session_id": "P2-S01",
+    "product": "Medicaid Fraud Documenter",
+    "interviewer": "Jesse Gilbert",
+    "participant": "Tiana Williams",
+    "role": "Medicaid program integrity analyst",
+    "organization": "Magnolia Medicaid Review Partners",
+    "region": "South",
+    "state_context": "Mississippi",
+    "date": "2026-08-10T09:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "state_context",
+      "state_required_fields",
+      "submission_destination",
+      "evidence_terminology",
+      "state_closure"
+    ],
+    "file": "product-2-medicaid-fraud-documenter/P2-S01_Medicaid_Fraud_Documenter_Tiana_Williams.docx"
+  },
+  {
+    "session_id": "P2-S02",
+    "product": "Medicaid Fraud Documenter",
+    "interviewer": "Jesse Gilbert",
+    "participant": "Evan Kim",
+    "role": "state Medicaid investigations specialist",
+    "organization": "Empire Health Integrity Services",
+    "region": "Northeast",
+    "state_context": "New York",
+    "date": "2026-08-11T10:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "state_context",
+      "state_required_fields",
+      "submission_destination",
+      "reviewer_attribution",
+      "state_closure"
+    ],
+    "file": "product-2-medicaid-fraud-documenter/P2-S02_Medicaid_Fraud_Documenter_Evan_Kim.docx"
+  },
+  {
+    "session_id": "P2-S03",
+    "product": "Medicaid Fraud Documenter",
+    "interviewer": "Jesse Gilbert",
+    "participant": "Sofia Martinez",
+    "role": "senior Medicaid caseworker",
+    "organization": "Southwest Benefits Integrity Group",
+    "region": "Southwest",
+    "state_context": "New Mexico",
+    "date": "2026-08-12T13:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "state_context",
+      "state_required_fields",
+      "multistate",
+      "evidence_terminology"
+    ],
+    "file": "product-2-medicaid-fraud-documenter/P2-S03_Medicaid_Fraud_Documenter_Sofia_Martinez.docx"
+  },
+  {
+    "session_id": "P2-S04",
+    "product": "Medicaid Fraud Documenter",
+    "interviewer": "Jesse Gilbert",
+    "participant": "Noah Patel",
+    "role": "Medicaid compliance investigator",
+    "organization": "Great Lakes Medicaid Oversight",
+    "region": "Midwest",
+    "state_context": "Ohio",
+    "date": "2026-08-13T11:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "state_context",
+      "state_required_fields",
+      "evidence_terminology",
+      "reviewer_attribution",
+      "state_closure"
+    ],
+    "file": "product-2-medicaid-fraud-documenter/P2-S04_Medicaid_Fraud_Documenter_Noah_Patel.docx"
+  },
+  {
+    "session_id": "P2-S05",
+    "product": "Medicaid Fraud Documenter",
+    "interviewer": "Jesse Gilbert",
+    "participant": "Rebecca Cole",
+    "role": "multi-state case supervisor",
+    "organization": "Atlantic Program Integrity Collaborative",
+    "region": "South",
+    "state_context": "North Carolina",
+    "date": "2026-08-14T14:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "state_required_fields",
+      "submission_destination",
+      "multistate",
+      "reviewer_attribution",
+      "state_closure"
+    ],
+    "file": "product-2-medicaid-fraud-documenter/P2-S05_Medicaid_Fraud_Documenter_Rebecca_Cole.docx"
+  },
+  {
+    "session_id": "P3-S01",
+    "product": "Medicare Fraud Finder",
+    "interviewer": "Kristina Snyder",
+    "participant": "Omar Haddad",
+    "role": "claims data analyst",
+    "organization": "Midwest Fraud Analytics Lab",
+    "region": "Midwest",
+    "state_context": "Michigan",
+    "date": "2026-08-17T09:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "suggestion_explanation",
+      "sufficiency_threshold",
+      "baseline_opaque",
+      "existing_cases",
+      "handoff_mapping"
+    ],
+    "file": "product-3-medicare-fraud-finder/P3-S01_Medicare_Fraud_Finder_Omar_Haddad.docx"
+  },
+  {
+    "session_id": "P3-S02",
+    "product": "Medicare Fraud Finder",
+    "interviewer": "Kristina Snyder",
+    "participant": "Grace Liu",
+    "role": "senior fraud detection analyst",
+    "organization": "Northeast Medicare Analytics Group",
+    "region": "Northeast",
+    "state_context": "Massachusetts",
+    "date": "2026-08-18T10:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "suggestion_explanation",
+      "sufficiency_threshold",
+      "baseline_opaque",
+      "decision_reversibility",
+      "handoff_mapping",
+      "queue_prioritization"
+    ],
+    "file": "product-3-medicare-fraud-finder/P3-S02_Medicare_Fraud_Finder_Grace_Liu.docx"
+  },
+  {
+    "session_id": "P3-S03",
+    "product": "Medicare Fraud Finder",
+    "interviewer": "Kristina Snyder",
+    "participant": "Carlos Vega",
+    "role": "program integrity investigator",
+    "organization": "Desert Claims Intelligence",
+    "region": "Southwest",
+    "state_context": "Arizona",
+    "date": "2026-08-19T13:30:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "suggestion_explanation",
+      "sufficiency_threshold",
+      "decision_reversibility",
+      "existing_cases",
+      "handoff_mapping",
+      "false_positive_handling"
+    ],
+    "file": "product-3-medicare-fraud-finder/P3-S03_Medicare_Fraud_Finder_Carlos_Vega.docx"
+  },
+  {
+    "session_id": "P3-S04",
+    "product": "Medicare Fraud Finder",
+    "interviewer": "Kristina Snyder",
+    "participant": "Nia Johnson",
+    "role": "investigation intake lead",
+    "organization": "Southern Claims Intelligence Partners",
+    "region": "South",
+    "state_context": "Georgia",
+    "date": "2026-08-20T11:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "suggestion_explanation",
+      "baseline_opaque",
+      "existing_cases",
+      "handoff_mapping",
+      "queue_prioritization"
+    ],
+    "file": "product-3-medicare-fraud-finder/P3-S04_Medicare_Fraud_Finder_Nia_Johnson.docx"
+  },
+  {
+    "session_id": "P3-S05",
+    "product": "Medicare Fraud Finder",
+    "interviewer": "Kristina Snyder",
+    "participant": "Benjamin Park",
+    "role": "analytics product specialist",
+    "organization": "Mid-Atlantic Program Integrity Center",
+    "region": "Northeast",
+    "state_context": "Maryland",
+    "date": "2026-08-21T14:00:00",
+    "turn_count": 20,
+    "duration": "25m 42s",
+    "issues": [
+      "suggestion_explanation",
+      "sufficiency_threshold",
+      "decision_reversibility",
+      "existing_cases",
+      "handoff_mapping",
+      "false_positive_handling"
+    ],
+    "file": "product-3-medicare-fraud-finder/P3-S05_Medicare_Fraud_Finder_Benjamin_Park.docx"
+  }
+]

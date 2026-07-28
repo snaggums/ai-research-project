@@ -127,7 +127,7 @@ def replace_record_assignment(db: Session, research_session: ResearchSession, ta
     if unique_ids:
         record = db.get(ProductRecord, unique_ids[0])
         if record is None:
-            raise ValueError("Select Record 1, Record 2, or Record 3.")
+            raise ValueError("Select Medicare Fraud Documenter, Medicaid Fraud Documenter, or Medicare Fraud Finder.")
         research_session.record_assignments = [SessionRecord(session_id=research_session.id, record_id=record.id)]
         legacy_reference = SessionRelationship(
             session_id=research_session.id,
@@ -161,7 +161,6 @@ def _replace_relationships(research_session: ResearchSession, target_type: str, 
 def session_to_read(db: Session, research_session: ResearchSession) -> SessionRead:
     documents = list(research_session.documents)
     primary = next((document for document in documents if document.id == research_session.primary_transcript_document_id), None)
-    representative = primary or (documents[0] if documents else None)
     themes = sorted(research_session.themes, key=lambda value: value.updated_at, reverse=True)
     reports = sorted(research_session.reports, key=lambda value: value.updated_at, reverse=True)
     participants = [membership.participant for membership in research_session.participant_memberships]
@@ -177,7 +176,7 @@ def session_to_read(db: Session, research_session: ResearchSession) -> SessionRe
         participant_ids=[participant.id for participant in participants],
         document_count=len(documents),
         transcript_names=[document.filename for document in documents],
-        transcript_status=representative.status if representative else "none",
+        transcript_status=primary.status if primary else "none",
         has_primary_transcript=primary is not None,
         theme_status=themes[0].status if themes else "not-generated",
         report_status=reports[0].status if reports else "not-generated",

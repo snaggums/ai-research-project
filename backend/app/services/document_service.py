@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from hashlib import sha256
+import json
 from pathlib import Path
 from shutil import copyfileobj
 from uuid import uuid4
@@ -6,16 +8,22 @@ from uuid import uuid4
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.chunk import Chunk
+from app.models.conversation import MessageCitation
 from app.models.document import Document
 from app.models.project import Project
+from app.models.record import RecordSynthesisEvidence, RecordSynthesisItem, RecordSynthesisRun
 from app.models.research_session import ResearchSession
+from app.models.session_report import SessionReport, SessionReportEvidence, SessionReportItem
+from app.models.theme_evidence import ThemeEvidence
+from app.models.transcript_coding import CodeSuggestion, CodeSuggestionRun, HighlightCodeAssignment, TranscriptHighlight
 from app.models.transcript_block import TranscriptBlockRecord
+from app.schemas.document import TranscriptDependencySummary
 from app.services.chunking_service import chunk_text
 from app.services.embedding_service import embed_text
 from app.services.parsing_service import ParsedTranscript, SUPPORTED_EXTENSIONS, extract_transcript
 from app.services.v1_migration_service import get_or_create_import_session
 from fastapi import UploadFile
-from sqlalchemy import delete, select
+from sqlalchemy import delete, distinct, func, select, update
 from sqlalchemy.orm import Session
 
 
@@ -28,7 +36,16 @@ def get_document(db: Session, document_id: str) -> Document | None:
     return db.get(Document, document_id)
 
 
-def create_uploaded_document(db: Session, project: Project, upload: UploadFile, research_session: ResearchSession | None = None) -> Document:
+def create_uploaded_document(
+    db: Session,
+    project: Project,
+    upload: UploadFile,
+    research_session: ResearchSession | None = None,
+    *,
+    lifecycle_status: str = "active",
+    replacement_for_document_id: str | None = None,
+    replacement_request_key: str | None = None,
+) -> Document:
     original_filename = upload.filename or "upload"
     extension = Path(original_filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
@@ -56,15 +73,58 @@ def create_uploaded_document(db: Session, project: Project, upload: UploadFile, 
         mime_type=upload.content_type,
         size_bytes=file_path.stat().st_size,
         status="uploaded",
+        lifecycle_status=lifecycle_status,
+        replacement_for_document_id=replacement_for_document_id,
+        replacement_request_key=replacement_request_key,
     )
     db.add(document)
     db.flush()
     if owning_session.primary_transcript_document_id is None:
         owning_session.primary_transcript_document_id = document.id
+        document.lifecycle_status = "active"
         db.add(owning_session)
+    elif lifecycle_status == "active":
+        document.lifecycle_status = "legacy"
     db.commit()
     db.refresh(document)
     return document
+
+
+def create_replacement_document(
+    db: Session,
+    project: Project,
+    research_session: ResearchSession,
+    upload: UploadFile,
+    request_key: str,
+) -> Document:
+    existing = db.scalar(
+        select(Document).where(
+            Document.session_id == research_session.id,
+            Document.replacement_request_key == request_key,
+        )
+    )
+    if existing is not None:
+        return existing
+    active_id = research_session.primary_transcript_document_id
+    if active_id is None:
+        raise ValueError("This Session does not have an active Transcript to replace.")
+    pending = db.scalar(
+        select(Document).where(
+            Document.session_id == research_session.id,
+            Document.lifecycle_status == "replacement-pending",
+        )
+    )
+    if pending is not None:
+        raise ValueError("A replacement Transcript is already processing.")
+    return create_uploaded_document(
+        db,
+        project,
+        upload,
+        research_session,
+        lifecycle_status="replacement-pending",
+        replacement_for_document_id=active_id,
+        replacement_request_key=request_key,
+    )
 
 
 def list_session_documents(db: Session, project_id: str, session_id: str) -> list[Document]:
@@ -74,6 +134,131 @@ def list_session_documents(db: Session, project_id: str, session_id: str) -> lis
 
 def get_session_document(db: Session, project_id: str, session_id: str, document_id: str) -> Document | None:
     return db.scalar(select(Document).where(Document.id == document_id, Document.project_id == project_id, Document.session_id == session_id))
+
+
+def get_transcript_dependencies(
+    db: Session,
+    research_session: ResearchSession,
+    document: Document,
+) -> TranscriptDependencySummary:
+    active_assignment = (
+        select(HighlightCodeAssignment.highlight_id)
+        .where(
+            HighlightCodeAssignment.highlight_id == TranscriptHighlight.id,
+            HighlightCodeAssignment.removed_at.is_(None),
+        )
+        .exists()
+    )
+    accepted_highlights = _count(
+        db,
+        select(func.count())
+        .select_from(TranscriptHighlight)
+        .where(
+            TranscriptHighlight.document_id == document.id,
+            TranscriptHighlight.deleted_at.is_(None),
+            active_assignment,
+        ),
+    )
+    uncoded_highlights = _count(
+        db,
+        select(func.count())
+        .select_from(TranscriptHighlight)
+        .where(
+            TranscriptHighlight.document_id == document.id,
+            TranscriptHighlight.deleted_at.is_(None),
+            ~active_assignment,
+        ),
+    )
+    suggestion_runs = _count(
+        db,
+        select(func.count()).select_from(CodeSuggestionRun).where(CodeSuggestionRun.document_id == document.id),
+    )
+    session_reports = _count(
+        db,
+        select(func.count(distinct(SessionReport.id)))
+        .select_from(SessionReport)
+        .join(SessionReportItem, SessionReportItem.report_id == SessionReport.id)
+        .join(SessionReportEvidence, SessionReportEvidence.item_id == SessionReportItem.id)
+        .where(SessionReportEvidence.document_id == document.id),
+    )
+    record_syntheses = _count(
+        db,
+        select(func.count(distinct(RecordSynthesisRun.id)))
+        .select_from(RecordSynthesisRun)
+        .join(RecordSynthesisItem, RecordSynthesisItem.run_id == RecordSynthesisRun.id)
+        .join(RecordSynthesisEvidence, RecordSynthesisEvidence.item_id == RecordSynthesisItem.id)
+        .where(RecordSynthesisEvidence.document_id == document.id),
+    )
+    fingerprint_values = {
+        "accepted_highlight_count": accepted_highlights,
+        "awaiting_review_suggestion_count": _count(
+            db,
+            select(func.count())
+            .select_from(CodeSuggestion)
+            .join(CodeSuggestionRun, CodeSuggestionRun.id == CodeSuggestion.run_id)
+            .where(
+                CodeSuggestionRun.document_id == document.id,
+                CodeSuggestion.status == "awaiting-review",
+            ),
+        ),
+        "code_suggestion_run_count": suggestion_runs,
+        "conversation_citation_count": _count(
+            db,
+            select(func.count()).select_from(MessageCitation).where(MessageCitation.document_id == document.id),
+        ),
+        "is_primary": research_session.primary_transcript_document_id == document.id,
+        "record_synthesis_count": record_syntheses,
+        "session_report_count": session_reports,
+        "theme_evidence_count": _count(
+            db,
+            select(func.count()).select_from(ThemeEvidence).where(ThemeEvidence.document_id == document.id),
+        ),
+        "uncoded_highlight_count": uncoded_highlights,
+    }
+    version = sha256(json.dumps(fingerprint_values, sort_keys=True).encode("utf-8")).hexdigest()
+    return TranscriptDependencySummary(
+        is_primary=fingerprint_values["is_primary"],
+        accepted_highlight_count=accepted_highlights,
+        uncoded_highlight_count=uncoded_highlights,
+        code_suggestion_run_count=suggestion_runs,
+        session_report_count=session_reports,
+        record_synthesis_count=record_syntheses,
+        retention_consequence="preserve-lineage",
+        version=version,
+    )
+
+
+def tombstone_active_transcript(
+    db: Session,
+    research_session: ResearchSession,
+    document: Document,
+) -> None:
+    if research_session.primary_transcript_document_id != document.id or document.lifecycle_status != "active":
+        raise ValueError("Only the active Transcript can be deleted from the Session workflow.")
+    pending = db.scalar(
+        select(Document.id).where(
+            Document.session_id == research_session.id,
+            Document.lifecycle_status == "replacement-pending",
+        )
+    )
+    if pending is not None:
+        raise ValueError("Wait for the replacement Transcript to finish before deleting the active Transcript.")
+
+    now = datetime.now(timezone.utc)
+    document.lifecycle_status = "tombstoned"
+    document.archived_at = now
+    research_session.primary_transcript_document_id = None
+    research_session.updated_at = now
+    db.execute(
+        update(SessionReport)
+        .where(
+            SessionReport.session_id == research_session.id,
+            SessionReport.status != "superseded",
+        )
+        .values(status="superseded", updated_at=now)
+    )
+    db.add_all([document, research_session])
+    db.commit()
 
 
 def process_document(document_id: str) -> None:
@@ -102,12 +287,16 @@ def process_document(document_id: str) -> None:
             document.status = "complete"
             document.error_message = None
             document.processed_at = datetime.now(timezone.utc)
+            if document.lifecycle_status == "replacement-pending":
+                _activate_replacement(db, document)
         except Exception as exc:
             db.rollback()
             document = db.get(Document, document_id)
             if document is None:
                 return
             document.status = "failed"
+            if document.lifecycle_status == "replacement-pending":
+                document.lifecycle_status = "replacement-failed"
             document.error_message = str(exc)
             document.processed_at = datetime.now(timezone.utc)
 
@@ -117,12 +306,63 @@ def process_document(document_id: str) -> None:
         db.close()
 
 
+def activate_existing_replacement(
+    db: Session,
+    research_session: ResearchSession,
+    original: Document,
+    replacement: Document,
+) -> None:
+    if original.session_id != research_session.id or replacement.session_id != research_session.id:
+        raise ValueError("Both Transcripts must belong to the same Session.")
+    if research_session.primary_transcript_document_id != original.id:
+        raise ValueError("The expected original Transcript is no longer active.")
+    if replacement.status != "complete":
+        raise ValueError("The replacement Transcript must finish processing before activation.")
+    replacement.replacement_for_document_id = original.id
+    replacement.lifecycle_status = "replacement-pending"
+    _activate_replacement(db, replacement)
+    db.commit()
+
+
+def _activate_replacement(db: Session, replacement: Document) -> None:
+    original_id = replacement.replacement_for_document_id
+    if original_id is None:
+        raise ValueError("The replacement Transcript is missing its active source.")
+    research_session = db.get(ResearchSession, replacement.session_id)
+    original = db.get(Document, original_id)
+    if research_session is None or original is None:
+        raise ValueError("The active Transcript could not be found.")
+    if research_session.primary_transcript_document_id != original.id:
+        raise ValueError("The active Transcript changed while the replacement was processing.")
+
+    now = datetime.now(timezone.utc)
+    original.lifecycle_status = "legacy"
+    original.archived_at = now
+    replacement.lifecycle_status = "active"
+    replacement.archived_at = None
+    research_session.primary_transcript_document_id = replacement.id
+    research_session.updated_at = now
+    db.execute(
+        update(SessionReport)
+        .where(
+            SessionReport.session_id == research_session.id,
+            SessionReport.status != "superseded",
+        )
+        .values(status="superseded", updated_at=now)
+    )
+    db.add_all([original, replacement, research_session])
+
+
 def delete_document(db: Session, document: Document) -> None:
     file_path = Path(document.file_path)
     db.delete(document)
     db.commit()
     if file_path.exists():
         file_path.unlink()
+
+
+def _count(db: Session, statement) -> int:
+    return int(db.scalar(statement) or 0)
 
 
 def _safe_filename(filename: str) -> str:

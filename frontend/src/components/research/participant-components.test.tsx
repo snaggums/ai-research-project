@@ -59,7 +59,7 @@ describe("ParticipantForm", () => {
     await user.type(screen.getByRole("textbox", { name: /Last name/ }), "  Moore  ");
     await user.type(screen.getByRole("textbox", { name: /Email address/ }), "  jordan@example.com  ");
     await user.click(screen.getByRole("button", { name: "Record" }));
-    await user.click(screen.getByRole("option", { name: "Record 1" }));
+    await user.click(screen.getByRole("option", { name: "Medicare Fraud Documenter" }));
     await user.type(screen.getByRole("textbox", { name: /Organization/ }), "  Midwest  ");
     await user.type(screen.getByRole("textbox", { name: /Role/ }), "  Supervisor  ");
     await user.type(screen.getByRole("textbox", { name: /Researcher notes/ }), "  Mobile checkout research.  ");
@@ -87,8 +87,8 @@ describe("ParticipantForm", () => {
     expect(fieldGrid).toHaveClass("items-start");
 
     await user.click(screen.getByRole("button", { name: "Record" }));
-    await user.click(screen.getByRole("option", { name: "Record 1" }));
-    expect(screen.getByRole("button", { name: "Remove Record 1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Medicare Fraud Documenter" }));
+    expect(screen.getByRole("button", { name: "Remove Medicare Fraud Documenter" })).toBeInTheDocument();
     expect(emailField).toHaveClass("content-start");
     expect(fieldGrid).toHaveClass("items-start");
   });

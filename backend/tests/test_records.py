@@ -74,9 +74,9 @@ def test_fixed_catalog_and_single_record_assignment(client: TestClient, db_sessi
     catalog = client.get("/api/records")
     assert catalog.status_code == 200
     assert [(record["id"], record["name"]) for record in catalog.json()] == [
-        ("record-1", "Record 1"),
-        ("record-2", "Record 2"),
-        ("record-3", "Record 3"),
+        ("record-1", "Medicare Fraud Documenter"),
+        ("record-2", "Medicaid Fraud Documenter"),
+        ("record-3", "Medicare Fraud Finder"),
     ]
 
     project = _project(client)
@@ -85,7 +85,7 @@ def test_fixed_catalog_and_single_record_assignment(client: TestClient, db_sessi
     first = client.put(f"{root}/record", json={"record_id": "record-2"})
     second = client.put(f"{root}/record", json={"record_id": "record-2"})
     assert first.status_code == second.status_code == 200
-    assert second.json()["related_records"] == [{"id": "record-2", "name": "Record 2"}]
+    assert second.json()["related_records"] == [{"id": "record-2", "name": "Medicaid Fraud Documenter"}]
     assert db_session.scalar(select(func.count()).select_from(SessionRecord).where(SessionRecord.session_id == research_session["id"])) == 1
     assert client.put(f"{root}/record", json={"record_id": "not-a-record"}).status_code == 400
     assert [item["id"] for item in client.get("/api/records/record-2/sessions").json()] == [research_session["id"]]
@@ -451,13 +451,30 @@ def test_provisional_record_backfill_is_replay_safe(client: TestClient, db_sessi
     spec.loader.exec_module(migration)
     migration.seed_records_and_backfill(db_session.connection())
     migration.seed_records_and_backfill(db_session.connection())
+
+    rename_path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0012_rename_fixed_records.py"
+    rename_spec = importlib.util.spec_from_file_location("record_rename_migration", rename_path)
+    assert rename_spec and rename_spec.loader
+    rename_migration = importlib.util.module_from_spec(rename_spec)
+    rename_spec.loader.exec_module(rename_migration)
+    rename_migration.rename_fixed_records(db_session.connection())
+    rename_migration.rename_fixed_records(db_session.connection())
     db_session.commit()
 
     assert db_session.scalar(select(func.count()).select_from(ProductRecord)) == 3
+    assert db_session.scalars(select(ProductRecord.name).order_by(ProductRecord.position)).all() == [
+        "Medicare Fraud Documenter",
+        "Medicaid Fraud Documenter",
+        "Medicare Fraud Finder",
+    ]
     assert db_session.scalar(
         select(func.count()).select_from(SessionRecord).where(
             SessionRecord.session_id == research_session["id"],
             SessionRecord.record_id == "record-2",
         )
     ) == 1
-    assert db_session.scalar(select(func.count()).select_from(SessionRelationship).where(SessionRelationship.session_id == research_session["id"])) == 1
+    relationship = db_session.scalar(
+        select(SessionRelationship).where(SessionRelationship.session_id == research_session["id"])
+    )
+    assert relationship is not None
+    assert relationship.target_name == "Medicaid Fraud Documenter"

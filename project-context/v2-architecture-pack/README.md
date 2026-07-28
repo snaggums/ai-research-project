@@ -50,8 +50,9 @@ Each implementation scope still requires its own approval.
   Approved, and Superseded.
 - Project and Session conversations persist and support Saved, Archived, and Deleted
   lifecycle states.
-- Records are product-functionality workflow objects, not research source files,
-  and retain generic names such as Record 1 and Record 2.
+- Records are product-functionality workflow objects, not research source files.
+  The fixed MVP catalog uses product-specific display names while preserving the
+  stable IDs `record-1`, `record-2`, and `record-3`.
 - Product Knowledge is cross-Project; Common Components exist independently of
   Projects.
 - Sessions may relate explicitly to Records and Common Components.
@@ -59,7 +60,7 @@ Each implementation scope still requires its own approval.
   per Session while preserving the extensible canonical model.
 - Record synthesis automatically uses all eligible related Sessions and produces
   Requirements, Decisions, and Action Items with source lineage.
-- Record 1, Record 2, and Record 3 are fixed read-only MVP objects; Common
+- Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder are fixed read-only MVP objects; Common
   Components and manual synthesis groups are deferred.
 - Requirements, Decision Log entries, and Action Items belong to or relate to at
   least one Record or Common Component.

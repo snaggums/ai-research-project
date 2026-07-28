@@ -13,7 +13,7 @@ import { RecordSynthesisScopeSummary } from "./record-synthesis-scope-summary";
 describe("Record Research Objects", () => {
   it("exposes the Record card as one descriptive link", () => {
     render(<RecordListItem href="/records/record-1" record={recordSummaries[0]} />);
-    expect(screen.getByRole("link", { name: "Open Record 1" })).toHaveAttribute("href", "/records/record-1");
+    expect(screen.getByRole("link", { name: "Open Medicare Fraud Documenter" })).toHaveAttribute("href", "/records/record-1");
     expect(screen.getByText("Ready to synthesize")).toBeInTheDocument();
   });
 
@@ -24,7 +24,7 @@ describe("Record Research Objects", () => {
     await user.click(screen.getByRole("combobox", { name: /Record/ }));
     expect(screen.getAllByRole("option")).toHaveLength(4);
     expect(screen.getByRole("option", { name: "Select a record" })).toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: "Record 3" }));
+    await user.click(screen.getByRole("option", { name: "Medicare Fraud Finder" }));
     expect(onValueChange).toHaveBeenCalledWith("record-3");
   });
 

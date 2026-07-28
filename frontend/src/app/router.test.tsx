@@ -40,6 +40,29 @@ describe("application router foundation", () => {
     expect(screen.queryByRole("searchbox", { name: "Search Alpha Project" })).not.toBeInTheDocument();
   });
 
+  it("confirms linked evidence and returns to upload after preserving a deleted Transcript", async () => {
+    const user = userEvent.setup();
+    server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/transcript"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    const deleteButton = await screen.findByRole("button", { name: "Delete transcript" });
+    await waitFor(() => expect(deleteButton).toBeEnabled());
+    await user.click(deleteButton);
+
+    const dialog = screen.getByRole("dialog", { name: "Delete transcript with linked evidence?" });
+    expect(within(dialog).getByText("accepted Highlights")).toBeInTheDocument();
+    expect(within(dialog).getByText("3")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Delete transcript" }));
+
+    expect(await screen.findByRole("heading", { name: "Upload transcript" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Transcript history" })).toBeInTheDocument();
+    expect(screen.getByText("Removed transcript")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View transcript" })).toBeInTheDocument();
+  });
+
   it("persists Transcript Coding highlights and suggestion review in the live Session route", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
@@ -496,10 +519,10 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Records" })).toBeInTheDocument();
     const globalNavigation = screen.getByRole("navigation", { name: "Global navigation" });
     expect(within(globalNavigation).getByRole("link", { name: "Records" })).toHaveAttribute("aria-current", "page");
-    expect(within(globalNavigation).getByRole("link", { name: "Record 1" })).not.toHaveAttribute("aria-current");
-    await user.click(await screen.findByRole("link", { name: "Open Record 1" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Record 1" })).toBeInTheDocument();
-    expect(within(globalNavigation).getByRole("link", { name: "Record 1" })).toHaveAttribute("aria-current", "page");
+    expect(within(globalNavigation).getByRole("link", { name: "Medicare Fraud Documenter" })).not.toHaveAttribute("aria-current");
+    await user.click(await screen.findByRole("link", { name: "Open Medicare Fraud Documenter" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeInTheDocument();
+    expect(within(globalNavigation).getByRole("link", { name: "Medicare Fraud Documenter" })).toHaveAttribute("aria-current", "page");
     await user.click(screen.getByRole("tab", { name: "Knowledge" }));
     expect(new URLSearchParams(router.state.location.search).get("view")).toBe("knowledge");
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "knowledge");
@@ -508,7 +531,7 @@ describe("application router foundation", () => {
     await user.click(screen.getByRole("tab", { name: "Overview" }));
     expect(router.state.location.search).toBe("");
     await user.click(screen.getByRole("button", { name: "Review synthesis" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Record 1 synthesis" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter synthesis" })).toBeInTheDocument();
     await user.click((await screen.findAllByRole("button", { name: "Mark reviewed" }))[0]);
     expect(await screen.findAllByText("Researcher Reviewed")).not.toHaveLength(0);
     await user.click((await screen.findAllByRole("button", { name: /Open evidence/ }))[0]);
@@ -528,10 +551,10 @@ describe("application router foundation", () => {
     expect(await within(projectNavigation).findByRole("link", { name: "Records, 3 items" })).toHaveAttribute("aria-current", "page");
     expect(within(projectNavigation).getByRole("button", { name: "Expand Records" })).toHaveAttribute("aria-expanded", "false");
 
-    await user.click(await screen.findByRole("link", { name: "Open Record 1" }));
+    await user.click(await screen.findByRole("link", { name: "Open Medicare Fraud Documenter" }));
 
     expect(router.state.location.pathname).toBe("/projects/alpha-project/records/record-1");
-    expect(await within(projectNavigation).findByRole("link", { name: "Record 1" })).toHaveAttribute("aria-current", "page");
+    expect(await within(projectNavigation).findByRole("link", { name: "Medicare Fraud Documenter" })).toHaveAttribute("aria-current", "page");
     expect(within(projectNavigation).getByRole("button", { name: "Collapse Records" })).toHaveAttribute("aria-expanded", "true");
   });
 
@@ -556,7 +579,7 @@ describe("application router foundation", () => {
     });
     render(<AppProviders queryClient={queryClient}><RouterProvider router={router} /></AppProviders>);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Record 1" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByText("Requirements could not be loaded")).toBeInTheDocument();
     expect(screen.getByText("Decisions could not be loaded")).toBeInTheDocument();
@@ -573,7 +596,7 @@ describe("application router foundation", () => {
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
 
     expect(
-      await screen.findByRole("heading", { name: "Ask Record 1" }),
+      await screen.findByRole("heading", { name: "Ask Medicare Fraud Documenter" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Ask Record" })).toHaveAttribute(
       "aria-selected",
@@ -633,7 +656,7 @@ describe("application router foundation", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Source availability" })).toBeInTheDocument();
     expect(screen.getAllByText("0")).toHaveLength(2);
-    expect(screen.queryByRole("textbox", { name: "Ask Record 2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).not.toBeInTheDocument();
   });
 
   it("withholds an Ask Record conclusion when only partial evidence is returned", async () => {
@@ -643,7 +666,7 @@ describe("application router foundation", () => {
     });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
 
-    const composer = await screen.findByRole("textbox", { name: "Ask Record 1" });
+    const composer = await screen.findByRole("textbox", { name: "Ask Medicare Fraud Documenter" });
     await user.type(
       composer,
       "Did participants prefer biometric verification over one-time passcodes?",
