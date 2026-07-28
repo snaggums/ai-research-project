@@ -71,17 +71,17 @@ def test_settings(db: Session) -> AISettingsTestResponse:
     db.commit()
     db.refresh(settings)
 
-    if provider in {"mock", "ollama"}:
+    if provider == "mock":
         return AISettingsTestResponse(
             ok=True,
-            message=f"{provider} does not require a stored API key for this local MVP check.",
+            message="Mock configuration verified. No external provider was contacted.",
             provider=settings.provider,
             model=settings.model,
             api_key_env_var=settings.api_key_env_var,
             has_api_key=settings.has_api_key,
         )
 
-    if not api_key_env_var:
+    if provider != "ollama" and not api_key_env_var:
         return AISettingsTestResponse(
             ok=False,
             message=f"No environment variable mapping exists for provider '{settings.provider}'.",
@@ -91,23 +91,42 @@ def test_settings(db: Session) -> AISettingsTestResponse:
             has_api_key=False,
         )
 
-    if not has_api_key:
+    if provider != "ollama" and not has_api_key:
         return AISettingsTestResponse(
             ok=False,
-            message=f"Set {api_key_env_var} in backend/.env to test {settings.provider}. The key is not stored in the database.",
+            message=(
+                f"API key not detected. Set {api_key_env_var} in backend/.env and restart the backend "
+                f"before testing {settings.provider}."
+            ),
             provider=settings.provider,
             model=settings.model,
             api_key_env_var=api_key_env_var,
             has_api_key=False,
         )
 
+    try:
+        _verify_provider_connection(settings)
+    except Exception as exc:
+        return AISettingsTestResponse(
+            ok=False,
+            message=(
+                f"Could not connect to {settings.provider} using {settings.model}. "
+                "Check the API key, model access, billing, and network connection. "
+                f"Provider error: {_clean_provider_error(exc, _api_key_for_provider(provider))}"
+            ),
+            provider=settings.provider,
+            model=settings.model,
+            api_key_env_var=api_key_env_var,
+            has_api_key=has_api_key,
+        )
+
     return AISettingsTestResponse(
         ok=True,
-        message=f"{api_key_env_var} is present. Live provider calls will be added in a later sprint.",
+        message=f"Connected to {settings.provider} using {settings.model}. No research data was sent.",
         provider=settings.provider,
         model=settings.model,
         api_key_env_var=api_key_env_var,
-        has_api_key=True,
+        has_api_key=has_api_key,
     )
 
 
@@ -131,3 +150,42 @@ def _has_key(api_key_env_var: str | None) -> bool:
 
     settings_field = api_key_env_var.lower()
     return bool(getattr(app_settings, settings_field, None))
+
+
+def _api_key_for_provider(provider: str) -> str | None:
+    api_key_env_var = _key_env_var_for_provider(provider)
+    if not api_key_env_var:
+        return None
+    return getattr(app_settings, api_key_env_var.lower(), None)
+
+
+def _verify_provider_connection(settings: AISettings) -> None:
+    try:
+        from litellm import completion
+    except ImportError as exc:
+        raise RuntimeError("Install backend requirements before testing a live AI provider.") from exc
+
+    completion(
+        model=settings.model,
+        messages=[
+            {
+                "role": "system",
+                "content": "This is a provider connection test. Reply with exactly OK.",
+            },
+            {
+                "role": "user",
+                "content": "Reply with OK.",
+            },
+        ],
+        max_tokens=8,
+        api_key=_api_key_for_provider(settings.provider),
+        api_base=settings.base_url,
+        timeout=15,
+    )
+
+
+def _clean_provider_error(exc: Exception, api_key: str | None) -> str:
+    message = " ".join(str(exc).split())
+    if api_key:
+        message = message.replace(api_key, "[redacted]")
+    return message[:500] or "The provider did not return an error message."

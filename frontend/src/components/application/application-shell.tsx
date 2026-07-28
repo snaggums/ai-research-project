@@ -187,8 +187,7 @@ export function Navigation<T extends string>({
 }
 
 export interface ApplicationShellProps {
-  activeGlobalItem?: "projects" | "records" | null;
-  activeGlobalSubItem?: string;
+  activeGlobalItem?: "projects" | null;
   activeProjectChildId?: string;
   activeProjectItem?: ProjectNavigationItem;
   children: React.ReactNode;
@@ -200,7 +199,6 @@ export interface ApplicationShellProps {
 
 export function ApplicationShell({
   activeGlobalItem = "projects",
-  activeGlobalSubItem,
   activeProjectChildId,
   activeProjectItem,
   children,
@@ -276,7 +274,6 @@ export function ApplicationShell({
               />
             ) : (
               <Navigation
-                activeChildId={activeGlobalSubItem}
                 activeId={activeId}
                 items={globalNavigationItems}
                 label="Global navigation"
@@ -305,7 +302,6 @@ export function ApplicationShell({
             />
           ) : (
             <Navigation
-              activeChildId={activeGlobalSubItem}
               activeId={activeId}
               items={globalNavigationItems}
               label="Global navigation"

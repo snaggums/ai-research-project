@@ -1,11 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { ApplicationShell } from "@/components/application";
+import { alphaProject } from "@/mocks/fixtures/domain";
 import { recordSummaries } from "@/mocks/fixtures/records";
 import { RecordsCollectionView, type RecordsCollectionViewProps } from "./record-views";
 
+const recordRootPath = `/projects/${alphaProject.id}/records`;
+
 function StoryPage(props: RecordsCollectionViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeGlobalItem="records" context="workspace"><RecordsCollectionView {...props} /></ApplicationShell></div>;
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="records" context="project" project={{ id: alphaProject.id, name: alphaProject.name }}><RecordsCollectionView {...props} recordRootPath={recordRootPath} /></ApplicationShell></div>;
 }
 
 const meta = {

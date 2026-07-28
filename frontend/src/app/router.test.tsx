@@ -281,6 +281,81 @@ describe("application router foundation", () => {
     expect(screen.getAllByRole("link", { name: "Projects" })[0]).not.toHaveAttribute("aria-current");
   });
 
+  it("distinguishes an API key prerequisite from a verified provider connection", async () => {
+    const user = userEvent.setup();
+    const liveSettings = {
+      id: "00000000-0000-0000-0000-000000000001",
+      provider: "openai",
+      model: "gpt-5.6-terra",
+      base_url: null,
+      embedding_provider: "mock",
+      embedding_model: "mock-hash-64",
+      api_key_env_var: "OPENAI_API_KEY",
+      has_api_key: true,
+      created_at: "2026-07-10T12:00:00Z",
+      updated_at: "2026-07-10T12:00:00Z",
+    };
+    server.use(
+      http.get(`${API_BASE_URL}/settings/ai`, () => HttpResponse.json(liveSettings)),
+      http.post(`${API_BASE_URL}/settings/ai/test`, () =>
+        HttpResponse.json({
+          ok: true,
+          message: "Connected to openai using gpt-5.6-terra. No research data was sent.",
+          provider: "openai",
+          model: "gpt-5.6-terra",
+          api_key_env_var: "OPENAI_API_KEY",
+          has_api_key: true,
+        })),
+    );
+    const router = createMemoryRouter(appRoutes, { initialEntries: ["/settings/ai"] });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByText("API key detected · OPENAI_API_KEY")).toBeInTheDocument();
+    expect(screen.queryByText("Connection and model verified")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Test config" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Connection and model verified");
+    expect(screen.getByRole("status")).toHaveTextContent("No research data was sent.");
+  });
+
+  it("shows a failed live provider verification independently from key detection", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API_BASE_URL}/settings/ai`, () =>
+        HttpResponse.json({
+          id: "00000000-0000-0000-0000-000000000001",
+          provider: "openai",
+          model: "gpt-5.6-terra",
+          base_url: null,
+          embedding_provider: "mock",
+          embedding_model: "mock-hash-64",
+          api_key_env_var: "OPENAI_API_KEY",
+          has_api_key: true,
+          created_at: "2026-07-10T12:00:00Z",
+          updated_at: "2026-07-10T12:00:00Z",
+        })),
+      http.post(`${API_BASE_URL}/settings/ai/test`, () =>
+        HttpResponse.json({
+          ok: false,
+          message:
+            "Could not connect to openai using gpt-5.6-terra. Check the API key, model access, billing, and network connection.",
+          provider: "openai",
+          model: "gpt-5.6-terra",
+          api_key_env_var: "OPENAI_API_KEY",
+          has_api_key: true,
+        })),
+    );
+    const router = createMemoryRouter(appRoutes, { initialEntries: ["/settings/ai"] });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(await screen.findByText("API key detected · OPENAI_API_KEY")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Test config" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Connection failed");
+    expect(screen.getByRole("alert")).toHaveTextContent("Check the API key, model access, billing, and network connection.");
+  });
+
   it("loads the Sessions Collection through the Project-scoped API contract", async () => {
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions"] });
@@ -518,11 +593,11 @@ describe("application router foundation", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Records" })).toBeInTheDocument();
     const globalNavigation = screen.getByRole("navigation", { name: "Global navigation" });
-    expect(within(globalNavigation).getByRole("link", { name: "Records" })).toHaveAttribute("aria-current", "page");
-    expect(within(globalNavigation).getByRole("link", { name: "Medicare Fraud Documenter" })).not.toHaveAttribute("aria-current");
+    expect(within(globalNavigation).queryByRole("link", { name: "Records" })).not.toBeInTheDocument();
+    expect(within(globalNavigation).getByRole("link", { name: "Projects" })).not.toHaveAttribute("aria-current");
     await user.click(await screen.findByRole("link", { name: "Open Medicare Fraud Documenter" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeInTheDocument();
-    expect(within(globalNavigation).getByRole("link", { name: "Medicare Fraud Documenter" })).toHaveAttribute("aria-current", "page");
+    expect(within(globalNavigation).queryByRole("link", { name: "Medicare Fraud Documenter" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Knowledge" }));
     expect(new URLSearchParams(router.state.location.search).get("view")).toBe("knowledge");
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "knowledge");

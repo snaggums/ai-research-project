@@ -1,4 +1,4 @@
-import { FolderKanban, Library } from "lucide-react";
+import { FolderKanban } from "lucide-react";
 
 import type { NavigationItem } from "@/components/application/application-shell";
 import type {
@@ -8,17 +8,6 @@ import type {
 
 export const globalNavigationItems: NavigationItem[] = [
   { id: "projects", label: "Projects", href: "/projects", icon: FolderKanban },
-  {
-    id: "records",
-    label: "Records",
-    href: "/records",
-    icon: Library,
-    children: [
-      { id: "record-1", label: "Medicare Fraud Documenter", href: "/records/record-1" },
-      { id: "record-2", label: "Medicaid Fraud Documenter", href: "/records/record-2" },
-      { id: "record-3", label: "Medicare Fraud Finder", href: "/records/record-3" },
-    ],
-  },
 ];
 
 export function projectNavigationItems(

@@ -48,5 +48,23 @@ describe("AIProviderSettingsForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Settings unavailable");
     expect(screen.getByRole("button", { name: "Save settings" })).toBeDisabled();
   });
+
+  it("distinguishes API key detection from a verified provider connection", () => {
+    render(
+      <AIProviderSettingsForm
+        apiKeyEnvVar="OPENAI_API_KEY"
+        hasApiKey
+        initialValues={{ ...mockAISettingsValues, provider: "openai", model: "gpt-5.6-terra" }}
+        onSave={() => undefined}
+        onTest={() => undefined}
+        state="test-success"
+        statusMessage="Connected to openai using gpt-5.6-terra. No research data was sent."
+      />,
+    );
+
+    expect(screen.getByText("API key detected · OPENAI_API_KEY")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Connection and model verified");
+    expect(screen.getByRole("status")).toHaveTextContent("No research data was sent.");
+  });
 });
 

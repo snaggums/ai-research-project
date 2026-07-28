@@ -37,9 +37,9 @@ const stateFeedback: Partial<Record<AIProviderSettingsFormState, { title: string
   saving: { title: "Saving settings", tone: "info" },
   "save-success": { title: "Settings saved", tone: "success" },
   "save-error": { title: "Settings not saved", tone: "error" },
-  testing: { title: "Testing configuration", tone: "info" },
-  "test-success": { title: "Configuration test passed", tone: "success" },
-  "test-failure": { title: "Configuration test failed", tone: "error" },
+  testing: { title: "Testing connection and model", tone: "info" },
+  "test-success": { title: "Connection and model verified", tone: "success" },
+  "test-failure": { title: "Connection failed", tone: "error" },
 };
 
 export function AIProviderSettingsForm({
@@ -57,6 +57,9 @@ export function AIProviderSettingsForm({
   const disabled = state === "loading" || state === "load-error" || state === "saving";
   const testing = state === "testing";
   const feedback = stateFeedback[state];
+  const apiKeyStatus = apiKeyEnvVar
+    ? `${hasApiKey ? "API key detected" : "API key not detected"} · ${apiKeyEnvVar}`
+    : `API key not required · ${values.provider}`;
 
   React.useEffect(() => {
     setValues(initialValues);
@@ -123,7 +126,7 @@ export function AIProviderSettingsForm({
           value={values.embedding_model}
         />
         <div className="flex min-h-12 items-center rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-subtle)] px-3 text-sm text-[var(--air-color-text-secondary)]">
-          Key env var: {apiKeyEnvVar ?? "none required"} · {hasApiKey ? "present" : "not detected"}
+          {apiKeyStatus}
         </div>
 
         {feedback ? (
