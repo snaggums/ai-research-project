@@ -1,11 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import { ApplicationShell } from "@/components/application";
+import { alphaProject } from "@/mocks/fixtures/domain";
 import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
 import { RecordSynthesisView, type RecordSynthesisViewProps } from "./record-views";
 
+const recordRootPath = `/projects/${alphaProject.id}/records`;
+
 function StoryPage(props: RecordSynthesisViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeGlobalItem="records" activeGlobalSubItem={props.record?.id ?? "record-1"} context="workspace"><RecordSynthesisView {...props} /></ApplicationShell></div>;
+  const recordId = props.record?.id ?? "record-1";
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectChildId={recordId} activeProjectItem="records" context="project" project={{ id: alphaProject.id, name: alphaProject.name }}><RecordSynthesisView {...props} recordRootPath={recordRootPath} /></ApplicationShell></div>;
 }
 
 const failed = { ...recordSynthesis, id: "failed", status: "failed" as const, items: [], errorMessage: "AIR could not complete this synthesis. The eligible Session Reports remain available." };

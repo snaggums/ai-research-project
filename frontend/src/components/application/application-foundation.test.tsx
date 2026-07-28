@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Pencil, Trash2 } from "lucide-react";
 import { describe, expect, it, vi } from "vitest";
@@ -44,21 +44,16 @@ describe("ApplicationShell", () => {
     expect(screen.queryByRole("complementary", { name: "Mobile navigation panel" })).not.toBeInTheDocument();
   });
 
-  it("shows Record links only in the active Records section and marks one Record current", () => {
+  it("shows only Projects in Workspace navigation", () => {
     render(
-      <ApplicationShell
-        activeGlobalItem="records"
-        activeGlobalSubItem="record-2"
-        context="workspace"
-      >
-        <div>Record content</div>
+      <ApplicationShell context="workspace">
+        <div>Workspace content</div>
       </ApplicationShell>,
     );
 
     const navigation = screen.getByRole("navigation", { name: "Global navigation" });
-    expect(screen.getByRole("list", { name: "Records list" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Records" })).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("link", { name: "Medicaid Fraud Documenter" })).toHaveAttribute("aria-current", "page");
+    expect(within(navigation).getByRole("link", { name: "Projects" })).toHaveAttribute("aria-current", "page");
+    expect(within(navigation).queryByRole("link", { name: "Records" })).not.toBeInTheDocument();
     expect(navigation).not.toHaveTextContent("Alpha Project");
   });
 });

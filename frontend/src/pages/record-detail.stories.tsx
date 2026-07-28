@@ -5,11 +5,15 @@ import { ApplicationShell } from "@/components/application";
 import { recordCodeDetails } from "@/components/research/record-code-story-data";
 import { toSessionSummary } from "@/adapters/sessions";
 import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
+import { alphaProject } from "@/mocks/fixtures/domain";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
 import { RecordDetailView, type RecordDetailViewProps } from "./record-views";
 
+const recordRootPath = `/projects/${alphaProject.id}/records`;
+
 function StoryPage(props: RecordDetailViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeGlobalItem="records" activeGlobalSubItem={props.record?.id ?? "record-1"} context="workspace"><RecordDetailView {...props} /></ApplicationShell></div>;
+  const recordId = props.record?.id ?? "record-1";
+  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectChildId={recordId} activeProjectItem="records" context="project" project={{ id: alphaProject.id, name: alphaProject.name }}><RecordDetailView {...props} recordRootPath={recordRootPath} /></ApplicationShell></div>;
 }
 
 const meta = {

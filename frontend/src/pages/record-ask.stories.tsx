@@ -20,6 +20,7 @@ import {
   recordSummaries,
   recordSynthesis,
 } from "@/mocks/fixtures/records";
+import { alphaProject } from "@/mocks/fixtures/domain";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
 import { RecordDetailView } from "./record-views";
 
@@ -28,6 +29,7 @@ const recordAskSessions = sessionApiFixtures
     session.related_records.some((record) => record.id === "record-1"),
   )
   .map(toSessionSummary);
+const recordRootPath = `/projects/${alphaProject.id}/records`;
 
 function RecordAskStoryPage(props: AskRecordWorkspaceProps) {
   const [activeView, setActiveView] = React.useState<
@@ -43,15 +45,17 @@ function RecordAskStoryPage(props: AskRecordWorkspaceProps) {
       }}
     >
       <ApplicationShell
-        activeGlobalItem="records"
-        activeGlobalSubItem={recordSummaries[0].id}
-        context="workspace"
+        activeProjectChildId={recordSummaries[0].id}
+        activeProjectItem="records"
+        context="project"
+        project={{ id: alphaProject.id, name: alphaProject.name }}
       >
         <RecordDetailView
           activeView={activeView}
           askRecordProps={props}
           onViewChange={setActiveView}
           record={recordSummaries[0]}
+          recordRootPath={recordRootPath}
           scope={readyRecordScope}
           sessions={recordAskSessions}
           synthesis={recordSynthesis}

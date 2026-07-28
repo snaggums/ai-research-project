@@ -8,6 +8,7 @@ import { resetSessionStore } from "@/mocks/handlers/sessions";
 import { resetTranscriptStore } from "@/mocks/handlers/transcripts";
 import { resetSynthesisStore } from "@/mocks/handlers/synthesis";
 import { resetRecordStore } from "@/mocks/handlers/records";
+import { resetAISettingsStore } from "@/mocks/handlers/settings";
 import { resetTranscriptCodingStore } from "@/mocks/handlers/transcript-coding";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -20,6 +21,7 @@ afterEach(() => {
   resetTranscriptStore();
   resetSynthesisStore();
   resetRecordStore();
+  resetAISettingsStore();
   resetTranscriptCodingStore();
 });
 

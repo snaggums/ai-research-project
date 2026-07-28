@@ -47,16 +47,13 @@ function activeProjectItem(pathname: string): ProjectNavigationItem {
 
 export function WorkspaceLayout() {
   const location = useLocation();
-  const activeRecordId = location.pathname.match(/^\/records\/([^/]+)/)?.[1];
-  const activeGlobalItem = location.pathname.startsWith("/records")
-    ? "records"
-    : location.pathname.startsWith("/settings")
-      ? null
-      : "projects";
+  const activeGlobalItem = location.pathname.startsWith("/settings")
+    || location.pathname.startsWith("/records")
+    ? null
+    : "projects";
   return (
     <ApplicationShell
       activeGlobalItem={activeGlobalItem}
-      activeGlobalSubItem={activeRecordId}
       context="workspace"
     >
       <Outlet />
