@@ -1,0 +1,122 @@
+{
+  "session": {
+    "title": "Session P2-S04 - Meeting Recording",
+    "date": "August 13, 2026, 11:30AM",
+    "duration": "25m 42s"
+  },
+  "recording": {
+    "started_by": "Jesse Gilbert",
+    "stopped_by": "Jesse Gilbert",
+    "marker": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\backend\\scripts\\transcript_docx_assets\\transcription_event_marker.png"
+  },
+  "speakers": {
+    "Jesse Gilbert": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\jesse_gilbert.png"
+    },
+    "Noah Patel": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\p2-s04_noah_patel.png"
+    }
+  },
+  "turns": [
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "0:00",
+      "text": "Thanks for joining. This is a synthetic usability study of the redesigned Medicaid Fraud Documenter. Please describe your role and the state Medicaid context in which you work."
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "0:42",
+      "text": "I am a Medicaid compliance investigator with Great Lakes Medicaid Oversight in the Midwest, and today I am working in the Ohio Medicaid context. I validate state policy requirements and trace questioned claims through final corrective action. I routinely coordinate with state reviewers and document why a case meets program integrity requirements."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "2:03",
+      "text": "You will use one fictional case throughout: Community Care Transit, with overlapping trips and repeated mileage entries. What is your first impression of the redesigned workspace?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "2:51",
+      "text": "The redesign is easier to scan than the current product. I am using the synthetic Community Care Transit case, which includes overlapping trips and repeated mileage entries, and I expect every decision to stay anchored to the Ohio Medicaid program."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "4:20",
+      "text": "Please create the case for your state Medicaid program. Think aloud about jurisdiction and the common case information."
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "5:18",
+      "text": "I entered the provider, service dates, transportation allegation, and affected members. The active state is not prominent after I enter the case, so I have to remember which program rules and reviewer path I am using. The state should behave like core case context, not a detail that disappears after setup."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "7:15",
+      "text": "Please complete the state-specific information. What helps you understand what the state Medicaid program requires?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "8:13",
+      "text": "I reached the state-specific section after the common case information. Several Ohio-specific fields are marked required, but the prototype does not explain the policy source, acceptable value, or why the state reviewer needs them. I would also expect validation before I leave this step, because these values affect routing and review."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "10:27",
+      "text": "Now upload the trip logs, claim extract, vehicle roster, and member verification records. How well does the evidence step fit your state terminology?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "11:39",
+      "text": "I uploaded the trip logs, claim extract, vehicle roster, and member verification records. The evidence categories use generic federal language instead of the terms our Ohio Medicaid program uses for transportation records and trip verification. Consistent terminology would make it easier for another state investigator to recognize what is present."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "13:48",
+      "text": "Please submit the case to the relevant state Medicaid program or reviewer. What do you expect to see before and after submission?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "14:53",
+      "text": "I reviewed the package and initiated state Medicaid review. The confirmation names the Ohio Medicaid review unit and shows the case moving into state reviewer intake. I need a receipt that identifies the state program, package version, and submission time."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "17:01",
+      "text": "Assume the state Medicaid reviewer requests additional trip verification. Please update the case with that request and your response."
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "18:08",
+      "text": "I added the synthetic request for trip verification that came back from the state Medicaid reviewer. I can add the state reviewer's response, but the note does not clearly show that the information came from that reviewer or connect it to the state's request. The case history should distinguish state communications from internal notes."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "20:02",
+      "text": "Now assume the state review is complete. Please close the Medicaid fraud case and describe the safeguards you expect."
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "21:05",
+      "text": "I selected a final outcome after the state Medicaid review was resolved. The close screen feels generic. It does not show the Ohio disposition language, state retention expectation, or whether the state reviewer has completed review. That confirmation is important because closing the case changes what my team can do next."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "22:38",
+      "text": "How should the product handle a provider whose activity may involve more than one state Medicaid program?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "23:29",
+      "text": "I checked how this workflow would behave if the same transportation provider also had activity in a neighboring state. For this single-state case, the jurisdiction and routing remain consistent from creation through closure. The shared facts should not blur each state's authority."
+    },
+    {
+      "speaker": "Jesse Gilbert",
+      "timestamp": "24:47",
+      "text": "What are the first changes you would make before this redesign replaces the current product?"
+    },
+    {
+      "speaker": "Noah Patel",
+      "timestamp": "25:42",
+      "text": "My first changes would be to explain every state-specific required field, then keep the active state visible, then make closure reflect state policy. The core workflow is understandable, but state identity, state policy, and state reviewer ownership have to remain visible at every consequential step."
+    }
+  ]
+}

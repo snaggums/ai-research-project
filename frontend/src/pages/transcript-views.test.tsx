@@ -1,11 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { toTranscriptContext, toTranscriptDocumentDetail, toTranscriptSearchResult } from "@/adapters/transcripts";
 import { transcriptApiFixtures, transcriptSearchFixtures } from "@/mocks/fixtures/transcripts";
 import { SessionTranscriptWorkspaceView, TranscriptContextView } from "./transcript-views";
 
-const defaultProps = { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[0])], onDelete: vi.fn(), onRetry: vi.fn(), onSearch: vi.fn(), onSetPrimary: vi.fn(), onUpload: vi.fn(), projectId: "alpha-project", sessionId: "mobile-checkout-test" };
+const defaultProps = { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[0])], onDelete: vi.fn(), onRetry: vi.fn(), onSearch: vi.fn(), onUpload: vi.fn(), projectId: "alpha-project", sessionId: "mobile-checkout-test" };
 
 it("resolves API-relative source downloads against the backend origin", () => {
   const document = toTranscriptDocumentDetail({
@@ -34,7 +34,7 @@ describe("Transcript page compositions", () => {
     expect(screen.getByRole("heading", { name: "Extracted transcript" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Back to transcripts" }).querySelector("svg")).not.toBeNull();
     await user.click(screen.getByRole("button", { name: "Back to transcripts" }));
-    expect(screen.getByRole("heading", { name: "Transcripts" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Transcript" })).toBeInTheDocument();
   });
 
   it("surfaces a blocked Transcript dependency action", () => {
@@ -46,6 +46,75 @@ describe("Transcript page compositions", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("cannot be deleted");
     expect(screen.getByText("Transcript action could not be completed")).toBeInTheDocument();
+  });
+
+  it("prevents a normal second upload and confirms a selected replacement", async () => {
+    const onReplace = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    const file = new File(["replacement transcript"], "interview-v2.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    render(<SessionTranscriptWorkspaceView {...defaultProps} onReplace={onReplace} />);
+
+    expect(screen.queryByRole("button", { name: "Upload transcript" })).not.toBeInTheDocument();
+    await user.upload(screen.getByLabelText("Choose replacement transcript"), file);
+    await user.click(screen.getAllByRole("button", { name: "Replace transcript" }).at(-1)!);
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Replace transcript" }));
+
+    expect(onReplace).toHaveBeenCalledWith(file);
+  });
+
+  it("cancels a selected replacement and keeps the active Transcript", async () => {
+    const user = userEvent.setup();
+    const file = new File(["replacement transcript"], "interview-v2.docx");
+    render(<SessionTranscriptWorkspaceView {...defaultProps} />);
+
+    await user.upload(screen.getByLabelText("Choose replacement transcript"), file);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText("interview-v2.docx")).not.toBeInTheDocument();
+    expect(screen.getByText("mobile-checkout-interview.docx")).toBeInTheDocument();
+  });
+
+  it("uses the approved deletion dialog instead of browser confirmation", async () => {
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+    render(<SessionTranscriptWorkspaceView {...defaultProps} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole("button", { name: "Delete transcript" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete transcript?" });
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Delete transcript" }));
+
+    expect(onDelete).toHaveBeenCalledWith("checkout-transcript");
+  });
+
+  it("shows retained Transcript history after deletion while allowing a new upload", () => {
+    const active = transcriptApiFixtures[0];
+    render(
+      <SessionTranscriptWorkspaceView
+        {...defaultProps}
+        documents={[
+          toTranscriptDocumentDetail({
+            ...active,
+            is_primary: false,
+            lifecycle_status: "tombstoned",
+          }),
+          toTranscriptDocumentDetail({
+            ...active,
+            id: "legacy-transcript",
+            filename: "legacy-interview.docx",
+            is_primary: false,
+            lifecycle_status: "legacy",
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Upload transcript" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Transcript history" })).toBeInTheDocument();
+    expect(screen.getByText("Removed transcript")).toBeInTheDocument();
+    expect(screen.getByText("Legacy transcript")).toBeInTheDocument();
   });
 
   it("renders the focused source passage and named moderator", () => {

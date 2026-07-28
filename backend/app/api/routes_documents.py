@@ -1,10 +1,10 @@
 from app.db.session import get_db
 from pathlib import Path
 
-from app.schemas.document import DocumentDetail, DocumentRead, TranscriptContext, TranscriptDocumentRead, TranscriptSearchResponse
+from app.schemas.document import DocumentDetail, DocumentRead, TranscriptContext, TranscriptDependencySummary, TranscriptDocumentRead, TranscriptSearchResponse
 from app.services import document_service, project_service, research_session_service, transcript_coding_service, transcript_service
 from app.core.domain_errors import ApplicationError
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -69,6 +69,13 @@ def delete_document(document_id: str, db: Session = Depends(get_db)):
     document = document_service.get_document(db, document_id)
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    research_session = research_session_service.get_session(db, document.project_id, document.session_id)
+    if research_session and research_session.primary_transcript_document_id == document.id:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_confirmation_required",
+            "Delete the active Transcript from its Session so AIR can preserve its evidence history.",
+        )
     _guard_coding_dependencies(db, document.id)
     document_service.delete_document(db, document)
     return None
@@ -92,6 +99,12 @@ def upload_session_document(
     research_session = _require_session(db, project_id, session_id)
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if research_session.primary_transcript_document_id is not None:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_already_exists",
+            "This Session already has an active Transcript. Use Replace transcript to preserve its evidence history.",
+        )
     try:
         document = document_service.create_uploaded_document(db, project, file, research_session)
     except ValueError as exc:
@@ -100,11 +113,62 @@ def upload_session_document(
     return transcript_service.document_to_read(db, document, research_session)
 
 
+@router.post(
+    "/projects/{project_id}/sessions/{session_id}/transcript-replacement",
+    response_model=TranscriptDocumentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def replace_session_transcript(
+    project_id: str,
+    session_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    db: Session = Depends(get_db),
+):
+    project = project_service.get_project(db, project_id)
+    research_session = _require_session(db, project_id, session_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    try:
+        document = document_service.create_replacement_document(
+            db,
+            project,
+            research_session,
+            file,
+            idempotency_key,
+        )
+    except ValueError as exc:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_replacement_failed",
+            str(exc),
+        ) from exc
+    if document.status == "uploaded":
+        background_tasks.add_task(document_service.process_document, document.id)
+    return transcript_service.document_to_read(db, document, research_session)
+
+
 @router.get("/projects/{project_id}/sessions/{session_id}/documents/{document_id}", response_model=TranscriptDocumentRead)
 def get_session_document(project_id: str, session_id: str, document_id: str, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
     return transcript_service.document_to_read(db, document, research_session)
+
+
+@router.get(
+    "/projects/{project_id}/sessions/{session_id}/documents/{document_id}/dependencies",
+    response_model=TranscriptDependencySummary,
+)
+def get_session_document_dependencies(
+    project_id: str,
+    session_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    research_session = _require_session(db, project_id, session_id)
+    document = _require_document(db, project_id, session_id, document_id)
+    return document_service.get_transcript_dependencies(db, research_session, document)
 
 
 @router.post("/projects/{project_id}/sessions/{session_id}/documents/{document_id}/process", response_model=TranscriptDocumentRead)
@@ -126,28 +190,47 @@ def retry_session_document(project_id: str, session_id: str, document_id: str, b
 def set_primary_session_document(project_id: str, session_id: str, document_id: str, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
-    if (
-        research_session.primary_transcript_document_id
-        and research_session.primary_transcript_document_id != document.id
-    ):
-        _guard_coding_dependencies(db, research_session.primary_transcript_document_id)
-    research_session.primary_transcript_document_id = document.id
-    db.add(research_session)
-    db.commit()
-    db.refresh(research_session)
+    if research_session.primary_transcript_document_id != document.id:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_replacement_required",
+            "Use Replace transcript to change the active Transcript while preserving evidence history.",
+        )
     return transcript_service.document_to_read(db, document, research_session)
 
 
 @router.delete("/projects/{project_id}/sessions/{session_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_session_document(project_id: str, session_id: str, document_id: str, db: Session = Depends(get_db)):
+def delete_session_document(
+    project_id: str,
+    session_id: str,
+    document_id: str,
+    confirmation: str | None = Header(None, alias="X-Transcript-Confirmation"),
+    dependency_version: str | None = Header(None, alias="If-Match"),
+    db: Session = Depends(get_db),
+):
     research_session = _require_session(db, project_id, session_id)
     document = _require_document(db, project_id, session_id, document_id)
-    _guard_coding_dependencies(db, document.id)
-    if research_session.primary_transcript_document_id == document.id:
-        research_session.primary_transcript_document_id = None
-        db.add(research_session)
-        db.flush()
-    document_service.delete_document(db, document)
+    dependencies = document_service.get_transcript_dependencies(db, research_session, document)
+    if confirmation != "preserve-lineage" or dependency_version is None:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_confirmation_required",
+            "Review the linked evidence and confirm that research history will be preserved.",
+        )
+    if dependency_version != dependencies.version:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_dependency_changed",
+            "Linked evidence changed after the confirmation opened. Review the refreshed counts and try again.",
+        )
+    try:
+        document_service.tombstone_active_transcript(db, research_session, document)
+    except ValueError as exc:
+        raise ApplicationError(
+            status.HTTP_409_CONFLICT,
+            "transcript_delete_failed",
+            str(exc),
+        ) from exc
     return None
 
 

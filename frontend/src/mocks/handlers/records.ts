@@ -72,7 +72,7 @@ const toTransportSynthesis = (value: RecordSynthesisDomain): RecordSynthesisTran
 const scopes: Record<string, RecordSynthesisScope> = {
   "record-1": readyRecordScope,
   "record-2": insufficientRecordScope,
-  "record-3": { ...readyRecordScope, recordId: "record-3", description: "All eligible Sessions related to Record 3 are included automatically." },
+  "record-3": { ...readyRecordScope, recordId: "record-3", description: "All eligible Sessions related to Medicare Fraud Finder are included automatically." },
 };
 
 const failedSynthesis: RecordSynthesisDomain = {

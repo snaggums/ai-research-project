@@ -27,7 +27,7 @@ describe("SessionCollectionItem", () => {
   it("shows normalized workflow and relationship metadata", () => {
     render(<SessionCollectionItem href="#session" session={sessions[0]} />);
     expect(screen.getByText("Researcher reviewed")).toBeInTheDocument();
-    expect(screen.getByText("Record 1")).toBeInTheDocument();
+    expect(screen.getByText("Medicare Fraud Documenter")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open session" })).toHaveAttribute("href", "#session");
   });
 
@@ -86,7 +86,7 @@ describe("SessionForm", () => {
     await user.click(screen.getByRole("combobox", { name: /Session type/ }));
     await user.click(screen.getByRole("option", { name: "Interview" }));
     await user.click(screen.getByRole("combobox", { name: /Record/ }));
-    await user.click(screen.getByRole("option", { name: "Record 2" }));
+    await user.click(screen.getByRole("option", { name: "Medicaid Fraud Documenter" }));
     await user.click(screen.getByRole("button", { name: "Create session" }));
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ recordId: "record-2" }), expect.anything());
   });
@@ -99,7 +99,7 @@ describe("SessionForm", () => {
     await user.click(screen.getByRole("combobox", { name: /Session type/ }));
     await user.click(screen.getByRole("option", { name: "Interview" }));
     await user.click(screen.getByRole("combobox", { name: /Record/ }));
-    await user.click(screen.getByRole("option", { name: "Record 2" }));
+    await user.click(screen.getByRole("option", { name: "Medicaid Fraud Documenter" }));
     await user.click(screen.getByRole("combobox", { name: /Record/ }));
     await user.click(screen.getByRole("option", { name: "Select a record" }));
     await user.click(screen.getByRole("button", { name: "Create session" }));
@@ -140,7 +140,7 @@ describe("SessionSummary", () => {
     expect(within(summary).getByText("July 10, 2026")).toBeInTheDocument();
     expect(within(summary).getByText("1 hr")).toBeInTheDocument();
     expect(within(summary).getByText("Alex Morgan +2 more")).toBeInTheDocument();
-    expect(within(summary).getByText("Record 1")).toBeInTheDocument();
+    expect(within(summary).getByText("Medicare Fraud Documenter")).toBeInTheDocument();
     await user.click(within(summary).getByRole("button", { name: "Edit session" }));
     expect(onEditSession).toHaveBeenCalledOnce();
   });

@@ -73,7 +73,7 @@ def get_workspace(db: Session, project_id: str, session_id: str) -> TranscriptCo
         .order_by(CodeSuggestionRun.created_at.desc())
     )
     codes = _active_codes(db, context.record.id) if context.record else []
-    highlights = _session_highlights(db, session_id)
+    highlights = _session_highlights(db, session_id, context.document.id)
     suggestions = list(latest_run.suggestions) if latest_run else []
     return TranscriptCodingWorkspaceRead(
         project_id=project_id,
@@ -102,7 +102,8 @@ def list_highlights(
     limit: int,
 ) -> list[TranscriptHighlightRead]:
     _workspace_context(db, project_id, session_id)
-    values = _session_highlights(db, session_id)
+    context = _workspace_context(db, project_id, session_id)
+    values = _session_highlights(db, session_id, context.document.id)
     values = _values_after_cursor(values, cursor)
     return _filter_highlights(values, status_filter, code_ids, limit)
 
@@ -120,9 +121,11 @@ def list_record_highlights(
         db.scalars(
             _highlight_select()
             .join(SessionRecord, SessionRecord.session_id == TranscriptHighlight.session_id)
+            .join(Document, Document.id == TranscriptHighlight.document_id)
             .where(
                 SessionRecord.record_id == record_id,
                 TranscriptHighlight.deleted_at.is_(None),
+                Document.lifecycle_status == "active",
             )
             .order_by(TranscriptHighlight.created_at.desc(), TranscriptHighlight.id)
         ).unique().all()
@@ -543,8 +546,10 @@ def has_active_coded_highlights(db: Session, session_id: str) -> bool:
     return db.scalar(
         select(HighlightCodeAssignment.highlight_id)
         .join(TranscriptHighlight, TranscriptHighlight.id == HighlightCodeAssignment.highlight_id)
+        .join(ResearchSession, ResearchSession.id == TranscriptHighlight.session_id)
         .where(
             TranscriptHighlight.session_id == session_id,
+            TranscriptHighlight.document_id == ResearchSession.primary_transcript_document_id,
             TranscriptHighlight.deleted_at.is_(None),
             HighlightCodeAssignment.removed_at.is_(None),
         )
@@ -781,11 +786,15 @@ def _active_codes(db: Session, record_id: str) -> list[RecordCode]:
     )
 
 
-def _session_highlights(db: Session, session_id: str) -> list[TranscriptHighlight]:
+def _session_highlights(db: Session, session_id: str, document_id: str) -> list[TranscriptHighlight]:
     return list(
         db.scalars(
             _highlight_select()
-            .where(TranscriptHighlight.session_id == session_id, TranscriptHighlight.deleted_at.is_(None))
+            .where(
+                TranscriptHighlight.session_id == session_id,
+                TranscriptHighlight.document_id == document_id,
+                TranscriptHighlight.deleted_at.is_(None),
+            )
             .order_by(TranscriptHighlight.start_char)
         ).unique().all()
     )

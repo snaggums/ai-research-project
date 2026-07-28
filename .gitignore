@@ -40,3 +40,6 @@ Thumbs.db
 # Local design automation state
 .air-dsb-state.json
 
+# Local task and generated preview artifacts
+.tmp/
+

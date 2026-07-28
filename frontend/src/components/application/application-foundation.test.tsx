@@ -58,7 +58,7 @@ describe("ApplicationShell", () => {
     const navigation = screen.getByRole("navigation", { name: "Global navigation" });
     expect(screen.getByRole("list", { name: "Records list" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Records" })).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("link", { name: "Record 2" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Medicaid Fraud Documenter" })).toHaveAttribute("aria-current", "page");
     expect(navigation).not.toHaveTextContent("Alpha Project");
   });
 });

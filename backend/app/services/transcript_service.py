@@ -18,6 +18,7 @@ def document_to_read(db: Session, document: Document, research_session: Research
         mime_type=document.mime_type,
         size_bytes=document.size_bytes,
         status=document.status,
+        lifecycle_status=document.lifecycle_status,
         is_primary=research_session.primary_transcript_document_id == document.id,
         uploaded_at=document.uploaded_at,
         processed_at=document.processed_at,

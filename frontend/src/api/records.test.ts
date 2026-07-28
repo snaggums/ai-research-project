@@ -14,7 +14,7 @@ import {
 
 describe("Record API contract", () => {
   it("loads the fixed catalog, detail, related Sessions, and automatic eligibility", async () => {
-    expect((await listRecords()).map(({ name }) => name)).toEqual(["Record 1", "Record 2", "Record 3"]);
+    expect((await listRecords()).map(({ name }) => name)).toEqual(["Medicare Fraud Documenter", "Medicaid Fraud Documenter", "Medicare Fraud Finder"]);
     expect((await getRecord("record-1")).readiness).toBe("ready");
     expect((await listRecordSessions("record-1")).map(({ id }) => id)).toEqual(["mobile-checkout-test", "checkout-interview"]);
     expect((await getRecordSynthesisEligibility("record-1")).included_sessions).toHaveLength(2);

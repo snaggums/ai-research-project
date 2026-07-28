@@ -72,7 +72,7 @@ describe("Ask Record Storybook components", () => {
     await user.click(
       screen.getByRole("button", { name: askRecordSuggestedQuestions[0] }),
     );
-    expect(screen.getByRole("textbox", { name: "Ask Record 2" })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).toHaveValue(
       askRecordSuggestedQuestions[0],
     );
     expect(onSuggestedQuestion).toHaveBeenCalledWith(
@@ -123,7 +123,7 @@ describe("Ask Record Storybook components", () => {
         name: "Generating an answer from Record evidence",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Ask Record 2" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
   });
 
@@ -144,7 +144,7 @@ describe("Ask Record Storybook components", () => {
       "Answer could not be generated",
     );
     expect(screen.getByRole("alert")).toHaveFocus();
-    expect(screen.getByRole("textbox", { name: "Ask Record 2" })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).toHaveValue(
       askRecordFollowUpQuestion,
     );
     await user.click(screen.getByRole("button", { name: "Retry" }));
@@ -182,7 +182,7 @@ describe("Ask Record Storybook components", () => {
 
     expect(screen.getAllByText("0")).toHaveLength(2);
     expect(screen.getByText("Not available")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Ask Record 2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open related Sessions" }));
     expect(onOpenRelatedSessions).toHaveBeenCalledOnce();
   });

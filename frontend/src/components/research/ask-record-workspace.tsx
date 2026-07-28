@@ -277,7 +277,7 @@ export function AskRecordWorkspace({
   onRetry,
   onSuggestedQuestion,
   question: controlledQuestion,
-  recordName = "Record 2",
+  recordName = "Medicaid Fraud Documenter",
   sourceAvailability = [],
   sourceDisclosure = defaultSourceDisclosure,
   state = "suggested",

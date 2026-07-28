@@ -25,9 +25,9 @@ const items: ProjectNavigationEntry[] = [
     href: "#records",
     id: "records",
     items: [
-      { href: "#record-1", id: "record-1", label: "Record 1" },
-      { href: "#record-2", id: "record-2", label: "Record 2" },
-      { href: "#record-3", id: "record-3", label: "Record 3" },
+      { href: "#record-1", id: "record-1", label: "Medicare Fraud Documenter" },
+      { href: "#record-2", id: "record-2", label: "Medicaid Fraud Documenter" },
+      { href: "#record-3", id: "record-3", label: "Medicare Fraud Finder" },
     ],
     label: "Records",
     type: "group",

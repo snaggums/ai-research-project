@@ -351,6 +351,20 @@ From the home page you can:
 
 Use `sample-data/synthetic-interview-01.txt` as a safe synthetic upload fixture.
 
+## Generate template-based Word transcripts
+
+Use the packaged transcript utility to turn structured JSON into an AIR-compatible
+`.docx` with speaker avatars, timestamps, and transcription event markers:
+
+```powershell
+.\backend\.venv\Scripts\python.exe backend\scripts\generate_transcript_docx.py `
+  --input backend\scripts\transcript_example.json `
+  --output .tmp\transcript-generator\example-transcript.docx
+```
+
+See `backend/scripts/TRANSCRIPT_DOCX_GENERATOR.md` for the input contract,
+content-generation brief, bundled template, and avatar examples.
+
 Documents uploaded before Sprint 3 need to be reprocessed before they appear in search results. Click **Retry** on an existing document to extract text again and create chunks.
 
 Theme generation and chat use the selected AI provider when a key is detected. If provider is `mock` or no key is available, the backend uses deterministic local mock behavior so the Sprint 7 workflow can still be tested without spending API credits.

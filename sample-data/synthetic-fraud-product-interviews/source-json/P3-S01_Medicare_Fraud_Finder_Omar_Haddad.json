@@ -1,0 +1,122 @@
+{
+  "session": {
+    "title": "Session P3-S01 - Meeting Recording",
+    "date": "August 17, 2026, 9:30AM",
+    "duration": "25m 42s"
+  },
+  "recording": {
+    "started_by": "Kristina Snyder",
+    "stopped_by": "Kristina Snyder",
+    "marker": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\backend\\scripts\\transcript_docx_assets\\transcription_event_marker.png"
+  },
+  "speakers": {
+    "Kristina Snyder": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\kristina_snyder.png"
+    },
+    "Omar Haddad": {
+      "avatar": "C:\\Users\\snagg\\Desktop\\Sky\\30 Days AI Project\\ai-assisted-ux-research-repository\\sample-data\\synthetic-fraud-product-interviews\\avatars\\p3-s01_omar_haddad.png"
+    }
+  },
+  "turns": [
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "0:00",
+      "text": "Thanks for joining. This is a synthetic usability study of the new Medicare Fraud Finder prototype. Please describe your role in identifying or triaging potential Medicare fraud."
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "0:42",
+      "text": "I am a claims data analyst with Midwest Fraud Analytics Lab in the Midwest. I build claim-pattern analyses and package the strongest anomalies for investigator triage. I usually move between claim-level analysis and the investigation teams that decide whether a pattern deserves a formal case."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "2:03",
+      "text": "You have a shared queue of six fictional suggestions: two strong leads, two borderline outliers, and two likely false positives. What do you expect to do first?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "2:51",
+      "text": "Because this product is new to me, I first looked for an explanation of the six-item queue. I see two high-volume or duplicate-billing leads, two borderline outliers, and two suggestions that may have a teaching-facility exception or provider-merger explanation."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "4:20",
+      "text": "Please open the two strongest suggestions and explain how you interpret why each one was flagged."
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "5:18",
+      "text": "I opened the impossible-service-volume suggestion and then the duplicate-same-day-claim suggestion. The cards show a risk score and a short label, but not the claim pattern, contributing signals, or reason the suggestion crossed the threshold. I need to move from the summary to the underlying claims without losing the reason the product flagged them."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "7:15",
+      "text": "Now review the peer comparison and time pattern for the two borderline suggestions. What do you need to evaluate those comparisons?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "8:13",
+      "text": "I compared the provider with the peer visualization before judging the two borderline suggestions. The comparison chart does not identify the peer group, measurement window, or whether the baseline changed after a provider specialty update. A peer comparison is only useful if I can defend who was compared and over what period."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "10:27",
+      "text": "Decide whether the strongest suggestion is robust enough to become a case. How do you judge evidence sufficiency?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "11:39",
+      "text": "The two strong leads look promising, but I paused before accepting either one. I do not see a standard for how much evidence is enough to accept a suggestion, so two analysts could make opposite decisions from the same facts. I would expect the product to support judgment without pretending the score is a final determination."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "13:48",
+      "text": "Please accept one suggestion and reject one. Talk through the decision controls and the record you expect the product to keep."
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "14:53",
+      "text": "I accepted the impossible-volume lead and rejected the seasonal outlier. The decision panel records my rationale and explains the short window in which I can reverse an accidental choice. The rationale is part of the research record, not an optional comment."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "17:01",
+      "text": "Before creating anything new, check whether the provider or pattern already exists in Medicare Fraud Documenter."
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "18:08",
+      "text": "I checked whether either accepted lead overlaps work already underway. Before accepting, I need to know whether the provider or pattern already appears in Medicare Fraud Documenter; that existing-case check is missing here. That check protects investigators from duplicate intake and gives me context for linking instead of creating."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "20:02",
+      "text": "Move the accepted suggestion into Medicare Fraud Documenter. What do you expect the handoff preview and resulting case to preserve?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "21:05",
+      "text": "I chose to move the accepted lead into Medicare Fraud Documenter and reviewed the preview. The handoff preview does not show which provider facts, claims, signals, notes, and analyst rationale will map into the new Medicare Fraud Documenter case. I also need a permanent source link so an investigator can trace the new case back to the exact suggestion version."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "22:38",
+      "text": "Return to the queue. How would you prioritize a larger workload and handle a suggestion explained by a known exception?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "23:29",
+      "text": "I returned to the queue and reviewed how I would prioritize a larger workload. Sorting by score and exposure is enough for this short queue, although saved views would help at production scale. I can document the known exception on the rejected suggestion, which should help future analysts understand the decision."
+    },
+    {
+      "speaker": "Kristina Snyder",
+      "timestamp": "24:47",
+      "text": "What are the first changes you would make before analysts use Medicare Fraud Finder in production?"
+    },
+    {
+      "speaker": "Omar Haddad",
+      "timestamp": "25:42",
+      "text": "My first changes would be to explain every suggestion with traceable signals, then make the handoff and provenance explicit, then define the evidence sufficiency threshold. The concept is valuable, but trust depends on transparent evidence, a consistent decision standard, and a lossless handoff into Medicare Fraud Documenter."
+    }
+  ]
+}

@@ -13,11 +13,29 @@ function StoryPage(props: SessionTranscriptWorkspaceViewProps) {
   return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="transcript" onEditSession={() => undefined} projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} transcriptContent={<SessionTranscriptWorkspaceView {...props} />} /></ApplicationShell></div>;
 }
 const documents = [toTranscriptDocumentDetail(transcriptApiFixtures[0])];
-const meta = { title: "Page Templates/Sessions/Transcript Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { documents, onDelete: () => undefined, onRetry: () => undefined, onSearch: () => undefined, onSetPrimary: () => undefined, onUpload: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test" } } satisfies Meta<typeof StoryPage>;
+const meta = { title: "Page Templates/Sessions/Transcript Workspace", component: StoryPage, tags: ["autodocs"], parameters: { layout: "fullscreen" }, args: { documents, onDelete: () => undefined, onRetry: () => undefined, onSearch: () => undefined, onUpload: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test" } } satisfies Meta<typeof StoryPage>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Ready: Story = {};
 export const Empty: Story = { args: { documents: [] } };
+export const DeletedWithTranscriptHistory: Story = {
+  args: {
+    documents: [
+      toTranscriptDocumentDetail({
+        ...transcriptApiFixtures[0],
+        is_primary: false,
+        lifecycle_status: "tombstoned",
+      }),
+      toTranscriptDocumentDetail({
+        ...transcriptApiFixtures[0],
+        id: "legacy-transcript",
+        filename: "legacy-checkout-interview.docx",
+        is_primary: false,
+        lifecycle_status: "legacy",
+      }),
+    ],
+  },
+};
 export const Processing: Story = { args: { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[1])] } };
 export const Viewing: Story = { play: async ({ canvasElement }) => { await userEvent.click(within(canvasElement).getByRole("link", { name: "View transcript" })); } };
 export const SearchResults: Story = { args: { searchQuery: "navigation confusion", searchResults: transcriptSearchFixtures.map(toTranscriptSearchResult) } };

@@ -1,5 +1,6 @@
 import type {
   TranscriptContext as TranscriptContextTransport,
+  TranscriptDependencySummary as TranscriptDependencySummaryTransport,
   TranscriptDocument as TranscriptDocumentTransport,
   TranscriptSearchResult as TranscriptSearchResultTransport,
 } from "@/api/types";
@@ -9,6 +10,7 @@ import type {
   TranscriptDocumentSummary,
   TranscriptSearchResult,
 } from "@/domain/types";
+import type { TranscriptDependencySummary } from "@/components/research/transcript-lifecycle-dialog";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -29,6 +31,7 @@ export function toTranscriptDocumentSummary(document: TranscriptDocumentTranspor
     mimeType: document.mime_type ?? undefined,
     sizeBytes: document.size_bytes ?? undefined,
     status: document.status,
+    lifecycleStatus: document.lifecycle_status,
     isPrimary: document.is_primary,
     uploadedAt: document.uploaded_at,
     processedAt: document.processed_at ?? undefined,
@@ -42,6 +45,21 @@ export function toTranscriptDocumentDetail(document: TranscriptDocumentTransport
     blocks: document.blocks,
     sourceUrl: resolveApiUrl(document.source_url),
     downloadUrl: resolveApiUrl(document.download_url),
+  };
+}
+
+export function toTranscriptDependencySummary(
+  dependencies: TranscriptDependencySummaryTransport,
+): TranscriptDependencySummary {
+  return {
+    acceptedHighlightCount: dependencies.accepted_highlight_count,
+    codeSuggestionRunCount: dependencies.code_suggestion_run_count,
+    isPrimary: dependencies.is_primary,
+    recordSynthesisCount: dependencies.record_synthesis_count,
+    retentionConsequence: dependencies.retention_consequence,
+    sessionReportCount: dependencies.session_report_count,
+    uncodedHighlightCount: dependencies.uncoded_highlight_count,
+    version: dependencies.version,
   };
 }
 

@@ -28,7 +28,7 @@ import {
 import { useAISettings, useTestAISettings, useUpdateAISettings } from "@/hooks/useSettings";
 import { useCreateSession, useDeleteSession, useSession, useSessions, useUpdateSession } from "@/hooks/useSessions";
 import { useRecords } from "@/hooks/useRecords";
-import { useDeleteTranscript, useRetryTranscript, useSessionTranscripts, useSetPrimaryTranscript, useTranscriptContext, useTranscriptSearch, useUploadTranscript } from "@/hooks/useTranscripts";
+import { useDeleteTranscript, useReplaceTranscript, useRetryTranscript, useSessionTranscripts, useTranscriptContext, useTranscriptDependencies, useTranscriptSearch, useUploadTranscript } from "@/hooks/useTranscripts";
 import {
   ProjectFormDialogView,
   ProjectOverviewView,
@@ -47,7 +47,7 @@ import {
   SessionsCollectionView,
 } from "@/pages/session-views";
 import { SessionTranscriptWorkspaceView, TranscriptContextView } from "@/pages/transcript-views";
-import { toTranscriptContext, toTranscriptDocumentDetail, toTranscriptSearchResult } from "@/adapters/transcripts";
+import { toTranscriptContext, toTranscriptDependencySummary, toTranscriptDocumentDetail, toTranscriptSearchResult } from "@/adapters/transcripts";
 import { toSessionConversation, toSessionReport, toSessionTheme } from "@/adapters/synthesis";
 import { sessionRecordOptions } from "@/mocks/fixtures/sessions";
 import { suggestedSessionQuestions } from "@/mocks/fixtures/synthesis";
@@ -549,14 +549,17 @@ export function SessionDetailRoute({ activeTab = "overview" }: { activeTab?: "ov
 export function SessionTranscriptRoute() {
   const navigate = useNavigate();
   const { projectId = "", sessionId = "" } = useParams();
+  const replacementRequestKeys = React.useRef(new WeakMap<File, string>());
   const projects = useProjects();
   const session = useSession(projectId, sessionId);
   const transcripts = useSessionTranscripts(projectId, sessionId);
+  const activeTranscriptId = transcripts.data?.find((item) => item.is_primary)?.id ?? "";
+  const dependencies = useTranscriptDependencies(projectId, sessionId, activeTranscriptId);
   const upload = useUploadTranscript(projectId, sessionId);
+  const replace = useReplaceTranscript(projectId, sessionId);
   const retry = useRetryTranscript(projectId, sessionId);
-  const setPrimary = useSetPrimaryTranscript(projectId, sessionId);
   const remove = useDeleteTranscript(projectId, sessionId);
-  const search = useTranscriptSearch(projectId, sessionId, transcripts.data?.find((item) => item.is_primary)?.id ?? transcripts.data?.find((item) => item.status === "complete")?.id ?? "");
+  const search = useTranscriptSearch(projectId, sessionId, activeTranscriptId);
   const project = projects.data?.find((item) => item.id === projectId);
   const summary = session.data ? toSessionSummary(session.data) : undefined;
   const projectMissing = !projects.isPending && !projects.isError && !project;
@@ -566,6 +569,14 @@ export function SessionTranscriptRoute() {
   const hasReadyPrimaryTranscript = (transcripts.data ?? []).some((document) =>
     document.is_primary && document.status === "complete",
   );
+  const replaceTranscript = (file: File) => {
+    let requestKey = replacementRequestKeys.current.get(file);
+    if (!requestKey) {
+      requestKey = crypto.randomUUID();
+      replacementRequestKeys.current.set(file, requestKey);
+    }
+    return replace.mutateAsync({ file, requestKey }).then(() => undefined);
+  };
   return (
     <SessionDetailView
       activeTab="transcript"
@@ -580,25 +591,31 @@ export function SessionTranscriptRoute() {
           <SessionTranscriptWorkspaceView
             actionError={remove.error
               ? errorMessage(remove.error)
-              : setPrimary.error
-                ? errorMessage(setPrimary.error)
-                : retry.error
-                  ? errorMessage(retry.error)
-                  : undefined}
-            deletePendingId={remove.isPending ? remove.variables : undefined}
+              : dependencies.error
+                ? errorMessage(dependencies.error)
+              : retry.error
+                ? errorMessage(retry.error)
+                : undefined}
+            deletePendingId={remove.isPending ? remove.variables.documentId : undefined}
+            dependencies={dependencies.data ? toTranscriptDependencySummary(dependencies.data) : undefined}
+            dependenciesPending={dependencies.isPending && Boolean(activeTranscriptId)}
             documents={documents}
             errorMessage={transcripts.error ? errorMessage(transcripts.error) : undefined}
             onDelete={(documentId) => {
-              if (window.confirm("Delete this transcript? This action cannot be undone.")) remove.mutate(documentId);
+              if (dependencies.data) {
+                remove.mutate({ documentId, dependencyVersion: dependencies.data.version });
+              }
             }}
             onOpenContext={(href) => navigate(href)}
             onRetry={(documentId) => retry.mutate(documentId)}
             onRetryLoad={() => void transcripts.refetch()}
+            onReplace={replaceTranscript}
             onSearch={(_documentId, query) => search.mutate(query)}
-            onSetPrimary={(documentId) => setPrimary.mutate(documentId)}
             onUpload={(file) => upload.mutateAsync(file).then(() => undefined)}
             projectId={projectId}
             retryingId={retry.isPending ? retry.variables : undefined}
+            replacementError={replace.error ? errorMessage(replace.error) : undefined}
+            replacing={replace.isPending}
             searchError={search.error ? errorMessage(search.error) : undefined}
             searchQuery={search.data?.query}
             searchResults={search.data?.results.map(toTranscriptSearchResult)}

@@ -38,7 +38,6 @@ function StoryPage(props: TranscriptCodingWorkspaceViewProps) {
                 onDelete={() => undefined}
                 onRetry={() => undefined}
                 onSearch={() => undefined}
-                onSetPrimary={() => undefined}
                 onUpload={() => undefined}
                 projectId={projectId}
                 sessionId={sessionId}

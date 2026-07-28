@@ -18,5 +18,5 @@ export const Record2: Story = { args: { defaultValue: "record-2" } };
 export const Record3: Story = { args: { defaultValue: "record-3" } };
 export const Open: Story = { args: { defaultOpen: true } };
 export const KeyboardFocus: Story = { parameters: { pseudo: { focusVisible: "[aria-haspopup='listbox']" } } };
-export const SelectRecord2: Story = { play: async ({ canvasElement }) => { const canvas = within(canvasElement); await userEvent.click(canvas.getByRole("combobox", { name: /Record/ })); await userEvent.click(canvas.getByRole("option", { name: "Record 2" })); } };
+export const SelectRecord2: Story = { play: async ({ canvasElement }) => { const canvas = within(canvasElement); await userEvent.click(canvas.getByRole("combobox", { name: /Record/ })); await userEvent.click(canvas.getByRole("option", { name: "Medicaid Fraud Documenter" })); } };
 export const Disabled: Story = { args: { disabled: true } };

@@ -54,7 +54,7 @@ export const Metadata: Story = {
           { label: "Session type", value: "Interview" },
           { label: "Date", value: "July 8, 2026" },
           { label: "Duration", value: "45 minutes" },
-          { label: "Records", value: "Record 1" },
+          { label: "Records", value: "Medicare Fraud Documenter" },
           { label: "Common Components", value: "Search" },
         ]}
       />

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.db.base import Base
-from sqlalchemy import BigInteger, DateTime, ForeignKey, JSON, Text, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, JSON, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,6 +15,13 @@ if False:
 
 class Document(Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        CheckConstraint(
+            "lifecycle_status IN ('active','legacy','replacement-pending','replacement-failed','tombstoned')",
+            name="ck_documents_lifecycle_status",
+        ),
+        UniqueConstraint("session_id", "replacement_request_key", name="uq_documents_session_replacement_request"),
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     project_id: Mapped[str] = mapped_column(
@@ -39,6 +46,21 @@ class Document(Base):
     parser_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     extraction_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="uploaded", server_default="uploaded")
+    lifecycle_status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="active",
+        server_default="active",
+        index=True,
+    )
+    replacement_for_document_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    replacement_request_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

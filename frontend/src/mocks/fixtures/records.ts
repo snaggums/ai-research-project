@@ -8,8 +8,8 @@ import type {
 export const recordSummaries: RecordSummary[] = [
   {
     id: "record-1",
-    name: "Record 1",
-    description: "Checkout and payment experience across interviews and usability tests.",
+    name: "Medicare Fraud Documenter",
+    description: "Research and synthesized product knowledge for documenting Medicare fraud cases.",
     relatedSessionCount: 6,
     eligibleSessionCount: 5,
     readiness: "ready",
@@ -17,16 +17,16 @@ export const recordSummaries: RecordSummary[] = [
   },
   {
     id: "record-2",
-    name: "Record 2",
-    description: "Navigation, orientation, and information-finding research.",
+    name: "Medicaid Fraud Documenter",
+    description: "Research and synthesized product knowledge for documenting Medicaid fraud cases.",
     relatedSessionCount: 3,
     eligibleSessionCount: 1,
     readiness: "needs-data",
   },
   {
     id: "record-3",
-    name: "Record 3",
-    description: "Account setup and ongoing profile-management research.",
+    name: "Medicare Fraud Finder",
+    description: "Research and synthesized product knowledge for finding Medicare fraud cases.",
     relatedSessionCount: 4,
     eligibleSessionCount: 4,
     readiness: "up-to-date",
@@ -36,7 +36,7 @@ export const recordSummaries: RecordSummary[] = [
 
 export const readyRecordScope: RecordSynthesisScope = {
   recordId: "record-1",
-  description: "All eligible Sessions related to Record 1 are included automatically.",
+  description: "All eligible Sessions related to Medicare Fraud Documenter are included automatically.",
   minimumEligibleSessions: 2,
   includedSessions: [
     {

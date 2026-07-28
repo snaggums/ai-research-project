@@ -16,7 +16,7 @@ The researcher assigns each Session to one of three fixed Records once. The
 researcher does not create a second manual grouping for synthesis.
 
 ```text
-Record 2
+Medicaid Fraud Documenter
   <- Checkout interview
   <- Checkout usability test
   <- Mobile design critique
@@ -34,8 +34,8 @@ A Record is not a Session type or a free-form tag. It is a workspace-level
 Product Knowledge object representing functionality being designed. For the
 MVP, each Session is assigned to one fixed Record.
 
-The interface uses a single-select field labeled **Record** with `Record 1`,
-`Record 2`, and `Record 3` as its only options.
+The interface uses a single-select field labeled **Record** with `Medicare Fraud Documenter`,
+`Medicaid Fraud Documenter`, and `Medicare Fraud Finder` as its only options.
 
 ## 3. MVP domain contracts
 
@@ -46,7 +46,7 @@ Minimum fields:
 | Field | Requirement |
 | --- | --- |
 | `id` | Stable fixed identifier: `record-1`, `record-2`, or `record-3`. |
-| `name` | Fixed display value: `Record 1`, `Record 2`, or `Record 3`. |
+| `name` | Fixed display value: `Medicare Fraud Documenter`, `Medicaid Fraud Documenter`, or `Medicare Fraud Finder`. |
 
 The three Records are seeded by the migration and are read-only in the MVP.
 They are workspace-level and may be related to Sessions from more than one
@@ -168,7 +168,7 @@ launched from the Record it updates.
 1. **Record List Item** - name, related Session count, last
    synthesized timestamp, and Open Record action.
 2. **Record Field** - reusable single-select composition for Session create/edit
-   forms with Record 1, Record 2, and Record 3.
+   forms with Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder.
 3. **Record Summary** - stable Record metadata and synthesis readiness.
 4. **Record Synthesis Scope Summary** - included and excluded Sessions with
    eligibility reasons.
@@ -258,12 +258,12 @@ shows only the latest run.
 
 ## 10. MVP acceptance workflow
 
-1. Create or edit at least two Sessions and select Record 2 for both.
+1. Create or edit at least two Sessions and select Medicaid Fraud Documenter for both.
 2. Upload one Primary Transcript to each Session and generate reviewed Session
    Reports.
 3. Confirm a second transcript cannot be added while the Primary Transcript is
    present.
-4. Open Record 2 and verify both Sessions appear automatically.
+4. Open Medicaid Fraud Documenter and verify both Sessions appear automatically.
 5. Generate Record synthesis without manually selecting Sessions.
 6. Verify grouped Requirements, Decisions, and Action Items.
 7. Verify every item identifies its source Sessions and source Report items.

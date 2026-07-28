@@ -14,9 +14,9 @@ export const globalNavigationItems: NavigationItem[] = [
     href: "/records",
     icon: Library,
     children: [
-      { id: "record-1", label: "Record 1", href: "/records/record-1" },
-      { id: "record-2", label: "Record 2", href: "/records/record-2" },
-      { id: "record-3", label: "Record 3", href: "/records/record-3" },
+      { id: "record-1", label: "Medicare Fraud Documenter", href: "/records/record-1" },
+      { id: "record-2", label: "Medicaid Fraud Documenter", href: "/records/record-2" },
+      { id: "record-3", label: "Medicare Fraud Finder", href: "/records/record-3" },
     ],
   },
 ];
@@ -29,9 +29,9 @@ export function projectNavigationItems(
   const root = `/projects/${projectId}`;
   const recordRoot = `${root}/records`;
   const resolvedRecords = records ?? [
-    { id: "record-1", label: "Record 1", href: `${recordRoot}/record-1` },
-    { id: "record-2", label: "Record 2", href: `${recordRoot}/record-2` },
-    { id: "record-3", label: "Record 3", href: `${recordRoot}/record-3` },
+    { id: "record-1", label: "Medicare Fraud Documenter", href: `${recordRoot}/record-1` },
+    { id: "record-2", label: "Medicaid Fraud Documenter", href: `${recordRoot}/record-2` },
+    { id: "record-3", label: "Medicare Fraud Finder", href: `${recordRoot}/record-3` },
   ];
   return [
     { id: "overview", label: "Overview", href: `${root}/overview`, type: "link" },

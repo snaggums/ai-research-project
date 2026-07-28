@@ -9,7 +9,7 @@ const axeOptions = { rules: { "color-contrast": { enabled: false }, region: { en
 
 describe("Transcript workspace accessibility", () => {
   it("has no automated violations in ready and search-result states", async () => {
-    const props = { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[0])], onDelete: () => undefined, onRetry: () => undefined, onSearch: () => undefined, onSetPrimary: () => undefined, onUpload: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test" };
+    const props = { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[0])], onDelete: () => undefined, onRetry: () => undefined, onSearch: () => undefined, onUpload: () => undefined, projectId: "alpha-project", sessionId: "mobile-checkout-test" };
     const { container, rerender } = render(<SessionTranscriptWorkspaceView {...props} />);
     expect((await axe.run(container, axeOptions)).violations).toEqual([]);
     rerender(<SessionTranscriptWorkspaceView {...props} searchQuery="navigation confusion" searchResults={transcriptSearchFixtures.map(toTranscriptSearchResult)} />);

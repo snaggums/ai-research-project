@@ -7,9 +7,9 @@ import type {
 } from "@/domain/types";
 
 export const recordReferences: ProductReference[] = [
-  { id: "record-1", name: "Record 1" },
-  { id: "record-2", name: "Record 2" },
-  { id: "record-3", name: "Record 3" },
+  { id: "record-1", name: "Medicare Fraud Documenter" },
+  { id: "record-2", name: "Medicaid Fraud Documenter" },
+  { id: "record-3", name: "Medicare Fraud Finder" },
 ];
 
 export const commonComponentReferences: ProductReference[] = [
@@ -150,6 +150,7 @@ export const primaryTranscript: TranscriptDocumentSummary = {
   mimeType: "text/plain",
   sizeBytes: 48211,
   status: "complete",
+  lifecycleStatus: "active",
   isPrimary: true,
   uploadedAt: "2026-07-08T15:00:00.000Z",
   processedAt: "2026-07-08T15:02:00.000Z",

@@ -13,7 +13,7 @@ describe("Record page compositions", () => {
   it("renders the fixed Records collection with direct destinations", () => {
     render(<RecordsCollectionView records={recordSummaries} />);
     expect(screen.getByRole("heading", { level: 1, name: "Records" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Record 1" })).toHaveAttribute("href", "/records/record-1");
+    expect(screen.getByRole("link", { name: "Open Medicare Fraud Documenter" })).toHaveAttribute("href", "/records/record-1");
     expect(screen.getAllByText(/eligible Session/)).not.toHaveLength(0);
   });
 
@@ -77,10 +77,10 @@ describe("Record page compositions", () => {
       "true",
     );
     expect(
-      screen.getByRole("heading", { name: "Ask Record 1" }),
+      screen.getByRole("heading", { name: "Ask Medicare Fraud Documenter" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", { name: "Ask Record 1" }),
+      screen.getByRole("textbox", { name: "Ask Medicare Fraud Documenter" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Ready to synthesize" }),
