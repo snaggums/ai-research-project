@@ -147,7 +147,11 @@ export function RecordDetailRoute() {
     recordId,
     activeView === "transcript-codes",
   );
-  const chatSources = useRecordChatSources(recordId, activeView === "ask-record");
+  const synthesisGenerated = Boolean(record.data?.latest_synthesis_at);
+  const chatSources = useRecordChatSources(
+    recordId,
+    activeView === "ask-record" && synthesisGenerated,
+  );
   const askRecordMutation = useAskRecord(recordId);
   const [chatTurns, setChatTurns] = React.useState<AskRecordConversationTurn[]>([]);
   const [chatQuestion, setChatQuestion] = React.useState("");
@@ -206,7 +210,9 @@ export function RecordDetailRoute() {
   const lastAssistantTurn = [...chatTurns]
     .reverse()
     .find((turn) => turn.role === "assistant");
-  const askRecordState: AskRecordWorkspaceState = chatSources.isError
+  const askRecordState: AskRecordWorkspaceState = !synthesisGenerated
+    ? "before-synthesis"
+    : chatSources.isError
     ? "recoverable-error"
     : chatSources.data && !chatSources.data.searchable
       ? "no-sources"
@@ -245,6 +251,12 @@ export function RecordDetailRoute() {
         ? "Record sources could not be loaded. Check your connection and try again."
         : recordChatErrorMessage(askRecordMutation.error),
       onAsk: (question) => submitRecordQuestion(question),
+      onNewChat: () => {
+        setChatTurns([]);
+        setChatQuestion("");
+        lastQuestionRef.current = "";
+        askRecordMutation.reset();
+      },
       onOpenRelatedSessions: () => {
         setSearchParams((current) => {
           const next = new URLSearchParams(current);

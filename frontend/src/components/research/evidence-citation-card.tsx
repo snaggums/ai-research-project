@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type EvidenceCitationRelevance = "supporting" | "partial";
-export type EvidenceCitationContext = "session" | "record";
+export type EvidenceCitationContext = "session" | "record" | "project";
 
 export interface EvidenceCitation {
   excerpt: string;
@@ -76,7 +76,7 @@ export function EvidenceCitationCard({
             <dd className="mt-2 break-words">{citation.project}</dd>
           </div>
         ) : null}
-        {context === "record" && citation.session ? (
+        {context !== "session" && citation.session ? (
           <div className="min-w-0">
             <dt className="text-xs font-semibold uppercase text-[var(--air-color-text-muted)]">Session</dt>
             <dd className="mt-2 break-words">{citation.session}</dd>

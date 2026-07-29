@@ -11,6 +11,7 @@ import {
 import {
   CreateProjectRoute,
   EditProjectRoute,
+  ProjectAskRoute,
   ProjectOverviewRoute,
   ParticipantCreateRoute,
   ParticipantDetailRoute,
@@ -83,7 +84,7 @@ export const appRoutes = [
       { path: "records/:recordId/synthesis", element: <RecordSynthesisRoute /> },
       { path: "records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordSynthesisEvidenceDetailRoute /> },
       { path: "records/:recordId/knowledge/items/:itemId/evidence/:evidenceId", element: <RecordKnowledgeEvidenceDetailRoute /> },
-      { path: "ask", element: <ProjectFoundationPage /> },
+      { path: "ask", element: <ProjectAskRoute /> },
     ],
   },
   { path: "/legacy-v1", element: <ProjectsPage /> },

@@ -400,6 +400,11 @@ export type ChatCitation = {
   chunk_id: string;
   document_id: string;
   document_name: string;
+  session_id: string;
+  session_title: string;
+  speaker: string;
+  location: string;
+  context_result_id: string;
   chunk_index: number;
   text: string;
   score: number;

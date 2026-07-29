@@ -1,17 +1,23 @@
 import * as React from "react";
-import { RefreshCw, Send } from "lucide-react";
+import { RefreshCw, Send, SquarePen } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Spinner } from "@/components/ui/spinner";
 import { TextareaField } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
   EvidenceCitationCard,
   type EvidenceCitation,
+  type EvidenceCitationContext,
 } from "./evidence-citation-card";
 
+export type AskWorkspaceScope = "record" | "project";
+
 export type AskRecordWorkspaceState =
+  | "before-synthesis"
   | "suggested"
   | "answered"
   | "generating"
@@ -66,12 +72,14 @@ export interface AskRecordWorkspaceProps
   errorMessage?: string;
   initialQuestion?: string;
   onAsk?: (question: string) => Promise<void> | void;
+  onNewChat?: () => void;
   onOpenRelatedSessions?: () => void;
   onOpenTranscriptContext?: (citation: EvidenceCitation) => void;
   onRetry?: () => void;
   onQuestionChange?: (question: string) => void;
   onSuggestedQuestion?: (question: string) => void;
   question?: string;
+  scope?: AskWorkspaceScope;
   sourceAvailability?: AskRecordSourceAvailability[];
   sourceDisclosure?: string;
   state?: AskRecordWorkspaceState;
@@ -96,10 +104,12 @@ function ResearcherQuestion({ turn }: { turn: AskRecordResearcherTurn }) {
 }
 
 function AnswerContent({
+  citationContext,
   onOpenTranscriptContext,
   responsePosition,
   turn,
 }: {
+  citationContext: EvidenceCitationContext;
   onOpenTranscriptContext?: (citation: EvidenceCitation) => void;
   responsePosition: number;
   turn: AskRecordAnsweredTurn;
@@ -156,6 +166,7 @@ function AnswerContent({
           <EvidenceCitationCard
             anchorId={citationAnchorId(citation.reference)}
             citation={citation}
+            context={citationContext}
             key={citation.id}
             onOpenTranscriptContext={onOpenTranscriptContext}
           />
@@ -166,10 +177,12 @@ function AnswerContent({
 }
 
 function InsufficientEvidenceContent({
+  citationContext,
   onOpenTranscriptContext,
   responsePosition,
   turn,
 }: {
+  citationContext: EvidenceCitationContext;
   onOpenTranscriptContext?: (citation: EvidenceCitation) => void;
   responsePosition: number;
   turn: AskRecordInsufficientEvidenceTurn;
@@ -208,6 +221,7 @@ function InsufficientEvidenceContent({
             <EvidenceCitationCard
               anchorId={citationAnchorId(citation.reference)}
               citation={{ ...citation, relevance: "partial" }}
+              context={citationContext}
               key={citation.id}
               onOpenTranscriptContext={onOpenTranscriptContext}
             />
@@ -220,12 +234,16 @@ function InsufficientEvidenceContent({
 
 function QuestionComposer({
   disabled,
+  label,
   onAsk,
+  placeholder,
   question,
   setQuestion,
 }: {
   disabled: boolean;
+  label: string;
   onAsk?: (question: string) => Promise<void> | void;
+  placeholder: string;
   question: string;
   setQuestion: (value: string) => void;
 }) {
@@ -245,9 +263,9 @@ function QuestionComposer({
     >
       <TextareaField
         disabled={disabled}
-        label="Ask this record"
+        label={label}
         onChange={(event) => setQuestion(event.currentTarget.value)}
-        placeholder="Ask a cited question across this Record…"
+        placeholder={placeholder}
         value={question}
       />
       <Button
@@ -268,23 +286,37 @@ export function AskRecordWorkspace({
   errorMessage,
   initialQuestion = "",
   onAsk,
+  onNewChat,
   onOpenRelatedSessions,
   onOpenTranscriptContext,
   onQuestionChange,
   onRetry,
   onSuggestedQuestion,
   question: controlledQuestion,
+  scope = "record",
   sourceAvailability = [],
-  sourceDisclosure = defaultSourceDisclosure,
+  sourceDisclosure,
   state = "suggested",
   suggestedQuestions = [],
   turns = [],
   ...props
 }: AskRecordWorkspaceProps) {
   const [internalQuestion, setInternalQuestion] = React.useState(initialQuestion);
+  const [showConversation, setShowConversation] = React.useState(true);
   const errorSummaryRef = React.useRef<HTMLDivElement>(null);
   const generating = state === "generating";
+  const beforeSynthesis = state === "before-synthesis";
   const composerQuestion = controlledQuestion ?? internalQuestion;
+  const projectScope = scope === "project";
+  const headingId = `ask-${scope}-heading`;
+  const suggestionsHeadingId = `ask-${scope}-suggestions-heading`;
+  const workspaceHeading = projectScope ? "Ask this project" : "Ask this record";
+  const workspaceDescription = projectScope
+    ? "Ask grounded questions across every searchable Session in this Project. Answers cite primary transcript evidence."
+    : "Ask across Record Knowledge, reviewed or approved Session Reports, and all related transcripts. Answers cite primary transcript evidence.";
+  const resolvedSourceDisclosure = sourceDisclosure ?? (projectScope
+    ? "Search includes every Session in this Project with a searchable active Transcript. Answers identify the source Session and cite transcript evidence."
+    : defaultSourceDisclosure);
 
   function setComposerQuestion(value: string) {
     if (controlledQuestion === undefined) setInternalQuestion(value);
@@ -300,35 +332,56 @@ export function AskRecordWorkspace({
     onSuggestedQuestion?.(suggestion);
   }
 
+  function startNewChat() {
+    setShowConversation(false);
+    setComposerQuestion("");
+    onNewChat?.();
+  }
+
+  React.useEffect(() => {
+    setShowConversation(true);
+  }, [turns]);
+
+  const visibleTurns = showConversation ? turns : [];
+
   return (
     <section
-      aria-labelledby="ask-record-heading"
+      aria-labelledby={headingId}
       className={cn(
         "grid min-w-0 gap-6 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5 md:p-6",
         className,
       )}
       {...props}
     >
-      <header className="grid gap-2">
-        <h2 className="text-2xl font-semibold" id="ask-record-heading">
-          Ask this record
-        </h2>
-        <p className="text-sm leading-6 text-[var(--air-color-text-secondary)]">
-          Ask across Record Knowledge, reviewed or approved Session Reports, and
-          all related transcripts. Answers cite primary transcript evidence.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="grid gap-2">
+          <h2 className="text-2xl font-semibold" id={headingId}>
+            {workspaceHeading}
+          </h2>
+          <p className="text-sm leading-6 text-[var(--air-color-text-secondary)]">
+            {workspaceDescription}
+          </p>
+        </div>
+        <Tooltip content="New chat" placement="bottom-end">
+          <IconButton
+            disabled={generating}
+            icon={<SquarePen aria-hidden="true" className="h-4 w-4" />}
+            label="New chat"
+            onClick={startNewChat}
+          />
+        </Tooltip>
       </header>
 
       <p className="rounded-[var(--air-radius-md)] bg-[var(--air-color-status-information-bg)] p-4 text-sm leading-6 text-[var(--air-color-status-information-text)]">
-        {sourceDisclosure}
+        {resolvedSourceDisclosure}
       </p>
 
-      {state !== "no-sources" && suggestedQuestions.length ? (
+      {!beforeSynthesis && state !== "no-sources" && suggestedQuestions.length ? (
         <section
-          aria-labelledby="ask-record-suggestions-heading"
+          aria-labelledby={suggestionsHeadingId}
           className="grid gap-2"
         >
-          <h3 className="font-semibold" id="ask-record-suggestions-heading">
+          <h3 className="font-semibold" id={suggestionsHeadingId}>
             Suggested questions
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -346,20 +399,29 @@ export function AskRecordWorkspace({
         </section>
       ) : null}
 
-      {state === "suggested" && !turns.length ? (
+      {!visibleTurns.length &&
+      state !== "generating" &&
+      state !== "recoverable-error" &&
+      state !== "no-sources" ? (
         <section className="rounded-[var(--air-radius-md)] bg-[var(--air-color-bg-subtle)] p-5">
           <h3 className="font-semibold">No conversation yet</h3>
           <p className="mt-2 text-sm leading-6 text-[var(--air-color-text-secondary)]">
-            Ask a question to synthesize across this Record while preserving
-            traceability to primary transcript passages.
+            {beforeSynthesis
+              ? "Generate Record Synthesis to enable Ask this record. Suggested questions will appear after synthesis succeeds."
+              : projectScope
+                ? "Select a suggested question or enter your own question to enable Ask."
+                : "Ask a question to synthesize across this Record while preserving traceability to primary transcript passages."}
           </p>
         </section>
       ) : null}
 
-      {turns.length ? (
-        <ol aria-label="Ask Record conversation" className="grid gap-4">
-          {turns.map((turn, index) => {
-            const responsePosition = turns
+      {visibleTurns.length ? (
+        <ol
+          aria-label={projectScope ? "Ask Project conversation" : "Ask Record conversation"}
+          className="grid gap-4"
+        >
+          {visibleTurns.map((turn, index) => {
+            const responsePosition = visibleTurns
               .slice(0, index + 1)
               .filter((candidate) => candidate.role === "assistant").length;
             return (
@@ -368,12 +430,14 @@ export function AskRecordWorkspace({
                   <ResearcherQuestion turn={turn} />
                 ) : turn.response === "answer" ? (
                   <AnswerContent
+                    citationContext={projectScope ? "project" : "record"}
                     onOpenTranscriptContext={onOpenTranscriptContext}
                     responsePosition={responsePosition}
                     turn={turn}
                   />
                 ) : (
                   <InsufficientEvidenceContent
+                    citationContext={projectScope ? "project" : "record"}
                     onOpenTranscriptContext={onOpenTranscriptContext}
                     responsePosition={responsePosition}
                     turn={turn}
@@ -390,11 +454,17 @@ export function AskRecordWorkspace({
           aria-live="polite"
           className="flex min-h-32 items-center gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5"
         >
-          <Spinner label="Generating an answer from Record evidence" />
+          <Spinner
+            label={projectScope
+              ? "Generating an answer from Project Sessions"
+              : "Generating an answer from Record evidence"}
+          />
           <div>
             <h3 className="font-semibold">Generating answer…</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--air-color-text-secondary)]">
-              AIR is tracing Record Knowledge through reviewed Session Reports to supporting transcript passages.
+              {projectScope
+                ? "AIR is searching Session transcripts across this Project and retrieving supporting passages."
+                : "AIR is tracing Record Knowledge through reviewed Session Reports to supporting transcript passages."}
             </p>
           </div>
         </div>
@@ -431,9 +501,13 @@ export function AskRecordWorkspace({
       {state === "no-sources" ? (
         <div className="grid gap-4">
           <Alert
-            message="This Record has no primary transcripts or reviewed Session Reports available to search. AIR cannot generate a grounded answer yet."
+            message={projectScope
+              ? "This Project has no Sessions with searchable active Transcripts."
+              : "This Record has no primary transcripts or reviewed Session Reports available to search. AIR cannot generate a grounded answer yet."}
             size="large"
-            title="No searchable Record sources"
+            title={projectScope
+              ? "No searchable Project sources"
+              : "No searchable Record sources"}
             tone="info"
           />
           {sourceAvailability.length ? (
@@ -459,7 +533,7 @@ export function AskRecordWorkspace({
               size="small"
               variant="gray-subtle"
             >
-              Open related Sessions
+              {projectScope ? "Open Sessions" : "Open related Sessions"}
             </Button>
           ) : null}
         </div>
@@ -467,8 +541,12 @@ export function AskRecordWorkspace({
 
       {state !== "no-sources" ? (
         <QuestionComposer
-          disabled={generating}
+          disabled={generating || beforeSynthesis}
+          label={projectScope ? "Ask this project" : "Ask this record"}
           onAsk={onAsk}
+          placeholder={projectScope
+            ? "Ask a cited question across this Project…"
+            : "Ask a cited question across this Record…"}
           question={composerQuestion}
           setQuestion={setComposerQuestion}
         />

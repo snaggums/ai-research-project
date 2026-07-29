@@ -81,6 +81,55 @@ describe("Ask Record Storybook components", () => {
     expect(onAsk).not.toHaveBeenCalled();
   });
 
+  it("keeps Ask this record unavailable before Record Synthesis", () => {
+    render(
+      <AskRecordWorkspace
+        onAsk={() => undefined}
+        state="before-synthesis"
+        suggestedQuestions={askRecordSuggestedQuestions}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Ask this record" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Generate Record Synthesis to enable Ask this record. Suggested questions will appear after synthesis succeeds.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Suggested questions" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Ask this record" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
+  });
+
+  it("starts a new chat while retaining available suggestions", async () => {
+    const user = userEvent.setup();
+    const onNewChat = vi.fn();
+    render(
+      <AskRecordWorkspace
+        onAsk={() => undefined}
+        onNewChat={onNewChat}
+        state="answered"
+        suggestedQuestions={askRecordSuggestedQuestions}
+        turns={askRecordAnsweredTurns}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(onNewChat).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("list", { name: "Ask Record conversation" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Suggested questions" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders an ordered multi-turn thread with grounded follow-up answers", () => {
     render(
       <AskRecordWorkspace

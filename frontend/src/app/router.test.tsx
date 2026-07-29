@@ -41,6 +41,91 @@ describe("application router foundation", () => {
     expect(screen.queryByRole("searchbox", { name: "Search Alpha Project" })).not.toBeInTheDocument();
   });
 
+  it("loads the approved Ask this project route in Project context", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(`${API_BASE_URL}/projects`, () =>
+        HttpResponse.json([projectResponse]),
+      ),
+      http.post(`${API_BASE_URL}/projects/alpha-project/chat`, async ({ request }) => {
+        const payload = await request.json() as { question?: string };
+        return HttpResponse.json({
+          answer: "Participants needed clear progress feedback. [1]",
+          citations: [
+            {
+              chunk_id: "project-citation-1",
+              chunk_index: 0,
+              context_result_id: "project-citation-1",
+              document_id: "checkout-transcript",
+              document_name: "Checkout transcript.docx",
+              location: "00:04:16",
+              score: 0.91,
+              session_id: "mobile-checkout-test",
+              session_title: "Mobile checkout usability test",
+              speaker: "Jordan Moore",
+              text: "I wanted to know how many steps were left.",
+            },
+          ],
+          message: "Project answer generated.",
+          model: "mock-chat",
+          provider: "mock",
+          question: payload.question,
+          used_mock: true,
+        });
+      }),
+    );
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/ask"],
+    });
+    render(
+      <AppProviders>
+        <RouterProvider router={router} />
+      </AppProviders>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Alpha Project",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Ask this project" }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Project sections" }))
+        .getByRole("link", { name: "Ask this project" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(screen.getByRole("navigation", { name: "Project navigation" }))
+        .getByRole("link", { name: "Ask this project" }),
+    ).toHaveAttribute("aria-current", "page");
+
+    const suggestion = screen.getByRole("button", {
+      name: "What findings appeared across Sessions?",
+    });
+    await user.click(suggestion);
+    expect(screen.getByRole("button", { name: "Ask" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByRole("heading", { name: "AIR answer" })).toBeInTheDocument();
+    expect(screen.getByText("Checkout transcript.docx")).toBeInTheDocument();
+    const citationLink = screen.getByRole("link", {
+      name: "Open transcript context for citation 1",
+    });
+    const citation = citationLink.closest("article");
+    if (!citation) throw new Error("Expected a Project citation card.");
+    expect(within(citation).getByText("Mobile checkout usability test")).toBeInTheDocument();
+    expect(within(citation).getByText("Jordan Moore • 00:04:16")).toBeInTheDocument();
+    expect(citationLink).toHaveAttribute(
+      "href",
+      "/projects/alpha-project/sessions/mobile-checkout-test/documents/checkout-transcript?result=project-citation-1&returnTo=%2Fprojects%2Falpha-project%2Fask",
+    );
+
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(screen.queryByRole("heading", { name: "AIR answer" })).not.toBeInTheDocument();
+    expect(suggestion).toBeInTheDocument();
+  });
+
   it("confirms linked evidence and returns to upload after preserving a deleted Transcript", async () => {
     const user = userEvent.setup();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
@@ -856,18 +941,42 @@ describe("application router foundation", () => {
     expect(router.state.location.search).toBe("?result=result-1");
   });
 
-  it("shows the production Ask Record no-sources state without a composer", async () => {
+  it("requires Record Synthesis before enabling Ask this record", async () => {
     const router = createMemoryRouter(appRoutes, {
       initialEntries: ["/records/record-2?view=ask-record"],
     });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
 
     expect(
-      await screen.findByText("No searchable Record sources"),
+      await screen.findByText(
+        "Generate Record Synthesis to enable Ask this record. Suggested questions will appear after synthesis succeeds.",
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Source availability" })).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(2);
-    expect(screen.queryByRole("textbox", { name: "Ask this record" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Ask this record" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
+    expect(screen.queryByRole("heading", { name: "Suggested questions" })).not.toBeInTheDocument();
+  });
+
+  it("starts a new Record chat without removing suggested questions", async () => {
+    const user = userEvent.setup();
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=ask-record"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    await user.click(await screen.findByRole("button", {
+      name: "What prevents participants from feeling confident after checkout?",
+    }));
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByRole("heading", { name: "AIR answer" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(screen.queryByRole("list", { name: "Ask Record conversation" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "What prevents participants from feeling confident after checkout?",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("withholds an Ask Record conclusion when only partial evidence is returned", async () => {
@@ -898,5 +1007,36 @@ describe("application router foundation", () => {
     await user.click(screen.getByRole("button", { name: "Ask" }));
     expect(await screen.findByRole("heading", { name: "AIR answer" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Open transcript context/ })).toHaveLength(2);
+
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(screen.queryByRole("heading", { name: "AIR answer" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "What caused participants to lose confidence during checkout?",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("requires a generated Session Report before enabling Ask this session", async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])),
+      http.get(
+        `${API_BASE_URL}/projects/alpha-project/sessions/mobile-checkout-test/report`,
+        () => HttpResponse.json(null),
+      ),
+    );
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/ask"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByText(
+        "Generate the Session Report to enable Ask this session. Suggested questions will appear after generation succeeds.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Ask this session" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ask" })).toBeDisabled();
+    expect(screen.queryByRole("heading", { name: "Suggested questions" })).not.toBeInTheDocument();
   });
 });
