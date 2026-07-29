@@ -227,10 +227,11 @@ export interface AskThisSessionWorkspaceViewProps {
   conversation?: SessionConversation;
   errorMessage?: string;
   onAsk: (question: string) => Promise<void> | void;
+  onNewChat?: () => void;
   onOpenContext?: (href: string) => void;
   projectId: string;
   sessionId: string;
-  state?: "ready" | "loading" | "error";
+  state?: "before-report" | "ready" | "loading" | "error";
   suggestedQuestions: string[];
 }
 

@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import { alphaProject, checkoutResearchProject } from "@/mocks/fixtures/domain";
 import { projectWorkflowAt } from "@/mocks/fixtures/project";
 import { mockAISettingsValues } from "@/mocks/fixtures/settings";
-import { ProjectOverviewView, ProjectsIndexView, SettingsView } from "@/pages/project-views";
+import {
+  ProjectAskView,
+  ProjectOverviewView,
+  ProjectsIndexView,
+  SettingsView,
+} from "@/pages/project-views";
 
 describe("ProjectsIndexView", () => {
   it("shows all projects without the deferred global search control", () => {
@@ -25,6 +30,34 @@ describe("ProjectOverviewView", () => {
     render(<ProjectOverviewView project={alphaProject} steps={projectWorkflowAt(1)} />);
     expect(screen.getAllByText("Alpha Project").length).toBeGreaterThan(1);
     expect(screen.getByRole("navigation", { name: "Project sections" })).toBeInTheDocument();
+  });
+});
+
+describe("ProjectAskView", () => {
+  it("composes the approved Project-scoped Ask workspace and navigation", () => {
+    render(
+      <ProjectAskView
+        project={alphaProject}
+        workspaceProps={{
+          suggestedQuestions: ["What findings appeared across Sessions?"],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: alphaProject.name }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Ask this project" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Ask this project" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getByText(
+        "Search includes every Session in this Project with a searchable active Transcript. Answers identify the source Session and cite transcript evidence.",
+      ),
+    ).toBeInTheDocument();
   });
 });
 

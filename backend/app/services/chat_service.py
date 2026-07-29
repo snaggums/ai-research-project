@@ -59,7 +59,11 @@ def _answer_with_litellm(
         raise ValueError("Install backend requirements before using live AI chat.") from exc
 
     context = "\n\n".join(
-        f"[{index}] {citation.document_name}, chunk {citation.chunk_index + 1}, score {citation.score:.2f}\n{citation.text}"
+        (
+            f"[{index}] {citation.session_title} · {citation.document_name} · "
+            f"{citation.speaker} · {citation.location} · "
+            f"score {citation.score:.2f}\n{citation.text}"
+        )
         for index, citation in enumerate(citations, start=1)
     )
     interpretation_context = (
@@ -123,6 +127,11 @@ def _citation_from_search_result(result: SearchResult) -> ChatCitation:
         chunk_id=result.chunk_id,
         document_id=result.document_id,
         document_name=result.document_name,
+        session_id=result.session_id,
+        session_title=result.session_title,
+        speaker=result.speaker,
+        location=result.location,
+        context_result_id=result.context_result_id,
         chunk_index=result.chunk_index,
         text=result.text,
         score=round(max(0.0, min(1.0, result.score)), 2),

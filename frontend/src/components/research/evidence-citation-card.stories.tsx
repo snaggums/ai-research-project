@@ -34,6 +34,17 @@ export const RecordPartiallyRelevant: Story = {
   args: { citation: askRecordPartialCitations[0] },
 };
 
+export const ProjectSupportingEvidence: Story = {
+  args: { context: "project" },
+};
+
+export const ProjectPartiallyRelevant: Story = {
+  args: {
+    citation: askRecordPartialCitations[0],
+    context: "project",
+  },
+};
+
 export const SessionSupportingEvidence: Story = {
   args: {
     citation: {

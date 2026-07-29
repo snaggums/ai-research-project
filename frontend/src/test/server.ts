@@ -8,6 +8,7 @@ import { synthesisHandlers } from "@/mocks/handlers/synthesis";
 import { recordHandlers } from "@/mocks/handlers/records";
 import { settingsHandlers } from "@/mocks/handlers/settings";
 import { transcriptCodingHandlers } from "@/mocks/handlers/transcript-coding";
+import { chatHandlers } from "@/mocks/handlers/chat";
 
 
 export const API_BASE_URL = "http://localhost:8000/api";
@@ -23,6 +24,7 @@ export const handlers = [
   ...recordHandlers,
   ...settingsHandlers,
   ...transcriptCodingHandlers,
+  ...chatHandlers,
 ];
 
 export const server = setupServer(...handlers);

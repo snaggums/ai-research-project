@@ -4,6 +4,10 @@ import { Plus } from "lucide-react";
 import type { AIProviderSettingsFormProps } from "@/components/research/ai-provider-settings-form";
 import { AIProviderSettingsForm } from "@/components/research/ai-provider-settings-form";
 import { ProjectCard } from "@/components/research/project-card";
+import {
+  AskProjectWorkspace,
+  type AskProjectWorkspaceProps,
+} from "@/components/research/ask-project-workspace";
 import { ProjectForm, type ProjectFormProps } from "@/components/research/project-form";
 import { ProjectSummary } from "@/components/research/project-summary";
 import { ProjectWorkflowSummary, type ProjectWorkflowStep } from "@/components/research/project-workflow-summary";
@@ -110,6 +114,43 @@ export function ProjectOverviewView({ project, steps }: ProjectOverviewViewProps
           steps={steps}
         />
       </div>
+    </div>
+  );
+}
+
+export interface ProjectAskViewProps {
+  project: ProjectSummaryModel;
+  workspaceProps?: AskProjectWorkspaceProps;
+}
+
+export function ProjectAskView({
+  project,
+  workspaceProps,
+}: ProjectAskViewProps) {
+  const root = `/projects/${project.id}`;
+
+  return (
+    <div className="grid gap-6">
+      <PageHeader
+        breadcrumbs={[
+          { href: "/projects", label: "Projects" },
+          { href: `${root}/overview`, label: project.name },
+          { label: "Ask this project" },
+        ]}
+        description="Ask grounded questions across every searchable Session in this Project."
+        title={project.name}
+      />
+      <SectionNavigation
+        activeId="ask"
+        items={[
+          { id: "overview", label: "Overview", href: `${root}/overview` },
+          { id: "participants", label: "Participants", href: `${root}/participants` },
+          { id: "sessions", label: "Sessions", href: `${root}/sessions` },
+          { id: "ask", label: "Ask this project", href: `${root}/ask` },
+        ]}
+        label="Project sections"
+      />
+      <AskProjectWorkspace {...workspaceProps} />
     </div>
   );
 }

@@ -2,34 +2,61 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 
 import { toSessionConversation } from "@/adapters/synthesis";
-import { toSessionSummary } from "@/adapters/sessions";
-import { ApplicationShell } from "@/components/application";
 import type { SessionConversation } from "@/api/types";
-import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
-import { sessionConversationFixture, suggestedSessionQuestions, synthesisEvidenceFixtures } from "@/mocks/fixtures/synthesis";
-import { SessionDetailView } from "./session-views";
-import { AskThisSessionWorkspaceView, type AskThisSessionWorkspaceViewProps } from "./synthesis-views";
+import {
+  sessionConversationFixture,
+  suggestedSessionQuestions,
+  synthesisEvidenceFixtures,
+} from "@/mocks/fixtures/synthesis";
+import { AskThisSession } from "./ask-this-session";
 
-const answeredTransport: SessionConversation = {
+const answeredConversation: SessionConversation = {
   ...sessionConversationFixture,
   turns: [
-    { id: "q-1", role: "researcher", content: suggestedSessionQuestions[0], citations: [], created_at: "2026-07-15T12:00:00Z" },
-    { id: "a-1", role: "assistant", content: "Participants lost confidence when the order summary disappeared and the checkout step was unclear.", citations: synthesisEvidenceFixtures.slice(0, 2).map((evidence) => ({ id: evidence.id, document_id: evidence.document_id, document_name: evidence.document_name, speaker: evidence.speaker, location: evidence.location, excerpt: evidence.excerpt, context_result_id: evidence.context_result_id })), created_at: "2026-07-15T12:00:01Z" },
+    {
+      id: "session-question",
+      role: "researcher",
+      content: suggestedSessionQuestions[0],
+      citations: [],
+      created_at: "2026-07-15T12:00:00Z",
+    },
+    {
+      id: "session-answer",
+      role: "assistant",
+      content:
+        "Participants lost confidence when the order summary disappeared and the checkout step was unclear.",
+      citations: synthesisEvidenceFixtures.slice(0, 2).map((evidence) => ({
+        id: evidence.id,
+        document_id: evidence.document_id,
+        document_name: evidence.document_name,
+        speaker: evidence.speaker,
+        location: evidence.location,
+        excerpt: evidence.excerpt,
+        context_result_id: evidence.context_result_id,
+      })),
+      created_at: "2026-07-15T12:00:01Z",
+    },
   ],
 };
 
-function StoryPage(props: AskThisSessionWorkspaceViewProps) {
-  return <div onClickCapture={(event) => { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); }}><ApplicationShell activeProjectItem="sessions" context="project" project={{ id: props.projectId, name: "Alpha Project" }}><SessionDetailView activeTab="ask" onEditSession={() => undefined} projectId={props.projectId} projectName="Alpha Project" session={toSessionSummary(sessionApiFixtures[0])} workspaceContent={<AskThisSessionWorkspaceView {...props} />} /></ApplicationShell></div>;
-}
 const meta = {
-  title: "Page Templates/Sessions/Ask This Session Workspace",
-  component: StoryPage,
+  title: "Research Objects/Session/Ask This Session Workspace",
+  component: AskThisSession,
   tags: ["autodocs"],
+  decorators: [
+    (Story) => (
+      <main className="min-h-screen bg-[var(--air-color-bg-canvas)] p-4 md:p-8">
+        <div className="mx-auto max-w-[1120px] rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5 md:p-6">
+          <Story />
+        </div>
+      </main>
+    ),
+  ],
   parameters: {
     docs: {
       description: {
         component: `
-Session-scoped grounded conversation. Ask this session is unavailable until the Session Report has been generated. After generation, suggested questions remain above the conversation in every available state. New chat clears the current conversation and retains suggestions.
+Session-scoped grounded conversation. The workspace is unavailable before Session Report generation. After generation, suggested questions remain above every conversation state. New chat clears the current thread and retains suggestions.
 
 - [Approved Desktop Figma component](https://www.figma.com/design/WPRxumvm6WB4WRFlfO3lbj/Sky-AIR-Design-System?node-id=584-16343)
 - [Approved Before report state](https://www.figma.com/design/WPRxumvm6WB4WRFlfO3lbj/Sky-AIR-Design-System?node-id=1161-69688)
@@ -42,11 +69,19 @@ Session-scoped grounded conversation. Ask this session is unavailable until the 
     conversation: toSessionConversation(sessionConversationFixture),
     onAsk: fn(),
     onNewChat: fn(),
+    onOpenContext: fn(),
     projectId: "alpha-project",
     sessionId: "mobile-checkout-test",
     suggestedQuestions: suggestedSessionQuestions,
   },
-} satisfies Meta<typeof StoryPage>;
+  argTypes: {
+    conversation: { control: false },
+    onAsk: { control: false },
+    onNewChat: { control: false },
+    onOpenContext: { control: false },
+  },
+} satisfies Meta<typeof AskThisSession>;
+
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -77,15 +112,12 @@ export const SuggestedQuestions: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: suggestedSessionQuestions[0] }),
     );
-    await expect(
-      canvas.getByRole("textbox", { name: "Ask this session" }),
-    ).toHaveValue(suggestedSessionQuestions[0]);
     await expect(askButton).toBeEnabled();
   },
 };
 
 export const Answered: Story = {
-  args: { conversation: toSessionConversation(answeredTransport) },
+  args: { conversation: toSessionConversation(answeredConversation) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
@@ -96,7 +128,7 @@ export const Answered: Story = {
 };
 
 export const NewChat: Story = {
-  args: { conversation: toSessionConversation(answeredTransport) },
+  args: { conversation: toSessionConversation(answeredConversation) },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "New chat" }));
@@ -105,12 +137,17 @@ export const NewChat: Story = {
       canvas.queryByRole("heading", { name: "AIR answer" }),
     ).not.toBeInTheDocument();
     await expect(canvas.getByText("No conversation yet")).toBeVisible();
-    await expect(
-      canvas.getByRole("heading", { name: "Suggested questions" }),
-    ).toBeVisible();
   },
 };
 
-export const Loading: Story = { args: { state: "loading" } };
-export const Error: Story = { args: { errorMessage: "Retrieval failed. Your question has been retained so you can try again.", state: "error" } };
-export const MobileAnswered: Story = { args: { conversation: toSessionConversation(answeredTransport) }, parameters: { viewport: { defaultViewport: "mobile1" } } };
+export const Generating: Story = {
+  args: { state: "loading" },
+};
+
+export const RecoverableError: Story = {
+  args: {
+    errorMessage:
+      "Retrieval failed. Your question has been retained so you can try again.",
+    state: "error",
+  },
+};

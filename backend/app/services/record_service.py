@@ -182,6 +182,14 @@ def answer_record_question(
             chunk_id=item.chunk.id,
             document_id=item.document.id,
             document_name=item.document.filename,
+            session_id=item.research_session.id,
+            session_title=item.research_session.title,
+            speaker=str(
+                (item.chunk.extra_metadata or {}).get("speaker")
+                or _speaker_and_excerpt(item.chunk.text)[0]
+            ),
+            location=_chunk_location(item.chunk),
+            context_result_id=item.chunk.id,
             chunk_index=item.chunk.chunk_index,
             text=item.chunk.text,
             score=item.score,

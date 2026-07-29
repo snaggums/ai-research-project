@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import type { AISettingsPayload, Project, Session, SessionPayload } from "@/api/types";
+import type { AISettingsPayload, ChatResponse, Project, Session, SessionPayload } from "@/api/types";
 import { toProjectSummary } from "@/adapters/projects";
 import {
   compareParticipantsByLastName,
@@ -17,6 +17,7 @@ import { toSessionFormValues, toSessionPayload, toSessionSummary } from "@/adapt
 import { SharedRouteState } from "@/components/application";
 import type { ProjectFormValues } from "@/components/research/project-form";
 import type { ProjectWorkflowStep } from "@/components/research/project-workflow-summary";
+import type { AskProjectConversationTurn } from "@/components/research/ask-project-workspace";
 import { useCreateProject, useDeleteProject, useProjects, useUpdateProject } from "@/hooks/useProjects";
 import {
   useCreateParticipant,
@@ -28,9 +29,11 @@ import {
 import { useAISettings, useTestAISettings, useUpdateAISettings } from "@/hooks/useSettings";
 import { useCreateSession, useDeleteSession, useSession, useSessions, useUpdateSession } from "@/hooks/useSessions";
 import { useRecords } from "@/hooks/useRecords";
+import { useProjectChat } from "@/hooks/useChat";
 import { useDeleteTranscript, useReplaceTranscript, useRetryTranscript, useSessionTranscripts, useTranscriptContext, useTranscriptDependencies, useTranscriptSearch, useUploadTranscript } from "@/hooks/useTranscripts";
 import {
   ProjectFormDialogView,
+  ProjectAskView,
   ProjectOverviewView,
   ProjectsIndexView,
   SettingsView,
@@ -50,7 +53,6 @@ import { SessionTranscriptWorkspaceView, TranscriptContextView } from "@/pages/t
 import { toTranscriptContext, toTranscriptDependencySummary, toTranscriptDocumentDetail, toTranscriptSearchResult } from "@/adapters/transcripts";
 import { toSessionConversation, toSessionReport, toSessionTheme } from "@/adapters/synthesis";
 import { sessionRecordOptions } from "@/mocks/fixtures/sessions";
-import { suggestedSessionQuestions } from "@/mocks/fixtures/synthesis";
 import { SynthesisApiError } from "@/api/synthesis";
 import {
   useAskSession,
@@ -67,6 +69,13 @@ import {
 } from "@/hooks/useSynthesis";
 import { AskThisSessionWorkspaceView, SessionReportWorkspaceView, SessionThemesWorkspaceView } from "@/pages/synthesis-views";
 import { TranscriptCodingRouteContent } from "@/routes/transcript-coding-route-content";
+import { sessionSuggestedQuestions } from "@/routes/session-ask-suggestions";
+
+const suggestedProjectQuestions = [
+  "What findings appeared across Sessions?",
+  "Where did participants disagree?",
+  "What should the team prioritize next?",
+];
 
 const emptyAISettings: AISettingsPayload = {
   provider: "mock",
@@ -305,6 +314,150 @@ export function ProjectOverviewRoute() {
   if (!project) return <SharedRouteState state="not-found" />;
 
   return <ProjectOverviewView project={toProjectSummary(project)} steps={projectWorkflowSteps(project)} />;
+}
+
+function createTransientChatId(prefix: string) {
+  return globalThis.crypto?.randomUUID?.() ??
+    `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function toProjectAnswerParagraphs(answer: string) {
+  return answer
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph, index) => {
+      const citationReferences = Array.from(
+        paragraph.matchAll(/\[(\d+)\]/g),
+        (match) => Number(match[1]),
+      );
+      return {
+        id: `project-answer-paragraph-${index + 1}`,
+        segments: [
+          {
+            text: paragraph.replace(/\s*\[\d+\]/g, "").trim(),
+            citationReferences,
+          },
+        ],
+      };
+    });
+}
+
+function toAskProjectTurn(
+  response: ChatResponse,
+  projectId: string,
+): AskProjectConversationTurn {
+  return {
+    answer: toProjectAnswerParagraphs(response.answer),
+    citations: response.citations.map((citation, index) => ({
+      excerpt: citation.text,
+      id: citation.chunk_id,
+      reference: index + 1,
+      relevance: "supporting",
+      session: citation.session_title,
+      speakerTimestamp: `${citation.speaker} • ${citation.location}`,
+      transcript: citation.document_name,
+      transcriptHref:
+        `/projects/${projectId}/sessions/${citation.session_id}` +
+        `/documents/${citation.document_id}?result=${citation.context_result_id}` +
+        `&returnTo=${encodeURIComponent(`/projects/${projectId}/ask`)}`,
+    })),
+    id: createTransientChatId("project-answer"),
+    response: "answer",
+    role: "assistant",
+    traceabilityNote:
+      "Trace: Project Sessions → searchable active transcripts → cited transcript passages.",
+  };
+}
+
+export function ProjectAskRoute() {
+  const navigate = useNavigate();
+  const { projectId = "" } = useParams();
+  const projects = useProjects();
+  const askProject = useProjectChat(projectId);
+  const resetProjectChat = askProject.reset;
+  const project = projects.data?.find((item) => item.id === projectId);
+  const [turns, setTurns] = React.useState<AskProjectConversationTurn[]>([]);
+  const [question, setQuestion] = React.useState("");
+  const lastQuestionRef = React.useRef("");
+
+  React.useEffect(() => {
+    setTurns([]);
+    setQuestion("");
+    lastQuestionRef.current = "";
+    resetProjectChat();
+  }, [projectId, resetProjectChat]);
+
+  async function submitProjectQuestion(value: string, appendQuestion = true) {
+    const cleanQuestion = value.trim();
+    if (!cleanQuestion) return;
+    lastQuestionRef.current = cleanQuestion;
+    askProject.reset();
+    if (appendQuestion) {
+      setTurns((current) => [
+        ...current,
+        {
+          content: cleanQuestion,
+          id: createTransientChatId("project-question"),
+          role: "researcher",
+        },
+      ]);
+    }
+    try {
+      const response = await askProject.mutateAsync({ question: cleanQuestion });
+      setTurns((current) => [...current, toAskProjectTurn(response, projectId)]);
+      setQuestion("");
+    } catch {
+      setQuestion(cleanQuestion);
+    }
+  }
+
+  if (projects.isPending) return <SharedRouteState state="loading" />;
+  if (projects.isError) {
+    return (
+      <SharedRouteState
+        onRetry={() => void projects.refetch()}
+        state="recoverable-error"
+      />
+    );
+  }
+  if (!project) return <SharedRouteState state="not-found" />;
+
+  return (
+    <ProjectAskView
+      project={toProjectSummary(project)}
+      workspaceProps={{
+        errorMessage: askProject.error ? errorMessage(askProject.error) : undefined,
+        onAsk: (value) => submitProjectQuestion(value),
+        onNewChat: () => {
+          setTurns([]);
+          setQuestion("");
+          lastQuestionRef.current = "";
+          askProject.reset();
+        },
+        onOpenSessions: () => navigate(`/projects/${projectId}/sessions`),
+        onOpenTranscriptContext: (citation) => {
+          if (citation.transcriptHref) navigate(citation.transcriptHref);
+        },
+        onQuestionChange: setQuestion,
+        onRetry: () => {
+          if (lastQuestionRef.current) {
+            void submitProjectQuestion(lastQuestionRef.current, false);
+          }
+        },
+        question,
+        state: askProject.isPending
+          ? "generating"
+          : askProject.isError
+            ? "recoverable-error"
+            : turns.length
+              ? "answered"
+              : "suggested",
+        suggestedQuestions: suggestedProjectQuestions,
+        turns,
+      }}
+    />
+  );
 }
 
 export function ParticipantsCollectionRoute() {
@@ -682,13 +835,39 @@ export function SessionAskRoute() {
   const { projectId = "", sessionId = "" } = useParams();
   const projects = useProjects();
   const session = useSession(projectId, sessionId);
+  const report = useSessionReport(projectId, sessionId);
   const conversation = useSessionConversation(projectId, sessionId);
   const ask = useAskSession(projectId, sessionId);
+  const resetSessionAsk = ask.reset;
+  const [conversationStartIndex, setConversationStartIndex] = React.useState(0);
   const project = projects.data?.find((item) => item.id === projectId);
   const summary = session.data ? toSessionSummary(session.data) : undefined;
   const projectMissing = !projects.isPending && !projects.isError && !project;
   const routeState = projectMissing || isNotFound(session.error) ? "not-found" : projects.isPending || session.isPending ? "loading" : projects.isError || session.isError ? "error" : "ready";
-  return <SessionDetailView activeTab="ask" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<AskThisSessionWorkspaceView conversation={conversation.data ? toSessionConversation(conversation.data) : undefined} errorMessage={ask.error ? errorMessage(ask.error) : conversation.error ? errorMessage(conversation.error) : undefined} onAsk={(question) => ask.mutateAsync(question).then(() => undefined)} onOpenContext={(href) => navigate(href)} projectId={projectId} sessionId={sessionId} state={conversation.isPending || ask.isPending ? "loading" : conversation.isError || ask.isError ? "error" : "ready"} suggestedQuestions={suggestedSessionQuestions} />} />;
+  const fullConversation = conversation.data
+    ? toSessionConversation(conversation.data)
+    : undefined;
+  const visibleConversation = fullConversation
+    ? {
+        ...fullConversation,
+        turns: fullConversation.turns.slice(conversationStartIndex),
+      }
+    : undefined;
+
+  React.useEffect(() => {
+    setConversationStartIndex(0);
+    resetSessionAsk();
+  }, [projectId, resetSessionAsk, sessionId]);
+
+  const askState = report.isPending || conversation.isPending || ask.isPending
+    ? "loading"
+    : report.isError || conversation.isError || ask.isError
+      ? "error"
+      : report.data
+        ? "ready"
+        : "before-report";
+
+  return <SessionDetailView activeTab="ask" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<AskThisSessionWorkspaceView conversation={visibleConversation} errorMessage={ask.error ? errorMessage(ask.error) : conversation.error ? errorMessage(conversation.error) : report.error ? errorMessage(report.error) : undefined} onAsk={(question) => ask.mutateAsync(question).then(() => undefined)} onNewChat={() => { setConversationStartIndex(fullConversation?.turns.length ?? 0); ask.reset(); }} onOpenContext={(href) => navigate(href)} projectId={projectId} sessionId={sessionId} state={askState} suggestedQuestions={sessionSuggestedQuestions(session.data?.title ?? "")} />} />;
 }
 
 export function TranscriptContextRoute() {
@@ -707,6 +886,7 @@ export function TranscriptContextRoute() {
     [`${sessionRoot}/themes`, "Themes"],
     [`${sessionRoot}/report`, "Session Report"],
     [`${sessionRoot}/ask`, "Ask this session"],
+    [`/projects/${projectId}/ask`, "Ask this project"],
   ]);
   const returnHref = requestedReturn && safeReturns.has(requestedReturn) ? requestedReturn : `${sessionRoot}/transcript`;
   const returnLabel = safeReturns.get(returnHref) ?? "Transcripts";

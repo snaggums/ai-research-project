@@ -2,6 +2,10 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.chunk import Chunk
 
 
 pytestmark = pytest.mark.integration
@@ -78,6 +82,77 @@ def test_project_summary_counts_participants_and_sessions(client: TestClient) ->
     assert listed_project["participant_count"] == 2
     assert listed_project["session_count"] == 1
     assert listed_project["ready_transcript_count"] == 0
+
+
+def test_project_chat_citations_include_session_speaker_and_timestamp(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    project = create_project(client, name="Healthcare Fraud Project")
+    research_session = client.post(
+        f"/api/projects/{project['id']}/sessions",
+        json={
+            "title": "Medicare Fraud Documenter - S001",
+            "type": "interview",
+            "participant_ids": [],
+        },
+    ).json()
+    root = f"/api/projects/{project['id']}/sessions/{research_session['id']}"
+    upload = client.post(
+        f"{root}/documents",
+        files={
+            "file": (
+                "S001_Transcript.docx.txt",
+                (
+                    "Priya Nair:\nThe submission record needs a complete "
+                    "audit trail for every decision."
+                ).encode(),
+                "text/plain",
+            )
+        },
+    )
+    assert upload.status_code == 201
+    document = upload.json()
+
+    chunk = db_session.scalar(
+        select(Chunk).where(Chunk.document_id == document["id"])
+    )
+    assert chunk is not None
+    chunk.extra_metadata = {
+        **(chunk.extra_metadata or {}),
+        "speaker": "Priya Nair",
+        "timestamp": "00:12:25",
+    }
+    db_session.add(chunk)
+    db_session.commit()
+
+    response = client.post(
+        f"/api/projects/{project['id']}/chat",
+        json={"question": "How should submission records preserve auditability?"},
+    )
+
+    assert response.status_code == 200
+    citation = response.json()["citations"][0]
+    assert citation == {
+        "chunk_id": chunk.id,
+        "document_id": document["id"],
+        "document_name": "S001_Transcript.docx.txt",
+        "session_id": research_session["id"],
+        "session_title": "Medicare Fraud Documenter - S001",
+        "speaker": "Priya Nair",
+        "location": "00:12:25",
+        "context_result_id": chunk.id,
+        "chunk_index": 0,
+        "text": chunk.text,
+        "score": citation["score"],
+    }
+
+    context = client.get(
+        f"{root}/documents/{document['id']}/context/{citation['context_result_id']}"
+    )
+    assert context.status_code == 200
+    assert context.json()["result"]["speaker"] == "Priya Nair"
+    assert context.json()["result"]["location"] == "00:12:25"
 
 
 def test_update_project(client: TestClient) -> None:

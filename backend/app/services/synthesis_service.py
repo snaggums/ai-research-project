@@ -339,6 +339,14 @@ def ask_session(db: Session, research_session: ResearchSession, question: str) -
             chunk_id=chunk.id,
             document_id=chunk.document_id,
             document_name=filename,
+            session_id=research_session.id,
+            session_title=research_session.title,
+            speaker=str(
+                (chunk.extra_metadata or {}).get("speaker")
+                or _speaker_and_text(chunk.text)[0]
+            ),
+            location=_chunk_location(chunk),
+            context_result_id=chunk.id,
             chunk_index=chunk.chunk_index,
             text=chunk.text,
             score=score,
