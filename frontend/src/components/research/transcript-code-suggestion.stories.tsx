@@ -208,6 +208,22 @@ export const SuggestedCollapsed: Story = {};
 export const SuggestedSelected: Story = { args: { selected: true } };
 export const SuggestedExpanded: Story = { args: { defaultEvidenceExpanded: true } };
 export const Accepted: Story = { args: { status: "accepted" } };
+export const AcceptedLongContent: Story = {
+  args: {
+    codeName: "Evidence needs structured allegation-linked organization",
+    description: "Flat evidence lists lack types, clear labels, and links to the allegations each file supports, limiting later reviewers' ability to understand evidence context.",
+    evidence: [
+      {
+        id: "long-accepted-evidence",
+        excerpt: "I uploaded the four synthetic supporting documents and added a short description to each. Once I add the claim extract, audit spreadsheet, provider profile, and correspondence, they appear as one flat list. I need evidence types, clearer labels, and a way to connect each file to the allegation it supports.",
+        location: "8:13",
+        speaker: "Daniel Brooks",
+      },
+    ],
+    provenance: "Researcher accepted AI suggestion",
+    status: "accepted",
+  },
+};
 export const AcceptedExpanded: Story = { args: { defaultEvidenceExpanded: true, status: "accepted" } };
 export const AcceptedSelected: Story = { args: { selected: true, status: "accepted" } };
 export const Uncoded: Story = { args: { codeName: "Uncoded highlight", description: "This saved Highlight does not yet have a Record code.", status: "uncoded" } };

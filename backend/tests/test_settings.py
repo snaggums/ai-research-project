@@ -48,6 +48,8 @@ def test_provider_verification_uses_saved_model_and_sends_no_research_data(
     assert captured["api_key"] == "test-secret"
     assert captured["max_tokens"] == 8
     assert captured["timeout"] == 15
+    assert captured["custom_llm_provider"] == "openai"
+    assert "temperature" not in captured
     prompt = " ".join(message["content"] for message in captured["messages"])
     assert prompt == "This is a provider connection test. Reply with exactly OK. Reply with OK."
     assert all(term not in prompt for term in ("Project", "Session", "Transcript", "Participant"))

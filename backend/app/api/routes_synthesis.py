@@ -63,7 +63,11 @@ def generate_session_report(project_id: str, session_id: str, db: Session = Depe
 @router.patch("/projects/{project_id}/sessions/{session_id}/report", response_model=SessionReportRead)
 def update_session_report(project_id: str, session_id: str, payload: SessionReportUpdate, db: Session = Depends(get_db)):
     research_session = _require_session(db, project_id, session_id)
-    report = synthesis_service.update_session_report(db, research_session, payload)
+    try:
+        report = synthesis_service.update_session_report(db, research_session, payload)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     if report is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session Report not found")
     return report

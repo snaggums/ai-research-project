@@ -1,11 +1,11 @@
 import * as React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { toSessionReport } from "@/adapters/synthesis";
+import { toSessionReport, toSessionTheme } from "@/adapters/synthesis";
 import type { SessionReport } from "@/domain/types";
-import { sessionReportFixture } from "@/mocks/fixtures/synthesis";
-import { SessionReportWorkspaceView, type SessionReportWorkspaceViewProps } from "./synthesis-views";
+import { sessionReportFixture, sessionThemeFixtures } from "@/mocks/fixtures/synthesis";
+import { SessionReportWorkspaceView, type SessionReportWorkspaceViewProps, SessionThemesWorkspaceView } from "./synthesis-views";
 
 function StatefulReportWorkspace() {
   const [report, setReport] = React.useState<SessionReport>(toSessionReport(sessionReportFixture));
@@ -60,5 +60,71 @@ describe("SessionReportWorkspaceView item editing", () => {
     expect(within(updatedCard!).getByText("Research operations")).toBeInTheDocument();
     expect(within(updatedCard!).queryByText("Needs review")).not.toBeInTheDocument();
     expect(within(updatedCard!).getByText("Confirmed")).toBeInTheDocument();
+  });
+});
+
+describe("SessionThemesWorkspaceView editing", () => {
+  it("edits only the Theme name and summary without exposing review decisions", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn().mockResolvedValue(undefined);
+    const onStatusChange = vi.fn();
+    const themes = sessionThemeFixtures.map(toSessionTheme);
+    render(
+      <SessionThemesWorkspaceView
+        onEdit={onEdit}
+        onGenerate={() => undefined}
+        onStatusChange={onStatusChange}
+        projectId="alpha-project"
+        sessionId="mobile-checkout-test"
+        themes={themes}
+      />,
+    );
+
+    const themeCard = screen.getByRole("heading", { name: themes[0].name }).closest("article");
+    if (!themeCard) throw new Error("Expected the Theme card.");
+    await user.click(within(themeCard).getByRole("button", { name: "Edit" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit theme" });
+    const dialogScope = within(dialog);
+    expect(dialogScope.queryByRole("button", { name: /Review/ })).not.toBeInTheDocument();
+    expect(dialogScope.queryByRole("button", { name: /Reject/ })).not.toBeInTheDocument();
+
+    await user.clear(dialogScope.getByRole("textbox", { name: /^Theme name/ }));
+    await user.type(dialogScope.getByRole("textbox", { name: /^Theme name/ }), "Clearer checkout orientation");
+    await user.clear(dialogScope.getByRole("textbox", { name: /^Theme summary/ }));
+    await user.type(dialogScope.getByRole("textbox", { name: /^Theme summary/ }), "Participants need persistent context while moving through checkout.");
+    await user.click(dialogScope.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(onEdit).toHaveBeenCalledWith(themes[0].id, {
+      name: "Clearer checkout orientation",
+      summary: "Participants need persistent context while moving through checkout.",
+    }));
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: "Edit theme" })).not.toBeInTheDocument();
+    expect(screen.getByText("AI Generated")).toBeInTheDocument();
+  }, 10_000);
+
+  it("keeps the editor open and reports a failed save", async () => {
+    const user = userEvent.setup();
+    const themes = sessionThemeFixtures.map(toSessionTheme);
+    const onEdit = vi.fn().mockRejectedValue(new Error("The Theme service is unavailable."));
+    render(
+      <SessionThemesWorkspaceView
+        onEdit={onEdit}
+        onGenerate={() => undefined}
+        projectId="alpha-project"
+        sessionId="mobile-checkout-test"
+        themes={themes}
+      />,
+    );
+
+    const themeCard = screen.getByRole("heading", { name: themes[0].name }).closest("article");
+    if (!themeCard) throw new Error("Expected the Theme card.");
+    await user.click(within(themeCard).getByRole("button", { name: "Edit" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Edit theme" })).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(onEdit).toHaveBeenCalledOnce());
+    expect(await screen.findByText("The Theme service is unavailable.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Edit theme" })).toBeInTheDocument();
   });
 });

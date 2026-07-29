@@ -4,6 +4,10 @@ import {
   getLatestRecordSynthesis,
   getRecord,
   getRecordChatSources,
+  getRecordKnowledge,
+  getRecordKnowledgeEvidence,
+  getRecordKnowledgeSources,
+  getRecordTranscriptCodes,
   getRecordSynthesisEligibility,
   getRecordSynthesisEvidence,
   listRecords,
@@ -15,9 +19,38 @@ import {
 describe("Record API contract", () => {
   it("loads the fixed catalog, detail, related Sessions, and automatic eligibility", async () => {
     expect((await listRecords()).map(({ name }) => name)).toEqual(["Medicare Fraud Documenter", "Medicaid Fraud Documenter", "Medicare Fraud Finder"]);
-    expect((await getRecord("record-1")).readiness).toBe("ready");
+    expect((await getRecord("record-1")).readiness).toBe("up-to-date");
     expect((await listRecordSessions("record-1")).map(({ id }) => id)).toEqual(["mobile-checkout-test", "checkout-interview"]);
     expect((await getRecordSynthesisEligibility("record-1")).included_sessions).toHaveLength(2);
+  });
+
+  it("loads exact approved Record Knowledge, sources, and evidence", async () => {
+    const knowledge = await getRecordKnowledge("record-1");
+    expect(knowledge.items).not.toHaveLength(0);
+    expect(knowledge.items.every((item) => item.status === "current")).toBe(true);
+    const sources = await getRecordKnowledgeSources("record-1");
+    expect(sources.sources.some((source) => source.included)).toBe(true);
+    const item = knowledge.items[0];
+    const evidence = await getRecordKnowledgeEvidence(
+      "record-1",
+      item.id,
+      item.evidence_ids[0],
+    );
+    expect(evidence.item_title).toBe(item.title);
+  });
+
+  it("loads only Accepted codes with supporting Highlights across Sessions", async () => {
+    const transcriptCodes = await getRecordTranscriptCodes("record-1");
+    expect(transcriptCodes.accepted_code_count).toBe(22);
+    expect(transcriptCodes.session_count).toBe(5);
+    expect(transcriptCodes.codes).toHaveLength(22);
+    expect(
+      transcriptCodes.codes.every(
+        (code) =>
+          code.accepted_highlight_count > 0 &&
+          code.evidence_groups.some((group) => group.highlights.length > 0),
+      ),
+    ).toBe(true);
   });
 
   it("reads, regenerates, reviews, and opens Record synthesis evidence", async () => {

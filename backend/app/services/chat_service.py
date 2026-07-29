@@ -2,6 +2,7 @@ from app.core.config import settings as app_settings
 from app.schemas.chat import ChatCitation, ChatResponse
 from app.schemas.search import SearchResult
 from app.services import ai_settings_service, search_service
+from app.services.ai_completion_options import completion_model_options
 from sqlalchemy.orm import Session
 
 
@@ -90,9 +91,9 @@ def _answer_with_litellm(
         response = completion(
             model=model,
             messages=messages,
-            temperature=0.2,
             api_key=_api_key_for_provider(provider),
             api_base=base_url,
+            **completion_model_options(provider, model),
         )
     except Exception as exc:
         raise ValueError(

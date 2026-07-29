@@ -2,7 +2,8 @@
 
 Status: Architecture, Figma Research Objects, Figma Page Templates, the
 React/Storybook contract map, and implementation scopes I1-I8 are approved.
-Sprint 8 and the Record Synthesis MVP are implemented, verified, and merged.
+Sprint 8 and the legacy Record Synthesis MVP are implemented. Deterministic
+Approved Session Report promotion is now the canonical Record Knowledge flow.
 The Transcript Coding planning contract is approved; Storybook and React wait
 for the core Figma workspace.
 Version: 2.0
@@ -37,6 +38,9 @@ Each implementation scope still requires its own approval.
 8. [Transcript Coding Vertical Slice Contract](./08_TRANSCRIPT_CODING_CONTRACT.md)
    - the Highlight and Record Code domain model, API contracts, state
    transitions, lean Figma policy, and acceptance criteria for the next slice.
+9. [Record Knowledge Promotion Contract](./09_RECORD_KNOWLEDGE_PROMOTION_CONTRACT.md)
+   - exact Approved Session Report promotion, revision history, preservation,
+   canonical routes, and API boundaries.
 
 ## Approved direction
 
@@ -58,8 +62,9 @@ Each implementation scope still requires its own approval.
 - Sessions may relate explicitly to Records and Common Components.
 - The Record Synthesis MVP exposes exactly one Record and one Primary Transcript
   per Session while preserving the extensible canonical model.
-- Record synthesis automatically uses all eligible related Sessions and produces
-  Requirements, Decisions, and Action Items with source lineage.
+- Approved Session Reports automatically contribute their exact Requirements,
+  Decisions, and Action Items to Record Knowledge with source lineage. Legacy
+  generated synthesis runs are retained only for audit and compatibility.
 - Medicare Fraud Documenter, Medicaid Fraud Documenter, and Medicare Fraud Finder are fixed read-only MVP objects; Common
   Components and manual synthesis groups are deferred.
 - Requirements, Decision Log entries, and Action Items belong to or relate to at

@@ -22,7 +22,6 @@ export interface RecordCodeWorkspaceProps
   collectionState?: RecordCodeCollectionState;
   comparisonState?: RecordCodeComparisonState;
   defaultSortOpen?: boolean;
-  eligibleSessionCount: number;
   headingLevel?: "h1" | "h2";
   onClearSearch: () => void;
   onOpenInTranscriptCoding?: (highlight: RecordCodeSupportingHighlightValue) => void;
@@ -34,6 +33,7 @@ export interface RecordCodeWorkspaceProps
   onViewRelatedSessions?: () => void;
   query: string;
   selectedCode?: RecordCodeDetailValue;
+  sessionCount: number;
   sort: RecordCodeSortValue;
   totalCodeCount: number;
 }
@@ -44,7 +44,6 @@ export function RecordCodeWorkspace({
   collectionState = "ready",
   comparisonState = "ready",
   defaultSortOpen = false,
-  eligibleSessionCount,
   headingLevel = "h1",
   onClearSearch,
   onOpenInTranscriptCoding,
@@ -56,6 +55,7 @@ export function RecordCodeWorkspace({
   onViewRelatedSessions,
   query,
   selectedCode,
+  sessionCount,
   sort,
   totalCodeCount,
   ...props
@@ -72,8 +72,8 @@ export function RecordCodeWorkspace({
           Transcript codes
         </Heading>
         <p className="text-sm text-[var(--air-color-text-secondary)]">
-          Explore accepted Codes across eligible Sessions and open supporting Highlights in
-          their source Transcript Coding workspace.
+          Explore accepted Codes across Sessions and open supporting Highlights in their source
+          Transcript Coding workspace.
         </p>
       </header>
       <div className="grid grid-cols-[400px_minmax(0,1fr)] items-start gap-4">
@@ -81,7 +81,6 @@ export function RecordCodeWorkspace({
           className="w-[400px]"
           codes={codes}
           defaultSortOpen={defaultSortOpen}
-          eligibleSessionCount={eligibleSessionCount}
           onClearSearch={onClearSearch}
           onQueryChange={onQueryChange}
           onRetry={onRetryCollection}
@@ -90,6 +89,7 @@ export function RecordCodeWorkspace({
           onViewRelatedSessions={onViewRelatedSessions}
           query={query}
           selectedCodeId={selectedCode?.id}
+          sessionCount={sessionCount}
           sort={sort}
           state={collectionState}
           totalCodeCount={totalCodeCount}

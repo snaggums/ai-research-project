@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.models.document import Document
 from app.models.participant import Participant
-from app.models.record import ProductRecord, RecordSynthesisRun, RecordSynthesisSource, SessionRecord
+from app.models.record import ProductRecord, RecordKnowledgePromotion, RecordSynthesisRun, RecordSynthesisSource, SessionRecord
 from app.models.research_session import ResearchSession, SessionParticipant, SessionRelationship
 from app.models.session_report import SessionReport
 from app.models.theme import Theme
@@ -65,6 +65,15 @@ def update_session(db: Session, research_session: ResearchSession, payload: Sess
 
 
 def delete_session(db: Session, research_session: ResearchSession) -> None:
+    promoted = db.scalar(
+        select(RecordKnowledgePromotion.id)
+        .where(RecordKnowledgePromotion.session_id == research_session.id)
+        .limit(1)
+    )
+    if promoted is not None:
+        raise ValueError(
+            "This Session has approved Record Knowledge and cannot be deleted. Preserve it as part of the Record history."
+        )
     file_paths = [Path(document.file_path) for document in research_session.documents]
     affected_runs = select(RecordSynthesisSource.run_id).where(
         RecordSynthesisSource.session_id == research_session.id
@@ -109,7 +118,17 @@ def replace_record_assignment(db: Session, research_session: ResearchSession, ta
     if len(unique_ids) > 1:
         raise ValueError("Select one Record for this Session.")
     current_ids = {value.record_id for value in research_session.record_assignments}
-    if current_ids != set(unique_ids):
+    assignment_changed = current_ids != set(unique_ids)
+    if assignment_changed:
+        promoted = db.scalar(
+            select(RecordKnowledgePromotion.id)
+            .where(RecordKnowledgePromotion.session_id == research_session.id)
+            .limit(1)
+        )
+        if promoted is not None:
+            raise ValueError(
+                "record_change_blocked_by_knowledge: This Session has approved Record Knowledge. Its Record assignment is preserved for historical traceability."
+            )
         coded_highlight = db.scalar(
             select(HighlightCodeAssignment.highlight_id)
             .join(TranscriptHighlight, TranscriptHighlight.id == HighlightCodeAssignment.highlight_id)
@@ -138,6 +157,25 @@ def replace_record_assignment(db: Session, research_session: ResearchSession, ta
         research_session.relationships = [
             value for value in research_session.relationships if value.target_type != "record"
         ] + [legacy_reference]
+        if assignment_changed:
+            db.flush()
+            from app.services import record_knowledge_service
+
+            approved_reports = db.scalars(
+                select(SessionReport)
+                .where(
+                    SessionReport.session_id == research_session.id,
+                    SessionReport.approved_at.is_not(None),
+                )
+                .order_by(
+                    SessionReport.approved_at.asc(),
+                    SessionReport.created_at.asc(),
+                )
+            ).all()
+            for approved_report in approved_reports:
+                record_knowledge_service.promote_approved_report(
+                    db, research_session, approved_report
+                )
     else:
         research_session.record_assignments = []
         research_session.relationships = [

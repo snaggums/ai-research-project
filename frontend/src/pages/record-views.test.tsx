@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import { toSessionSummary } from "@/adapters/sessions";
 import { recordCodeDetails } from "@/components/research/record-code-story-data";
 import { askRecordSuggestedQuestions } from "@/mocks/fixtures/ask-record";
-import { insufficientRecordScope, readyRecordScope, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
+import { insufficientRecordScope, readyRecordScope, recordKnowledge, recordSummaries, recordSynthesis } from "@/mocks/fixtures/records";
 import { sessionApiFixtures } from "@/mocks/fixtures/sessions";
 import { RecordDetailView, RecordsCollectionView, RecordSynthesisView } from "./record-views";
 
@@ -14,50 +14,44 @@ describe("Record page compositions", () => {
     render(<RecordsCollectionView records={recordSummaries} />);
     expect(screen.getByRole("heading", { level: 1, name: "Records" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Medicare Fraud Documenter" })).toHaveAttribute("href", "/records/record-1");
-    expect(screen.getAllByText(/eligible Session/)).not.toHaveLength(0);
+    expect(screen.getAllByText(/approved report/)).not.toHaveLength(0);
   });
 
-  it("shows automatic scope, related Sessions, and the latest synthesis", () => {
-    render(<RecordDetailView onGenerate={() => undefined} onOpenSynthesis={() => undefined} record={recordSummaries[0]} scope={readyRecordScope} sessions={sessionApiFixtures.slice(0, 2).map(toSessionSummary)} synthesis={recordSynthesis} />);
-    expect(screen.getByRole("heading", { name: "Synthesis scope" })).toBeInTheDocument();
+  it("shows approved sources and related Sessions without generation actions", () => {
+    render(<RecordDetailView knowledge={recordKnowledge} record={recordSummaries[0]} scope={readyRecordScope} sessions={sessionApiFixtures.slice(0, 2).map(toSessionSummary)} />);
+    expect(screen.getByRole("heading", { name: "Knowledge sources" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Related Sessions" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate synthesis" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Review synthesis" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate synthesis" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review synthesis" })).not.toBeInTheDocument();
   });
 
-  it("composes the approved Knowledge view from every latest synthesis item", async () => {
+  it("composes Record Knowledge from exact approved Session Report items", async () => {
     const user = userEvent.setup();
     const onOpenEvidence = vi.fn();
-    const onStatusChange = vi.fn();
     const onViewChange = vi.fn();
     render(
       <RecordDetailView
         activeView="knowledge"
-        onGenerate={() => undefined}
+        knowledge={recordKnowledge}
         onOpenEvidence={onOpenEvidence}
-        onStatusChange={onStatusChange}
         onViewChange={onViewChange}
         record={recordSummaries[0]}
         scope={readyRecordScope}
         sessions={[]}
-        synthesis={recordSynthesis}
       />,
     );
     expect(screen.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("9 items")).toBeInTheDocument();
-    expect(screen.getAllByText("AI Generated")).not.toHaveLength(0);
-    expect(screen.getAllByText("Superseded")).not.toHaveLength(0);
+    expect(screen.getAllByText("Current")).not.toHaveLength(0);
     await user.click(screen.getByRole("button", { name: /Review evidence links for approved items/ }));
     await user.click(screen.getByRole("button", { name: "Open evidence" }));
     expect(onOpenEvidence).toHaveBeenCalledWith("record-action-evidence-links");
-    await user.click(screen.getByRole("button", { name: "Approve item" }));
-    expect(onStatusChange).toHaveBeenCalledWith("record-action-evidence-links", "approved");
+    expect(screen.queryByRole("button", { name: "Approve item" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Overview" }));
     expect(onViewChange).toHaveBeenCalledWith("overview");
   });
 
-  it("integrates Ask Record as a Record Detail view without synthesis actions", () => {
+  it("integrates Ask this record as a Record Detail view without synthesis actions", () => {
     render(
       <RecordDetailView
         activeView="ask-record"
@@ -72,15 +66,15 @@ describe("Record page compositions", () => {
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "Ask Record" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Ask this record" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     expect(
-      screen.getByRole("heading", { name: "Ask Medicare Fraud Documenter" }),
+      screen.getByRole("heading", { name: "Ask this record" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", { name: "Ask Medicare Fraud Documenter" }),
+      screen.getByRole("textbox", { name: "Ask this record" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Ready to synthesize" }),
@@ -97,7 +91,7 @@ describe("Record page compositions", () => {
         onOpenInTranscriptCoding={onOpenInTranscriptCoding}
         onViewChange={onViewChange}
         record={recordSummaries[0]}
-        recordCodeEligibleSessionCount={5}
+        recordCodeSessionCount={5}
         recordCodes={recordCodeDetails}
         scope={readyRecordScope}
         sessions={[]}
@@ -117,19 +111,24 @@ describe("Record page compositions", () => {
     await user.click(screen.getByRole("combobox", { name: "Sort by" }));
     await user.click(screen.getByRole("option", { name: "Name Z–A" }));
     expect(within(codeList).getAllByRole("button")[0]).toHaveTextContent(
-      "Table navigation",
+      "Submission readiness requires explicit criteria and audit receipt",
     );
 
-    await user.type(screen.getByRole("searchbox", { name: "Search" }), "focus feedback");
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search" }),
+      "decision support for legally",
+    );
     expect(within(codeList).getAllByRole("button")).toHaveLength(1);
     await user.click(within(codeList).getByRole("button"));
     expect(
-      screen.getByRole("heading", { name: "Focus feedback" }),
+      screen.getByRole("heading", { name: "Decision support for legally meaningful actions" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Open in Transcript Coding" }));
+    await user.click(
+      screen.getAllByRole("button", { name: "Open in Transcript Coding" })[0],
+    );
     expect(onOpenInTranscriptCoding).toHaveBeenCalledWith(
-      recordCodeDetails[1].evidenceGroups[0].highlights[0],
+      recordCodeDetails[0].evidenceGroups[0].highlights[0],
     );
 
     await user.click(screen.getByRole("tab", { name: "Overview" }));

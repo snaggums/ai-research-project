@@ -48,8 +48,8 @@ export function RecordListItem({ className, href, layout = "default", onOpen, re
         </header>
         <dl className={cn("mt-6 grid gap-4", !compact && "sm:grid-cols-3")}>
           <div><dt className="text-xs text-[var(--air-color-text-secondary)]">Related Sessions</dt><dd className="mt-2 text-sm">{record.relatedSessionCount} related Sessions</dd></div>
-          <div><dt className="text-xs text-[var(--air-color-text-secondary)]">Eligible Sessions</dt><dd className="mt-2 text-sm">{record.eligibleSessionCount} eligible {record.eligibleSessionCount === 1 ? "Session" : "Sessions"}</dd></div>
-          <div><dt className="text-xs text-[var(--air-color-text-secondary)]">Last synthesized</dt><dd className="mt-2 text-sm">{record.latestSynthesisAt ? `Synthesized ${formatRecordSynthesisDate(record.latestSynthesisAt, false)}` : "Not yet synthesized"}</dd></div>
+          <div><dt className="text-xs text-[var(--air-color-text-secondary)]">Approved Session Reports</dt><dd className="mt-2 text-sm">{record.approvedReportCount ?? record.eligibleSessionCount} approved {(record.approvedReportCount ?? record.eligibleSessionCount) === 1 ? "report" : "reports"}</dd></div>
+          <div><dt className="text-xs text-[var(--air-color-text-secondary)]">Knowledge updated</dt><dd className="mt-2 text-sm">{record.knowledgeUpdatedAt ? formatRecordSynthesisDate(record.knowledgeUpdatedAt, false) : "No approved knowledge yet"}</dd></div>
         </dl>
       </div>
     </article>

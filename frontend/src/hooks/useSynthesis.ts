@@ -44,7 +44,15 @@ export function useGenerateSessionReport(projectId: string, sessionId: string) {
 
 export function useUpdateSessionReportStatus(projectId: string, sessionId: string) {
   const client = useQueryClient();
-  return useMutation({ mutationFn: (status: SessionReport["status"]) => updateSessionReportStatus(projectId, sessionId, status), onSuccess: (report) => client.setQueryData(queryKeys.sessionReport(projectId, sessionId), report) });
+  return useMutation({
+    mutationFn: (status: SessionReport["status"]) => updateSessionReportStatus(projectId, sessionId, status),
+    onSuccess: (report) => {
+      client.setQueryData(queryKeys.sessionReport(projectId, sessionId), report);
+      if (report.status === "approved") {
+        void client.invalidateQueries({ queryKey: queryKeys.records() });
+      }
+    },
+  });
 }
 
 export function useUpdateSessionReport(projectId: string, sessionId: string) {

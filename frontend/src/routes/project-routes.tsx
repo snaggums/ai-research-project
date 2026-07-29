@@ -606,6 +606,7 @@ export function SessionTranscriptRoute() {
                 remove.mutate({ documentId, dependencyVersion: dependencies.data.version });
               }
             }}
+            onClearSearch={() => search.reset()}
             onOpenContext={(href) => navigate(href)}
             onRetry={(documentId) => retry.mutate(documentId)}
             onRetryLoad={() => void transcripts.refetch()}
@@ -654,7 +655,7 @@ export function SessionThemesRoute() {
     update.mutate({ themeId, payload: { status } });
     if (status === "approved" || status === "rejected") setSelectedThemeId(undefined);
   };
-  return <SessionDetailView activeTab="themes" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<SessionThemesWorkspaceView errorMessage={themes.error ? errorMessage(themes.error) : undefined} generating={generate.isPending} onCloseReview={() => setSelectedThemeId(undefined)} onGenerate={() => generate.mutate()} onOpenContext={(href) => navigate(href)} onRetry={() => void themes.refetch()} onReview={(theme) => { setSelectedThemeId(theme.id); if (theme.status === "ai-generated") changeStatus(theme.id, "researcher-reviewed"); }} onStatusChange={changeStatus} projectId={projectId} selectedThemeId={selectedThemeId} sessionId={sessionId} state={themes.isPending ? "loading" : themes.isError ? "error" : "ready"} themes={values} />} />;
+  return <SessionDetailView activeTab="themes" onEditSession={() => navigate(`/projects/${projectId}/sessions/${sessionId}/edit`)} onRetry={() => void session.refetch()} projectId={projectId} projectName={project?.name ?? "Project"} routeState={routeState} session={summary} workspaceContent={<SessionThemesWorkspaceView errorMessage={themes.error ? errorMessage(themes.error) : undefined} generating={generate.isPending} onCloseReview={() => setSelectedThemeId(undefined)} onEdit={(themeId, payload) => update.mutateAsync({ themeId, payload }).then(() => undefined)} onGenerate={() => generate.mutate()} onOpenContext={(href) => navigate(href)} onRetry={() => void themes.refetch()} onReview={(theme) => setSelectedThemeId(theme.id)} onStatusChange={changeStatus} projectId={projectId} selectedThemeId={selectedThemeId} sessionId={sessionId} state={themes.isPending ? "loading" : themes.isError ? "error" : "ready"} themes={values} />} />;
 }
 
 export function SessionReportRoute() {

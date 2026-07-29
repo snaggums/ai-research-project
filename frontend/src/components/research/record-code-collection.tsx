@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { RecordCodeListItem } from "./record-code-list-item";
 import {
@@ -12,13 +13,12 @@ import {
   type RecordCodeSummaryValue,
 } from "./record-code-types";
 
-export type RecordCodeCollectionState = "ready" | "empty" | "error";
+export type RecordCodeCollectionState = "ready" | "loading" | "empty" | "error";
 
 export interface RecordCodeCollectionProps
   extends Omit<React.HTMLAttributes<HTMLElement>, "onChange"> {
   codes: RecordCodeSummaryValue[];
   defaultSortOpen?: boolean;
-  eligibleSessionCount: number;
   onClearSearch: () => void;
   onQueryChange: (query: string) => void;
   onRetry?: () => void;
@@ -27,6 +27,7 @@ export interface RecordCodeCollectionProps
   onViewRelatedSessions?: () => void;
   query: string;
   selectedCodeId?: string;
+  sessionCount: number;
   sort: RecordCodeSortValue;
   state?: RecordCodeCollectionState;
   totalCodeCount: number;
@@ -36,7 +37,6 @@ export function RecordCodeCollection({
   className,
   codes,
   defaultSortOpen = false,
-  eligibleSessionCount,
   onClearSearch,
   onQueryChange,
   onRetry,
@@ -45,6 +45,7 @@ export function RecordCodeCollection({
   onViewRelatedSessions,
   query,
   selectedCodeId,
+  sessionCount,
   sort,
   state = "ready",
   totalCodeCount,
@@ -72,7 +73,7 @@ export function RecordCodeCollection({
         <h2 className="text-xl font-semibold">Accepted codes</h2>
         <p className="text-[13px] text-[var(--air-color-text-secondary)]">
           {totalCodeCount} {totalCodeCount === 1 ? "Code" : "Codes"} from{" "}
-          {eligibleSessionCount} eligible {eligibleSessionCount === 1 ? "Session" : "Sessions"}
+          {sessionCount} {sessionCount === 1 ? "Session" : "Sessions"}
         </p>
       </header>
 
@@ -107,12 +108,23 @@ export function RecordCodeCollection({
         />
       </div>
 
-      {state === "empty" ? (
+      {state === "loading" ? (
+        <div
+          aria-live="polite"
+          className="flex min-h-28 items-center justify-center gap-3"
+          role="status"
+        >
+          <Spinner label="Loading accepted Codes" size="small" />
+          <span className="text-sm text-[var(--air-color-text-secondary)]">
+            Loading accepted Codes...
+          </span>
+        </div>
+      ) : state === "empty" ? (
         <div className="grid gap-2" role="status">
           <h3 className="text-lg font-semibold">No accepted Codes yet</h3>
           <p className="text-sm text-[var(--air-color-text-secondary)]">
-            Accepted Codes appear after researchers apply or accept Codes in eligible Session
-            Transcript Coding.
+            Accepted Codes appear after researchers apply or accept Codes in Session Transcript
+            Coding.
           </p>
           {onViewRelatedSessions ? (
             <div className="pt-1">
@@ -163,7 +175,7 @@ export function RecordCodeCollection({
       )}
 
       <p className="text-xs text-[var(--air-color-text-secondary)]">
-        Counts include accepted Highlights from eligible Sessions only.
+        Counts include accepted Highlights from Sessions assigned to this Record.
       </p>
     </section>
   );

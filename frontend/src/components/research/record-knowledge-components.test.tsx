@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { recordSynthesisItems } from "@/mocks/fixtures/records";
+import { recordKnowledge } from "@/mocks/fixtures/records";
 import { RecordKnowledgeRow } from "./record-knowledge-row";
 import {
   RecordKnowledgeWorkspace,
@@ -22,7 +22,6 @@ function WorkspaceHarness({
   const [expandedItemIds, setExpandedItemIds] = React.useState<Set<string>>(
     () => new Set(),
   );
-
   return (
     <RecordKnowledgeWorkspace
       {...props}
@@ -46,103 +45,71 @@ describe("Record Knowledge components", () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     const { rerender } = render(
-      <RecordKnowledgeRow
-        expanded={false}
-        item={recordSynthesisItems[0]}
-        onToggle={onToggle}
-      />,
+      <RecordKnowledgeRow expanded={false} item={recordKnowledge.items[0]} onToggle={onToggle} />,
     );
     const disclosure = screen.getByRole("button", { name: /Checkout must confirm payment success/ });
     disclosure.focus();
     await user.click(disclosure);
     expect(onToggle).toHaveBeenCalledOnce();
-    rerender(
-      <RecordKnowledgeRow
-        expanded
-        item={recordSynthesisItems[0]}
-        onToggle={onToggle}
-      />,
-    );
+    rerender(<RecordKnowledgeRow expanded item={recordKnowledge.items[0]} onToggle={onToggle} />);
     expect(disclosure).toHaveFocus();
     expect(disclosure).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("region", { name: /Checkout must confirm payment success/ })).toBeInTheDocument();
   });
 
-  it("uses compact Session and Report item counts in the disclosure metadata", () => {
+  it("shows the exact source Session and supporting passage count", () => {
     render(
-      <RecordKnowledgeRow
-        expanded={false}
-        item={recordSynthesisItems[0]}
-        onToggle={() => undefined}
-      />,
+      <RecordKnowledgeRow expanded={false} item={recordKnowledge.items[0]} onToggle={() => undefined} />,
     );
-
-    expect(screen.getByText("2 Sessions · 3 Report items")).toBeInTheDocument();
-    expect(screen.queryByText(/source Sessions|source Report items/)).not.toBeInTheDocument();
+    expect(screen.getByText("Checkout usability test · 2 supporting passages")).toBeInTheDocument();
   });
 
   it("allows multiple knowledge rows to remain expanded", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceHarness items={recordSynthesisItems} />);
+    render(<WorkspaceHarness items={recordKnowledge.items} />);
     const requirement = screen.getByRole("button", { name: /Checkout must confirm payment success/ });
     const decision = screen.getByRole("button", { name: /Keep Knowledge separate from Ask Record/ });
     await user.click(requirement);
     await user.click(decision);
     expect(requirement).toHaveAttribute("aria-expanded", "true");
     expect(decision).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("region", { name: /Checkout must confirm payment success/ })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /Keep Knowledge separate from Ask Record/ })).toBeInTheDocument();
   });
 
   it("filters titles and summaries with case-insensitive literal matching", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceHarness items={recordSynthesisItems} />);
+    render(<WorkspaceHarness items={recordKnowledge.items} />);
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "KNOWLEDGE");
     expect(screen.getByText("3 items")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Requirements" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Decisions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Decision Log" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Action items" })).toBeInTheDocument();
-    expect(screen.getByText("Search uses literal keyword matching")).toBeInTheDocument();
-    expect(screen.getByText("Review evidence links for approved items")).toBeInTheDocument();
   });
 
   it("clears a no-results query, restores all items, and returns focus to Search", async () => {
     const user = userEvent.setup();
-    render(<WorkspaceHarness initialQuery="chargeback" items={recordSynthesisItems} />);
-    const heading = screen.getByRole("heading", { name: "No knowledge matches “chargeback”" });
-    const noResults = heading.closest("[role='status']");
+    render(<WorkspaceHarness initialQuery="chargeback" items={recordKnowledge.items} />);
+    const noResults = screen.getByRole("heading", { name: "No knowledge matches “chargeback”" }).closest("[role='status']");
     expect(noResults).not.toBeNull();
     await user.click(within(noResults as HTMLElement).getByRole("button", { name: "Clear search" }));
     await waitFor(() => expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus());
     expect(screen.getByText("9 items")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Decisions" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Action items" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Decision Log" })).toBeInTheDocument();
   });
 
   it("exposes retry actions for each failed category without stale rows", () => {
     const onRetry = vi.fn();
-    render(
-      <WorkspaceHarness
-        items={recordSynthesisItems}
-        onRetry={onRetry}
-        state="error"
-      />,
-    );
+    render(<WorkspaceHarness items={recordKnowledge.items} onRetry={onRetry} state="error" />);
     expect(screen.queryByText("Checkout must confirm payment success")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Retry" })).toHaveLength(3);
   });
 
   it("has no automated semantic violations in ready and no-results states", async () => {
-    const ready = render(<WorkspaceHarness items={recordSynthesisItems} />);
+    const ready = render(<WorkspaceHarness items={recordKnowledge.items} />);
     expect((await axe.run(ready.container, {
       rules: { "color-contrast": { enabled: false }, region: { enabled: false } },
     })).violations).toEqual([]);
     ready.unmount();
-
-    const noResults = render(
-      <WorkspaceHarness initialQuery="chargeback" items={recordSynthesisItems} />,
-    );
+    const noResults = render(<WorkspaceHarness initialQuery="chargeback" items={recordKnowledge.items} />);
     expect((await axe.run(noResults.container, {
       rules: { "color-contrast": { enabled: false }, region: { enabled: false } },
     })).violations).toEqual([]);

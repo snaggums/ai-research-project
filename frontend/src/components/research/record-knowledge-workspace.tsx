@@ -3,9 +3,10 @@ import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type {
+  RecordKnowledgeItem,
+  RecordKnowledgeItemType,
   LifecycleStatus,
   RecordSynthesisItem,
-  RecordSynthesisItemType,
 } from "@/domain/types";
 import { cn } from "@/lib/utils";
 import {
@@ -18,7 +19,7 @@ export type RecordKnowledgeWorkspaceState = "ready" | "loading" | "empty" | "err
 
 export interface RecordKnowledgeWorkspaceProps extends React.HTMLAttributes<HTMLElement> {
   expandedItemIds?: ReadonlySet<string>;
-  items: RecordSynthesisItem[];
+  items: Array<RecordKnowledgeItem | RecordSynthesisItem>;
   onOpenEvidence?: (itemId: string) => void;
   onQueryChange: (value: string) => void;
   onRetry?: () => void;
@@ -29,9 +30,9 @@ export interface RecordKnowledgeWorkspaceProps extends React.HTMLAttributes<HTML
   statusUpdatingItemId?: string;
 }
 
-const sectionOrder: Array<{ label: string; type: RecordSynthesisItemType }> = [
+const sectionOrder: Array<{ label: string; type: RecordKnowledgeItemType }> = [
   { label: "Requirements", type: "requirement" },
-  { label: "Decisions", type: "decision" },
+  { label: "Decision Log", type: "decision" },
   { label: "Action items", type: "action-item" },
 ];
 
@@ -42,11 +43,9 @@ export function RecordKnowledgeWorkspace({
   onOpenEvidence,
   onQueryChange,
   onRetry,
-  onStatusChange,
   onToggleItem,
   query,
   state = "ready",
-  statusUpdatingItemId,
   ...props
 }: RecordKnowledgeWorkspaceProps) {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -58,14 +57,14 @@ export function RecordKnowledgeWorkspace({
   const hasResults = filteredItems.length > 0;
   const disabled = state !== "ready" || items.length === 0;
   const resultContext = state === "loading"
-    ? "Loading latest synthesis"
+    ? "Loading Record Knowledge"
     : state === "error"
-      ? "Latest synthesis unavailable"
+      ? "Record Knowledge unavailable"
       : searchActive
         ? hasResults
           ? `Match “${query.trim()}”`
           : `No matches for “${query.trim()}”`
-        : "Latest synthesis";
+        : "Approved Session Report knowledge";
   const resultCount = state === "ready" ? filteredItems.length : 0;
   const sectionState: RecordKnowledgeSectionState = state === "ready"
     ? "populated"
@@ -121,10 +120,8 @@ export function RecordKnowledgeWorkspace({
               label={label}
               onOpenEvidence={onOpenEvidence}
               onRetry={onRetry}
-              onStatusChange={onStatusChange}
               onToggleItem={onToggleItem}
               state={sectionState}
-              statusUpdatingItemId={statusUpdatingItemId}
               type={type}
             />
           );

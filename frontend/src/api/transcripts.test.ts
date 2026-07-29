@@ -31,6 +31,11 @@ describe("Transcript API contract", () => {
 
     const search = await searchSessionTranscript("alpha-project", "mobile-checkout-test", "checkout-transcript", "navigation confusion");
     expect(search.results).toHaveLength(3);
+    expect(
+      search.results.every((result) =>
+        /(?<!\w)navigation confusion(?!\w)/i.test(`${result.speaker} ${result.excerpt}`),
+      ),
+    ).toBe(true);
     const context = await getTranscriptContext("alpha-project", "mobile-checkout-test", "checkout-transcript", search.results[0].id);
     expect(context.focused_passage_id).toBe("passage-2");
     expect(context.passages[0].speaker).toContain("Moderator");

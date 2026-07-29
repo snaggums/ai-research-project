@@ -76,7 +76,7 @@ export function TranscriptCodeSuggestion({
     <>
       <article
         className={cn(
-          "relative grid overflow-hidden rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)]",
+          "relative grid min-w-0 overflow-hidden rounded-[var(--air-radius-md)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)]",
           selected && "border-[var(--air-color-interaction-progress)]",
         )}
         data-selected={selected || undefined}
@@ -88,22 +88,23 @@ export function TranscriptCodeSuggestion({
             className="absolute bottom-2 left-0 top-2 w-1 rounded-r-sm bg-[var(--air-color-interaction-progress)]"
           />
         ) : null}
-        <div className={cn("grid gap-4", layout === "compact" ? "p-4" : "p-6", selected && "pl-7")}>
-          <header className="flex items-start justify-between gap-3">
+        <div className={cn("grid min-w-0 gap-4", layout === "compact" ? "p-4" : "p-6", selected && "pl-7")}>
+          <header className="flex min-w-0 items-start justify-between gap-3">
             <button
               type="button"
               className="min-w-0 flex-1 rounded-[var(--air-radius-sm)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--air-color-interaction-focus)] focus-visible:ring-offset-2"
               disabled={!onSelect}
               onClick={onSelect}
             >
-              <span className="block text-xl font-semibold leading-7 text-[var(--air-color-text-primary)]">
+              <span className="block break-words text-xl font-semibold leading-7 text-[var(--air-color-text-primary)]">
                 {codeName}
               </span>
-              <span className="mt-1 block text-base leading-6 text-[var(--air-color-text-secondary)]">
+              <span className="mt-1 block break-words text-base leading-6 text-[var(--air-color-text-secondary)]">
                 {description}
               </span>
             </button>
             <Badge
+              className="shrink-0"
               showIcon={false}
               tone={status === "accepted" ? "success" : status === "uncoded" ? "neutral" : "brand"}
             >
@@ -111,8 +112,8 @@ export function TranscriptCodeSuggestion({
             </Badge>
           </header>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs leading-4">
-            <p className="text-[var(--air-color-text-muted)]">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-xs leading-4">
+            <p className="min-w-0 break-words text-[var(--air-color-text-muted)]">
               {[provenance, confidence === undefined ? undefined : `Confidence ${confidence.toFixed(2)}`]
                 .filter(Boolean)
                 .join(" • ")}
@@ -122,22 +123,23 @@ export function TranscriptCodeSuggestion({
             </p>
           </div>
 
-          <div className="grid gap-2" aria-label="Supporting transcript evidence">
+          <div className="grid min-w-0 gap-2" aria-label="Supporting transcript evidence">
             {visibleEvidence.map((passage) => {
               const passageLabel = [passage.speaker, passage.location].filter(Boolean).join(", ");
 
               return (
                 <article
                   aria-label={`Highlight from ${passageLabel}`}
-                  className="grid gap-2 rounded-[var(--air-radius-md)] bg-[var(--air-color-bg-subtle)] p-4 text-sm leading-6 text-[var(--air-color-text-primary)]"
+                  className="grid min-w-0 gap-2 rounded-[var(--air-radius-md)] bg-[var(--air-color-bg-subtle)] p-4 text-sm leading-6 text-[var(--air-color-text-primary)]"
                   key={passage.id}
                 >
-                  <header className="flex items-start justify-between gap-3">
-                    <span className="font-medium">
+                  <header className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="min-w-0 break-words font-medium">
                       {[passage.speaker, passage.location].filter(Boolean).join(" • ")}
                     </span>
                     {status !== "suggested" && onDeleteHighlight ? (
                       <IconButton
+                        className="shrink-0"
                         icon={<Trash2 aria-hidden="true" />}
                         label={`Delete highlight from ${passageLabel}`}
                         onClick={() => setHighlightToDelete(passage)}
@@ -145,9 +147,10 @@ export function TranscriptCodeSuggestion({
                       />
                     ) : null}
                   </header>
-                  <blockquote>“{passage.excerpt}”</blockquote>
+                  <blockquote className="min-w-0 break-words">“{passage.excerpt}”</blockquote>
                   {status === "accepted" ? (
                     <TranscriptCodeChip
+                      className="max-w-full"
                       codeName={codeName}
                       onRemove={onRemoveCode ? () => onRemoveCode(passage.id) : undefined}
                       removable={Boolean(onRemoveCode)}

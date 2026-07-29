@@ -1,4 +1,6 @@
 from io import BytesIO
+from pathlib import Path
+import re
 
 import pytest
 from app.models.document import Document as DocumentModel
@@ -10,6 +12,14 @@ from sqlalchemy.orm import Session
 
 
 pytestmark = pytest.mark.integration
+
+PRIYA_NAIR_TRANSCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "sample-data"
+    / "Sky_AIR_15_Synthetic_Fraud_Product_Interviews"
+    / "product-1-medicare-fraud-documenter"
+    / "P1-S01_Medicare_Fraud_Documenter_Priya_Nair.docx"
+)
 
 
 def _docx_bytes() -> bytes:
@@ -166,3 +176,43 @@ def test_templated_docx_flows_to_transcript_coding_and_search(
     retry = client.post(f"{root}/documents/{document_id}/process")
     assert retry.status_code == 409
     assert retry.json()["code"] == "transcript_has_coding_dependencies"
+
+
+def test_transcript_search_returns_only_exact_billing_matches(client: TestClient) -> None:
+    project, research_session = _workspace(client)
+    root = f"/api/projects/{project['id']}/sessions/{research_session['id']}"
+    upload = client.post(
+        f"{root}/documents",
+        files={
+            "file": (
+                PRIYA_NAIR_TRANSCRIPT.name,
+                PRIYA_NAIR_TRANSCRIPT.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+    assert upload.status_code == 201
+    document_id = upload.json()["id"]
+
+    response = client.get(
+        f"{root}/documents/{document_id}/search",
+        params={"q": "BILLING"},
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert [result["block_index"] for result in results] == sorted(
+        result["block_index"] for result in results
+    )
+    assert all(
+        re.search(r"(?<!\w)billing(?!\w)", f"{result['speaker']} {result['excerpt']}", re.IGNORECASE)
+        for result in results
+    )
+
+    no_match = client.get(
+        f"{root}/documents/{document_id}/search",
+        params={"q": "rebilling"},
+    )
+    assert no_match.status_code == 200
+    assert no_match.json()["results"] == []

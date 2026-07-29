@@ -14,7 +14,7 @@ describe("Record Research Objects", () => {
   it("exposes the Record card as one descriptive link", () => {
     render(<RecordListItem href="/records/record-1" record={recordSummaries[0]} />);
     expect(screen.getByRole("link", { name: "Open Medicare Fraud Documenter" })).toHaveAttribute("href", "/records/record-1");
-    expect(screen.getByText("Ready to synthesize")).toBeInTheDocument();
+    expect(screen.getByText("Knowledge available")).toBeInTheDocument();
   });
 
   it("supports the three fixed MVP Records plus an unassigned option", async () => {
@@ -28,11 +28,12 @@ describe("Record Research Objects", () => {
     expect(onValueChange).toHaveBeenCalledWith("record-3");
   });
 
-  it("presents readiness and automatic synthesis eligibility", () => {
+  it("presents approved report readiness and automatic Knowledge promotion", () => {
     render(<main><RecordSummary record={recordSummaries[1]} /><RecordSynthesisScopeSummary scope={insufficientRecordScope} /></main>);
-    expect(screen.getByText("Needs more data")).toBeInTheDocument();
-    expect(screen.getByText("More eligible Sessions required")).toBeInTheDocument();
-    expect(screen.getByText(/included automatically/)).toBeInTheDocument();
+    expect(screen.getByText("No approved reports")).toBeInTheDocument();
+    expect(screen.getByText("No approved Session Reports yet")).toBeInTheDocument();
+    expect(screen.getByText(/Approve a Session Report to add/)).toBeInTheDocument();
+    expect(screen.queryByText(/At least two/)).not.toBeInTheDocument();
   });
 
   it("delegates evidence review from a synthesis item", async () => {

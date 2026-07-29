@@ -17,7 +17,7 @@ export function sortRecordCodeValues<T extends RecordCodeSummaryValue>(
       return right.acceptedHighlightCount - left.acceptedHighlightCount;
     }
     if (sort === "most-sessions") {
-      return right.eligibleSessionCount - left.eligibleSessionCount;
+      return right.sessionCount - left.sessionCount;
     }
     if (sort === "most-recent-evidence") {
       return Date.parse(right.latestEvidenceAt) - Date.parse(left.latestEvidenceAt);

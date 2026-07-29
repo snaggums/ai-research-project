@@ -16,11 +16,11 @@ export const recordCodeSortOptions = [
 export interface RecordCodeSummaryValue {
   acceptedHighlightCount: number;
   description: string;
-  eligibleSessionCount: number;
   id: string;
   latestEvidenceAt: string;
   latestEvidenceLabel: string;
   name: string;
+  sessionCount: number;
 }
 
 export interface RecordCodeSupportingHighlightValue {
@@ -42,5 +42,4 @@ export interface RecordCodeEvidenceGroupValue {
 
 export interface RecordCodeDetailValue extends RecordCodeSummaryValue {
   evidenceGroups: RecordCodeEvidenceGroupValue[];
-  knowledgeItemCount: number;
 }

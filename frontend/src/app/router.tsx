@@ -31,8 +31,9 @@ import {
 } from "@/routes/project-routes";
 import {
   RecordDetailRoute,
-  RecordEvidenceDetailRoute,
+  RecordKnowledgeEvidenceDetailRoute,
   RecordsCollectionRoute,
+  RecordSynthesisEvidenceDetailRoute,
   RecordSynthesisRoute,
 } from "@/routes/record-routes";
 
@@ -48,7 +49,8 @@ export const appRoutes = [
       { path: "/records", element: <RecordsCollectionRoute /> },
       { path: "/records/:recordId", element: <RecordDetailRoute /> },
       { path: "/records/:recordId/synthesis", element: <RecordSynthesisRoute /> },
-      { path: "/records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordEvidenceDetailRoute /> },
+      { path: "/records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordSynthesisEvidenceDetailRoute /> },
+      { path: "/records/:recordId/knowledge/items/:itemId/evidence/:evidenceId", element: <RecordKnowledgeEvidenceDetailRoute /> },
       { path: "/settings/profile", element: <SettingsProfileRoute /> },
       { path: "/settings/ai", element: <SettingsAIRoute /> },
     ],
@@ -79,7 +81,8 @@ export const appRoutes = [
       { path: "records", element: <RecordsCollectionRoute /> },
       { path: "records/:recordId", element: <RecordDetailRoute /> },
       { path: "records/:recordId/synthesis", element: <RecordSynthesisRoute /> },
-      { path: "records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordEvidenceDetailRoute /> },
+      { path: "records/:recordId/synthesis/items/:itemId/evidence/:evidenceId", element: <RecordSynthesisEvidenceDetailRoute /> },
+      { path: "records/:recordId/knowledge/items/:itemId/evidence/:evidenceId", element: <RecordKnowledgeEvidenceDetailRoute /> },
       { path: "ask", element: <ProjectFoundationPage /> },
     ],
   },

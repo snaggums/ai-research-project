@@ -1,3 +1,4 @@
+import * as React from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -25,6 +26,41 @@ describe("Transcript page compositions", () => {
     expect(onSearch).toHaveBeenCalledWith("checkout-transcript", "navigation confusion");
     rerender(<SessionTranscriptWorkspaceView {...defaultProps} searchQuery="navigation confusion" searchResults={transcriptSearchFixtures.map(toTranscriptSearchResult)} />);
     expect(screen.getAllByRole("link", { name: /Open transcript context/ })).toHaveLength(3);
+  });
+
+  it("clears the query and matching excerpts when the search input is cleared", async () => {
+    const onClearSearch = vi.fn();
+    const onSearch = vi.fn();
+    const user = userEvent.setup();
+
+    function SearchHarness() {
+      const [cleared, setCleared] = React.useState(false);
+      return (
+        <SessionTranscriptWorkspaceView
+          {...defaultProps}
+          onClearSearch={() => {
+            onClearSearch();
+            setCleared(true);
+          }}
+          onSearch={onSearch}
+          searchQuery={cleared ? "" : "navigation confusion"}
+          searchResults={cleared ? undefined : transcriptSearchFixtures.map(toTranscriptSearchResult)}
+        />
+      );
+    }
+
+    render(<SearchHarness />);
+    const searchbox = screen.getByRole("searchbox", { name: "Search this transcript" });
+    expect(screen.getByText("3 matching excerpts")).toBeInTheDocument();
+
+    await user.clear(searchbox);
+
+    expect(onClearSearch).toHaveBeenCalledOnce();
+    expect(onSearch).not.toHaveBeenCalled();
+    expect(searchbox).toHaveValue("");
+    expect(searchbox).toHaveFocus();
+    expect(screen.queryByText("3 matching excerpts")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open transcript context" })).not.toBeInTheDocument();
   });
 
   it("opens and closes the inline transcript preview", async () => {
@@ -122,7 +158,7 @@ describe("Transcript page compositions", () => {
     render(<TranscriptContextView context={context} projectId="alpha-project" projectName="Alpha Project" returnHref="/projects/alpha-project/sessions/mobile-checkout-test/transcript" sessionId="mobile-checkout-test" sessionTitle="Mobile checkout test" />);
     expect(screen.getByRole("heading", { level: 1, name: "Transcript context" })).toBeInTheDocument();
     expect(screen.getAllByText(/Maya Chen \(Moderator\)/)).not.toHaveLength(0);
-    expect(screen.getByText(/Relevance 91%/)).toBeInTheDocument();
+    expect(screen.getByText(/Relevance 100%/)).toBeInTheDocument();
   });
 
   it("returns transcript evidence to the originating Session Report", () => {

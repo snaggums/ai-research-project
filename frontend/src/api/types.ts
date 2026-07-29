@@ -190,6 +190,41 @@ export type RecordCode = {
   updated_at: string;
 };
 
+export type RecordCodeSupportingHighlight = {
+  id: string;
+  project_id: string;
+  project_name: string;
+  session_id: string;
+  session_title: string;
+  excerpt: string;
+  speaker: string | null;
+  location: string | null;
+};
+
+export type RecordCodeEvidenceGroup = {
+  session_id: string;
+  session_title: string;
+  highlights: RecordCodeSupportingHighlight[];
+};
+
+export type RecordAcceptedCode = {
+  id: string;
+  record_id: string;
+  name: string;
+  description: string | null;
+  accepted_highlight_count: number;
+  session_count: number;
+  latest_evidence_at: string;
+  evidence_groups: RecordCodeEvidenceGroup[];
+};
+
+export type RecordTranscriptCodes = {
+  record_id: string;
+  accepted_code_count: number;
+  session_count: number;
+  codes: RecordAcceptedCode[];
+};
+
 export type TranscriptHighlight = {
   id: string;
   project_id: string;
@@ -501,6 +536,9 @@ export type RecordCatalogItem = {
   eligible_session_count: number;
   readiness: "ready" | "needs-data" | "up-to-date";
   latest_synthesis_at: string | null;
+  approved_report_count?: number;
+  knowledge_item_count?: number;
+  knowledge_updated_at?: string | null;
 };
 
 export type RecordSynthesisSourceSession = {
@@ -561,6 +599,59 @@ export type RecordSynthesisEvidence = {
   session_title: string;
   context: TranscriptContext;
 };
+
+export type RecordKnowledgeOwnership = {
+  role: "decision-maker" | "assignee";
+  value: string | null;
+  status: "ai-suggested" | "confirmed" | "confirmed-empty" | "needs-review";
+  rationale: string | null;
+};
+
+export type RecordKnowledgeItem = {
+  id: string;
+  type: "requirement" | "decision" | "action-item";
+  status: "current" | "superseded";
+  title: string;
+  summary: string;
+  provenance: string;
+  ownership: RecordKnowledgeOwnership | null;
+  source_project_id: string;
+  source_session_id: string;
+  source_session_title: string;
+  source_report_id: string;
+  source_report_item_id: string;
+  source_report_updated_at: string;
+  position: number;
+  promoted_at: string;
+  superseded_at: string | null;
+  evidence_preview: string;
+  evidence_ids: string[];
+};
+
+export type RecordKnowledge = {
+  record_id: string;
+  items: RecordKnowledgeItem[];
+  total_count: number;
+  knowledge_updated_at: string | null;
+};
+
+export type RecordKnowledgeSource = {
+  session_id: string;
+  session_title: string;
+  report_id: string | null;
+  report_status: "ai-generated" | "researcher-reviewed" | "approved" | "superseded" | null;
+  promoted_item_count: number;
+  included: boolean;
+  reason: string | null;
+};
+
+export type RecordKnowledgeSources = {
+  record_id: string;
+  description: string;
+  sources: RecordKnowledgeSource[];
+};
+
+export type RecordKnowledgeEvidence = RecordSynthesisEvidence;
 
 export type RecordChatSourceAvailability = {
   record_id: string;

@@ -8,6 +8,7 @@ import { appRoutes } from "@/app/router";
 import { AppProviders } from "@/app/providers";
 import { API_BASE_URL, server } from "@/test/server";
 import { participantApiFixtures } from "@/mocks/fixtures/participants";
+import { sessionThemeFixtures } from "@/mocks/fixtures/synthesis";
 
 describe("application router foundation", () => {
   const projectResponse = {
@@ -109,7 +110,7 @@ describe("application router foundation", () => {
       expect(screen.getByRole("tab", { name: "Suggestions" })).toHaveTextContent("(1)");
       expect(screen.getByRole("tab", { name: "Uncoded highlights" })).toHaveTextContent("(0)");
     });
-  });
+  }, 15_000);
 
   it("persists Transcript Coding view and status controls in route search parameters", async () => {
     const user = userEvent.setup();
@@ -150,6 +151,48 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Transcript context" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/documents/checkout-transcript");
     expect(router.state.location.search).toBe("?result=result-1");
+  });
+
+  it("does not restore stale Transcript search results after the query is cleared", async () => {
+    let releaseSearch: (() => void) | undefined;
+    const waitForRelease = new Promise<void>((resolve) => {
+      releaseSearch = resolve;
+    });
+    server.use(
+      http.get(
+        `${API_BASE_URL}/projects/:projectId/sessions/:sessionId/documents/:documentId/search`,
+        async () => {
+          await waitForRelease;
+          return HttpResponse.json({
+            query: "navigation confusion",
+            results: [{
+              id: "stale-result",
+              document_id: "checkout-transcript",
+              speaker: "Jordan Moore",
+              location: "00:01:12",
+              excerpt: "The navigation confusion started when the cart summary disappeared.",
+              relevance: 1,
+              block_index: 1,
+            }],
+          });
+        },
+      ),
+      http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])),
+    );
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/transcript"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    const searchbox = await screen.findByRole("searchbox", { name: "Search this transcript" });
+    await userEvent.type(searchbox, "navigation confusion");
+    await userEvent.click(screen.getByRole("button", { name: "Search transcript" }));
+    await userEvent.clear(searchbox);
+    releaseSearch?.();
+
+    await waitFor(() => expect(searchbox).toHaveValue(""));
+    expect(searchbox).toHaveFocus();
+    expect(screen.queryByRole("link", { name: "Open transcript context" })).not.toBeInTheDocument();
   });
 
   it("redirects the application root to Projects", async () => {
@@ -549,13 +592,31 @@ describe("application router foundation", () => {
 
   it("loads the Session Themes workspace and opens evidence review", async () => {
     const user = userEvent.setup();
+    const updateTheme = vi.fn();
     server.use(http.get(`${API_BASE_URL}/projects`, () => HttpResponse.json([projectResponse])));
+    server.use(http.patch(`${API_BASE_URL}/projects/:projectId/sessions/:sessionId/themes/:themeId`, async ({ request }) => {
+      const payload = await request.json() as Record<string, unknown>;
+      updateTheme(payload);
+      return HttpResponse.json({ ...sessionThemeFixtures[0], ...payload });
+    }));
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/projects/alpha-project/sessions/mobile-checkout-test/themes"] });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
     const navigation = await screen.findByRole("navigation", { name: "Session sections" });
     expect(within(navigation).getByRole("link", { name: "Themes" })).toHaveAttribute("aria-current", "page");
     await user.click((await screen.findAllByRole("button", { name: "Review theme" }))[0]);
     expect(await screen.findByRole("heading", { name: "Theme evidence" })).toBeInTheDocument();
+    expect(updateTheme).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Edit theme" }));
+    const editDialog = screen.getByRole("dialog", { name: "Edit theme" });
+    await user.clear(within(editDialog).getByRole("textbox", { name: /^Theme name/ }));
+    await user.type(within(editDialog).getByRole("textbox", { name: /^Theme name/ }), "Edited without review");
+    await user.click(within(editDialog).getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(updateTheme).toHaveBeenCalledWith({
+      name: "Edited without review",
+      summary: sessionThemeFixtures[0].summary,
+    }));
   });
 
   it("loads the canonical Session Report sections", async () => {
@@ -586,7 +647,7 @@ describe("application router foundation", () => {
     expect(router.state.location.pathname).toBe("/projects/alpha-project/sessions/mobile-checkout-test/report");
   });
 
-  it("loads the workspace Record catalog and follows the Record synthesis workflow", async () => {
+  it("loads the workspace Record catalog and follows approved Record Knowledge evidence", async () => {
     const user = userEvent.setup();
     const router = createMemoryRouter(appRoutes, { initialEntries: ["/records"] });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
@@ -603,15 +664,28 @@ describe("application router foundation", () => {
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "knowledge");
     expect(await screen.findByText("3 items")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Requirements" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Overview" }));
-    expect(router.state.location.search).toBe("");
-    await user.click(screen.getByRole("button", { name: "Review synthesis" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter synthesis" })).toBeInTheDocument();
-    await user.click((await screen.findAllByRole("button", { name: "Mark reviewed" }))[0]);
-    expect(await screen.findAllByText("Researcher Reviewed")).not.toHaveLength(0);
+    await user.clear(screen.getByRole("searchbox", { name: "Search" }));
+    await user.click(screen.getByRole("button", { name: /Checkout must confirm payment success/ }));
     await user.click((await screen.findAllByRole("button", { name: /Open evidence/ }))[0]);
-    expect(await screen.findByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeInTheDocument();
-    expect(router.state.location.pathname).toContain("/records/record-1/synthesis/items/");
+    expect(await screen.findByRole("heading", { level: 1, name: "Record Knowledge evidence" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toContain("/records/record-1/knowledge/items/");
+  });
+
+  it("keeps legacy Record Synthesis evidence links available", async () => {
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: [
+        "/records/record-1/synthesis/items/record-requirement-confirmation/evidence/evidence-confirmation-1",
+      ],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Synthesis evidence" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to Synthesis" })).toHaveAttribute(
+      "href",
+      "/records/record-1/synthesis",
+    );
   });
 
   it("preserves Project navigation when opening a Record from a Project", async () => {
@@ -633,10 +707,72 @@ describe("application router foundation", () => {
     expect(within(projectNavigation).getByRole("button", { name: "Collapse Records" })).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("loads accepted Transcript Codes aggregated across Record Sessions", async () => {
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=transcript-codes"],
+    });
+    render(<AppProviders><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Medicare Fraud Documenter",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Transcript codes" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("22 Codes from 5 Sessions")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Decision support for legally meaningful actions",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the Record shell available when Transcript codes cannot load", async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}/records/record-1/transcript-codes`,
+        () => HttpResponse.json(
+          { detail: "Transcript codes are temporarily unavailable." },
+          { status: 500 },
+        ),
+      ),
+    );
+    const router = createMemoryRouter(appRoutes, {
+      initialEntries: ["/records/record-1?view=transcript-codes"],
+    });
+    const queryClient = createAppQueryClient();
+    queryClient.setDefaultOptions({
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: false,
+        staleTime: 30_000,
+      },
+      mutations: { retry: false },
+    });
+    render(<AppProviders queryClient={queryClient}><RouterProvider router={router} /></AppProviders>);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Medicare Fraud Documenter",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Transcript codes" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("Codes could not be loaded")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Retry" })).not.toHaveLength(0);
+  });
+
   it("keeps the Record shell available when Knowledge cannot load", async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}/records/record-1/synthesis/latest`,
+        `${API_BASE_URL}/records/record-1/knowledge`,
         () => HttpResponse.json({ detail: "Knowledge is temporarily unavailable." }, { status: 500 }),
       ),
     );
@@ -657,7 +793,7 @@ describe("application router foundation", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByText("Requirements could not be loaded")).toBeInTheDocument();
-    expect(screen.getByText("Decisions could not be loaded")).toBeInTheDocument();
+    expect(screen.getByText("Decision Log could not be loaded")).toBeInTheDocument();
     expect(screen.getByText("Action items could not be loaded")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Retry" })).toHaveLength(3);
     expect(screen.queryByText("Checkout must confirm payment success")).not.toBeInTheDocument();

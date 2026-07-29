@@ -1,5 +1,6 @@
 import type {
   RecordSummary,
+  RecordKnowledge,
   RecordSynthesis,
   RecordSynthesisItem,
   RecordSynthesisScope,
@@ -12,8 +13,11 @@ export const recordSummaries: RecordSummary[] = [
     description: "Research and synthesized product knowledge for documenting Medicare fraud cases.",
     relatedSessionCount: 6,
     eligibleSessionCount: 5,
-    readiness: "ready",
+    readiness: "up-to-date",
     latestSynthesisAt: "2026-07-15T18:42:00.000Z",
+    approvedReportCount: 5,
+    knowledgeItemCount: 9,
+    knowledgeUpdatedAt: "2026-07-15T18:42:00.000Z",
   },
   {
     id: "record-2",
@@ -22,6 +26,8 @@ export const recordSummaries: RecordSummary[] = [
     relatedSessionCount: 3,
     eligibleSessionCount: 1,
     readiness: "needs-data",
+    approvedReportCount: 0,
+    knowledgeItemCount: 0,
   },
   {
     id: "record-3",
@@ -31,19 +37,22 @@ export const recordSummaries: RecordSummary[] = [
     eligibleSessionCount: 4,
     readiness: "up-to-date",
     latestSynthesisAt: "2026-07-14T15:10:00.000Z",
+    approvedReportCount: 4,
+    knowledgeItemCount: 9,
+    knowledgeUpdatedAt: "2026-07-14T15:10:00.000Z",
   },
 ];
 
 export const readyRecordScope: RecordSynthesisScope = {
   recordId: "record-1",
-  description: "All eligible Sessions related to Medicare Fraud Documenter are included automatically.",
-  minimumEligibleSessions: 2,
+  description: "Approved Session Report Requirements, Decisions, and Action Items are collected exactly as written.",
+  minimumEligibleSessions: 1,
   includedSessions: [
     {
       id: "checkout-interview",
       title: "Checkout usability test",
       reportId: "report-checkout-interview",
-      reportStatus: "researcher-reviewed",
+      reportStatus: "approved",
     },
     {
       id: "mobile-navigation-interview",
@@ -63,9 +72,9 @@ export const readyRecordScope: RecordSynthesisScope = {
 
 export const insufficientRecordScope: RecordSynthesisScope = {
   recordId: "record-2",
-  description: "Only one eligible Session is available. At least two are required.",
-  minimumEligibleSessions: 2,
-  includedSessions: [readyRecordScope.includedSessions[0]],
+  description: "Approved Session Report Requirements, Decisions, and Action Items are collected exactly as written.",
+  minimumEligibleSessions: 1,
+  includedSessions: [],
   excludedSessions: readyRecordScope.excludedSessions,
 };
 
@@ -191,4 +200,28 @@ export const recordSynthesis: RecordSynthesis = {
   model: "mock-chat",
   promptVersion: "prompt v1",
   items: recordSynthesisItems,
+};
+
+export const recordKnowledge: RecordKnowledge = {
+  recordId: "record-1",
+  totalCount: recordSynthesisItems.length,
+  knowledgeUpdatedAt: "2026-07-15T18:42:00.000Z",
+  items: recordSynthesisItems.map((item, index) => ({
+    id: item.id,
+    type: item.type,
+    status: item.status === "superseded" ? "superseded" : "current",
+    title: item.title,
+    summary: item.summary,
+    evidencePreview: item.evidencePreview,
+    provenance: "Approved Session Report",
+    evidenceIds: item.evidenceIds,
+    sourceProjectId: "alpha-project",
+    sourceSessionId: index % 2 ? "mobile-navigation-interview" : "checkout-interview",
+    sourceSessionTitle: index % 2 ? "Mobile navigation interview" : "Checkout usability test",
+    sourceReportId: index % 2 ? "report-mobile-navigation" : "report-checkout-interview",
+    sourceReportItemId: `report-item-${item.id}`,
+    sourceReportUpdatedAt: "2026-07-15T18:42:00.000Z",
+    promotedAt: "2026-07-15T18:42:00.000Z",
+    position: index,
+  })),
 };

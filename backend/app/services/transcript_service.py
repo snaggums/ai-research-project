@@ -1,9 +1,11 @@
+import re
+import unicodedata
+
 from app.models.chunk import Chunk
 from app.models.document import Document
 from app.models.research_session import ResearchSession
 from app.models.transcript_block import TranscriptBlockRecord
 from app.schemas.document import TranscriptBlock, TranscriptContext, TranscriptDocumentRead, TranscriptSearchResponse, TranscriptSearchResult
-from app.services.embedding_service import embed_text
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,15 +31,24 @@ def document_to_read(db: Session, document: Document, research_session: Research
     )
 
 
-def search_document(db: Session, document: Document, query: str, limit: int = 10) -> TranscriptSearchResponse:
-    clean_query = query.strip()
+def search_document(db: Session, document: Document, query: str, limit: int | None = None) -> TranscriptSearchResponse:
+    clean_query = " ".join(query.split())
     if not clean_query:
         return TranscriptSearchResponse(query="", results=[])
     if document.status != "complete":
         raise ValueError("Transcript is not ready")
-    distance = Chunk.embedding.cosine_distance(embed_text(clean_query))
-    statement = select(Chunk, distance.label("distance")).where(Chunk.document_id == document.id).order_by(distance).limit(max(1, min(limit, 25)))
-    results = [_search_result(chunk, float(raw_distance or 0)) for chunk, raw_distance in db.execute(statement).all()]
+    chunks = list(
+        db.scalars(
+            select(Chunk)
+            .where(Chunk.document_id == document.id)
+            .order_by(Chunk.chunk_index)
+        ).all()
+    )
+    pattern = _literal_query_pattern(clean_query)
+    matching_chunks = [chunk for chunk in chunks if _chunk_matches_query(chunk, pattern)]
+    if limit is not None:
+        matching_chunks = matching_chunks[:max(1, min(limit, 100))]
+    results = [_search_result(chunk, 0.0) for chunk in matching_chunks]
     return TranscriptSearchResponse(query=clean_query, results=results)
 
 
@@ -126,3 +137,24 @@ def _speaker_and_text(text: str) -> tuple[str, str]:
         combined = " ".join(value for value in (opening.strip(), remainder.strip()) if value)
         return speaker.strip(), combined
     return "Transcript", text.strip()
+
+
+def _chunk_matches_query(chunk: Chunk, pattern: re.Pattern[str]) -> bool:
+    metadata = chunk.extra_metadata or {}
+    speaker, text = _speaker_and_text(chunk.text)
+    speaker = str(metadata.get("speaker") or speaker)
+    if metadata.get("speaker"):
+        text = chunk.text
+    return bool(pattern.search(_normalize_search_text(speaker)) or pattern.search(_normalize_search_text(text)))
+
+
+def _literal_query_pattern(query: str) -> re.Pattern[str]:
+    normalized_query = _normalize_search_text(query)
+    escaped = re.escape(normalized_query).replace(r"\ ", r"\s+")
+    prefix = r"(?<!\w)" if normalized_query[0].isalnum() else ""
+    suffix = r"(?!\w)" if normalized_query[-1].isalnum() else ""
+    return re.compile(f"{prefix}{escaped}{suffix}")
+
+
+def _normalize_search_text(value: str) -> str:
+    return " ".join(unicodedata.normalize("NFKC", value).casefold().split())

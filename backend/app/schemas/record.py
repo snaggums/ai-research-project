@@ -14,6 +14,9 @@ class RecordCatalogRead(BaseModel):
     eligible_session_count: int
     readiness: Literal["ready", "needs-data", "up-to-date"]
     latest_synthesis_at: datetime | None
+    approved_report_count: int
+    knowledge_item_count: int
+    knowledge_updated_at: datetime | None
 
 
 class RecordAssignment(BaseModel):
@@ -77,6 +80,68 @@ class RecordSynthesisRead(BaseModel):
 
 
 class RecordSynthesisEvidenceRead(BaseModel):
+    id: str
+    record_id: str
+    item_id: str
+    item_title: str
+    project_id: str
+    session_id: str
+    session_title: str
+    context: TranscriptContext
+
+
+class RecordKnowledgeOwnershipRead(BaseModel):
+    role: Literal["decision-maker", "assignee"]
+    value: str | None
+    status: Literal["ai-suggested", "confirmed", "confirmed-empty", "needs-review"]
+    rationale: str | None
+
+
+class RecordKnowledgeItemRead(BaseModel):
+    id: str
+    type: Literal["requirement", "decision", "action-item"]
+    status: Literal["current", "superseded"]
+    title: str
+    summary: str
+    provenance: str
+    ownership: RecordKnowledgeOwnershipRead | None
+    source_project_id: str
+    source_session_id: str
+    source_session_title: str
+    source_report_id: str
+    source_report_item_id: str
+    source_report_updated_at: datetime
+    position: int
+    promoted_at: datetime
+    superseded_at: datetime | None
+    evidence_preview: str
+    evidence_ids: list[str]
+
+
+class RecordKnowledgeRead(BaseModel):
+    record_id: str
+    items: list[RecordKnowledgeItemRead]
+    total_count: int
+    knowledge_updated_at: datetime | None
+
+
+class RecordKnowledgeSourceRead(BaseModel):
+    session_id: str
+    session_title: str
+    report_id: str | None
+    report_status: Literal["ai-generated", "researcher-reviewed", "approved", "superseded"] | None
+    promoted_item_count: int
+    included: bool
+    reason: str | None
+
+
+class RecordKnowledgeSourcesRead(BaseModel):
+    record_id: str
+    description: str
+    sources: list[RecordKnowledgeSourceRead]
+
+
+class RecordKnowledgeEvidenceRead(BaseModel):
     id: str
     record_id: str
     item_id: str

@@ -19,6 +19,7 @@ from app.schemas.theme import (
     ThemeUpdate,
 )
 from app.services import ai_settings_service
+from app.services.ai_completion_options import completion_model_options
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
@@ -311,9 +312,9 @@ def _generate_with_litellm(settings: AISettings, chunks: list[tuple[Chunk, str]]
             model=settings.model,
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0.2,
             api_key=_api_key_for_provider(settings.provider),
             api_base=settings.base_url,
+            **completion_model_options(settings.provider, settings.model),
         )
     except Exception as exc:
         raise ValueError(

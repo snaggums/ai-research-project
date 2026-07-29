@@ -55,7 +55,7 @@ export const RecordSearchToolbar = React.forwardRef<HTMLInputElement, RecordSear
           <SearchField
             ref={setRef}
             disabled={disabled}
-            hint="Filters titles and summaries in the latest synthesis using literal keywords."
+            hint="Filters exact approved Session Report titles and summaries using literal keywords."
             label="Search"
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search titles and summaries"

@@ -6,6 +6,10 @@ import {
   getLatestRecordSynthesis,
   getRecord,
   getRecordChatSources,
+  getRecordKnowledge,
+  getRecordKnowledgeEvidence,
+  getRecordKnowledgeSources,
+  getRecordTranscriptCodes,
   getRecordSynthesisEligibility,
   getRecordSynthesisEvidence,
   listRecords,
@@ -31,6 +35,38 @@ export function useRecordChatSources(recordId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.recordChatSources(recordId),
     queryFn: () => getRecordChatSources(recordId),
+    enabled: Boolean(recordId) && enabled,
+  });
+}
+
+export function useRecordKnowledge(recordId: string, includeSuperseded = false) {
+  return useQuery({
+    queryKey: queryKeys.recordKnowledge(recordId, includeSuperseded),
+    queryFn: () => getRecordKnowledge(recordId, includeSuperseded),
+    enabled: Boolean(recordId),
+  });
+}
+
+export function useRecordKnowledgeSources(recordId: string) {
+  return useQuery({
+    queryKey: queryKeys.recordKnowledgeSources(recordId),
+    queryFn: () => getRecordKnowledgeSources(recordId),
+    enabled: Boolean(recordId),
+  });
+}
+
+export function useRecordKnowledgeEvidence(recordId: string, itemId: string, evidenceId: string) {
+  return useQuery({
+    queryKey: queryKeys.recordKnowledgeEvidence(recordId, itemId, evidenceId),
+    queryFn: () => getRecordKnowledgeEvidence(recordId, itemId, evidenceId),
+    enabled: Boolean(recordId && itemId && evidenceId),
+  });
+}
+
+export function useRecordTranscriptCodes(recordId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.recordTranscriptCodes(recordId),
+    queryFn: () => getRecordTranscriptCodes(recordId),
     enabled: Boolean(recordId) && enabled,
   });
 }

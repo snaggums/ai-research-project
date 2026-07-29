@@ -33,4 +33,13 @@ describe("Session synthesis workspace accessibility", () => {
     await user.click(screen.getByRole("combobox", { name: /Decision maker/ }));
     expect((await axe.run(dialog, axeOptions)).violations).toEqual([]);
   });
+
+  it("has no automated violations in the Theme editor", async () => {
+    const user = userEvent.setup();
+    render(<SessionThemesWorkspaceView onEdit={() => undefined} onGenerate={() => undefined} projectId="alpha-project" sessionId="mobile-checkout-test" themes={sessionThemeFixtures.map(toSessionTheme)} />);
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+
+    const dialog = screen.getByRole("dialog", { name: "Edit theme" });
+    expect((await axe.run(dialog, axeOptions)).violations).toEqual([]);
+  });
 });

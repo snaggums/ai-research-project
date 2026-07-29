@@ -39,6 +39,7 @@ export const DeletedWithTranscriptHistory: Story = {
 export const Processing: Story = { args: { documents: [toTranscriptDocumentDetail(transcriptApiFixtures[1])] } };
 export const Viewing: Story = { play: async ({ canvasElement }) => { await userEvent.click(within(canvasElement).getByRole("link", { name: "View transcript" })); } };
 export const SearchResults: Story = { args: { searchQuery: "navigation confusion", searchResults: transcriptSearchFixtures.map(toTranscriptSearchResult) } };
+export const NoMatchingExcerpts: Story = { args: { searchQuery: "billing", searchResults: [] } };
 export const Loading: Story = { args: { state: "loading" } };
 export const Error: Story = { args: { errorMessage: "Check your connection and try again.", state: "error" } };
 export const MobileReady: Story = { parameters: { viewport: { defaultViewport: "mobile1" } } };
