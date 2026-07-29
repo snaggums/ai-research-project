@@ -95,6 +95,8 @@ def test_session_theme_report_and_conversation_contracts(client: TestClient) -> 
     assert "detailed patterns" in report["detailed_notes"].lower()
     decision = next(item for item in report["items"] if item["type"] == "decision")
     action_item = next(item for item in report["items"] if item["type"] == "action-item")
+    assert decision["title"] == "Reviewed checkout confidence"
+    assert not decision["title"].lower().startswith("decide how to address")
     assert decision["ownership"] == {
         "role": "decision-maker",
         "value": None,

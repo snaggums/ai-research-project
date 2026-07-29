@@ -173,6 +173,71 @@ def test_manual_codes_assignments_filters_and_record_guard(client: TestClient) -
     assert unblocked.json()["related_records"][0]["id"] == "record-2"
 
 
+def test_record_transcript_codes_include_only_codes_with_accepted_highlights_across_sessions(
+    client: TestClient,
+) -> None:
+    project = _project(client, "Record Transcript Codes Project")
+    first_session = _session(client, project["id"])
+    second_session = _session(client, project["id"])
+    first_workspace = _workspace(client, project["id"], first_session["id"])
+    second_workspace = _workspace(client, project["id"], second_session["id"])
+
+    accepted_code = client.post(
+        "/api/records/record-1/codes",
+        json={
+            "name": "Cross-Session accepted evidence",
+            "description": "Evidence accepted in more than one Session.",
+        },
+        headers={"Idempotency-Key": "record-accepted-code"},
+    ).json()
+    unused_code = client.post(
+        "/api/records/record-1/codes",
+        json={"name": "Unused dictionary code"},
+        headers={"Idempotency-Key": "record-unused-code"},
+    ).json()
+
+    for index, (research_session, workspace) in enumerate(
+        (
+            (first_session, first_workspace),
+            (second_session, second_workspace),
+        ),
+        start=1,
+    ):
+        created = client.post(
+            f"/api/projects/{project['id']}/sessions/{research_session['id']}/highlights",
+            json={
+                "anchor": _anchor(workspace, 0, 32),
+                "code_ids": [accepted_code["id"]],
+                "new_code": None,
+            },
+            headers={"Idempotency-Key": f"record-code-highlight-{index}"},
+        )
+        assert created.status_code == 201, created.text
+
+    response = client.get("/api/records/record-1/transcript-codes")
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["record_id"] == "record-1"
+    assert payload["accepted_code_count"] == 1
+    assert payload["session_count"] == 2
+    assert [code["id"] for code in payload["codes"]] == [accepted_code["id"]]
+    assert unused_code["id"] not in [code["id"] for code in payload["codes"]]
+
+    code = payload["codes"][0]
+    assert code["accepted_highlight_count"] == 2
+    assert code["session_count"] == 2
+    assert code["latest_evidence_at"]
+    assert {group["session_id"] for group in code["evidence_groups"]} == {
+        first_session["id"],
+        second_session["id"],
+    }
+    assert all(
+        highlight["project_name"] == "Record Transcript Codes Project"
+        for group in code["evidence_groups"]
+        for highlight in group["highlights"]
+    )
+
+
 def test_replacement_preserves_codes_but_excludes_archived_highlights_from_current_counts(
     client: TestClient,
 ) -> None:

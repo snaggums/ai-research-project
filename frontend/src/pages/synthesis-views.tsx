@@ -19,7 +19,7 @@ import type { SessionConversation, SessionReport as SessionReportValue, SessionR
 export interface SessionThemesWorkspaceViewProps {
   errorMessage?: string;
   generating?: boolean;
-  onEdit?: (theme: SessionTheme) => void;
+  onEdit?: (themeId: string, payload: { name: string; summary: string }) => Promise<void> | void;
   onGenerate: () => void;
   onCloseReview?: () => void;
   onOpenContext?: (href: string) => void;
@@ -34,14 +34,72 @@ export interface SessionThemesWorkspaceViewProps {
 }
 
 export function SessionThemesWorkspaceView({ errorMessage, generating = false, onCloseReview, onEdit, onGenerate, onOpenContext, onRetry, onReview, onStatusChange, projectId, selectedThemeId, sessionId, state = "ready", themes }: SessionThemesWorkspaceViewProps) {
+  const [editingTheme, setEditingTheme] = React.useState<SessionTheme>();
+  const [themeName, setThemeName] = React.useState("");
+  const [themeSummary, setThemeSummary] = React.useState("");
+  const [editPending, setEditPending] = React.useState(false);
+  const [editError, setEditError] = React.useState<string>();
   const selected = themes.find((theme) => theme.id === selectedThemeId);
   const contextHref = (evidence: ThemeEvidenceDetailValue) => `/projects/${projectId}/sessions/${sessionId}/documents/${evidence.documentId}?result=${evidence.contextResultId}`;
+  const beginEdit = (theme: SessionTheme) => {
+    setEditingTheme(theme);
+    setThemeName(theme.name);
+    setThemeSummary(theme.summary);
+    setEditError(undefined);
+  };
+  const closeEditor = () => {
+    if (editPending) return;
+    setEditingTheme(undefined);
+    setEditError(undefined);
+  };
+  const saveTheme = async () => {
+    if (!editingTheme || !themeName.trim() || !themeSummary.trim() || editPending) return;
+    setEditPending(true);
+    setEditError(undefined);
+    try {
+      await onEdit?.(editingTheme.id, {
+        name: themeName.trim(),
+        summary: themeSummary.trim(),
+      });
+      setEditingTheme(undefined);
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "Theme changes could not be saved. Try again.");
+    } finally {
+      setEditPending(false);
+    }
+  };
   if (state === "loading") return <SharedRouteState state="loading" />;
   if (state === "error") return <div className="grid gap-3"><Alert message={errorMessage ?? "Check your connection and try again."} size="large" title="Themes could not be loaded" tone="error" />{onRetry ? <Button className="justify-self-start" onClick={onRetry} size="small">Retry</Button> : null}</div>;
   if (generating) return <div aria-live="polite" className="grid justify-items-center gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] px-6 py-16 text-center"><Spinner label="Generating themes" size="medium" /><div><h2 className="text-xl font-semibold">Generating themes…</h2><p className="mt-1 text-sm text-[var(--air-color-text-secondary)]">AIR is identifying patterns and supporting evidence in this Session.</p></div></div>;
-  if (selected) return <div className="grid gap-4"><Button className="justify-self-start" onClick={onCloseReview} size="small" variant="text">Back to themes</Button><ThemeEvidenceDetail contextHref={contextHref} onApprove={() => onStatusChange?.(selected.id, "approved")} onEdit={() => onEdit?.(selected)} onOpenContext={onOpenContext} onReject={() => onStatusChange?.(selected.id, "rejected")} theme={selected} /></div>;
   if (!themes.length) return <EmptyState description="Generate structured themes from this Session’s transcript and evidence." primaryAction={<Button onClick={onGenerate} size="small" variant="brand"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate themes</Button>} title="No themes yet" />;
-  return <section aria-labelledby="themes-heading" className="grid gap-4"><header className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold" id="themes-heading">Themes</h2><p className="text-sm text-[var(--air-color-text-secondary)]">Review generated patterns and inspect their supporting evidence.</p></div><Button onClick={onGenerate} size="small" variant="brand"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate themes</Button></header><div className="grid gap-4">{themes.map((theme) => <ThemeCard key={theme.id} onEdit={() => onEdit?.(theme)} onReject={() => onStatusChange?.(theme.id, "rejected")} onReview={() => onReview?.(theme)} theme={theme} />)}</div></section>;
+  const content = selected
+    ? <div className="grid gap-4"><Button className="justify-self-start" onClick={onCloseReview} size="small" variant="text">Back to themes</Button><ThemeEvidenceDetail contextHref={contextHref} onApprove={() => onStatusChange?.(selected.id, "approved")} onEdit={() => beginEdit(selected)} onOpenContext={onOpenContext} onReject={() => onStatusChange?.(selected.id, "rejected")} theme={selected} /></div>
+    : <section aria-labelledby="themes-heading" className="grid gap-4"><header className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold" id="themes-heading">Themes</h2><p className="text-sm text-[var(--air-color-text-secondary)]">Review generated patterns and inspect their supporting evidence.</p></div><Button onClick={onGenerate} size="small" variant="brand"><Sparkles aria-hidden="true" className="h-4 w-4" />Generate themes</Button></header><div className="grid gap-4">{themes.map((theme) => <ThemeCard key={theme.id} onEdit={() => beginEdit(theme)} onReject={() => onStatusChange?.(theme.id, "rejected")} onReview={() => onReview?.(theme)} theme={theme} />)}</div></section>;
+  const editorValid = Boolean(themeName.trim() && themeSummary.trim());
+
+  return <>
+    {content}
+    <Dialog
+      className="w-[42rem]"
+      description="Update the Theme name and summary. Evidence and review status will not change."
+      dismissible={!editPending}
+      onOpenChange={(open) => { if (!open) closeEditor(); }}
+      open={Boolean(editingTheme)}
+      showActions={false}
+      size="large"
+      title="Edit theme"
+    >
+      <div className="grid gap-4 py-2">
+        <InputField disabled={editPending} label="Theme name" maxLength={180} onChange={(event) => setThemeName(event.currentTarget.value)} required value={themeName} />
+        <TextareaField disabled={editPending} label="Theme summary" onChange={(event) => setThemeSummary(event.currentTarget.value)} required value={themeSummary} />
+        {editError ? <Alert size="small" title={editError} tone="error" /> : null}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button disabled={editPending} onClick={closeEditor} size="small" type="button" variant="gray-subtle">Cancel</Button>
+          <Button disabled={!editorValid || editPending} onClick={() => void saveTheme()} size="small" type="button" variant="brand">{editPending ? "Saving…" : "Save changes"}</Button>
+        </div>
+      </div>
+    </Dialog>
+  </>;
 }
 
 export interface SessionReportWorkspaceViewProps {

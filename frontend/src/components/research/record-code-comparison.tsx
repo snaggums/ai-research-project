@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { RecordCodeSupportingHighlight } from "./record-code-supporting-highlight";
 import type {
@@ -8,7 +9,7 @@ import type {
   RecordCodeSupportingHighlightValue,
 } from "./record-code-types";
 
-export type RecordCodeComparisonState = "ready" | "no-selection" | "error";
+export type RecordCodeComparisonState = "ready" | "loading" | "no-selection" | "error";
 
 export interface RecordCodeComparisonProps
   extends React.HTMLAttributes<HTMLElement> {
@@ -44,7 +45,7 @@ export function RecordCodeComparison({
           </p>
           <h2 className="break-words text-2xl font-semibold">{code.name}</h2>
           <p className="text-sm text-[var(--air-color-text-secondary)]">
-            {code.description} Compare how this Code appears across eligible Sessions.
+            {code.description} Compare how this Code appears across Sessions.
           </p>
         </header>
       ) : null}
@@ -57,8 +58,19 @@ export function RecordCodeComparison({
           <h2 className="text-lg font-semibold">Select a Code to compare evidence</h2>
           <p className="text-sm text-[var(--air-color-text-secondary)]">
             Choose an accepted Code from the list to compare supporting Highlights across
-            eligible Sessions.
+            Sessions.
           </p>
+        </div>
+      ) : effectiveState === "loading" ? (
+        <div
+          aria-live="polite"
+          className="flex min-h-[180px] items-center justify-center gap-3 rounded-[var(--air-radius-lg)] bg-[var(--air-color-bg-subtle)] p-6"
+          role="status"
+        >
+          <Spinner label="Loading supporting Highlights" size="small" />
+          <span className="text-sm text-[var(--air-color-text-secondary)]">
+            Loading supporting Highlights...
+          </span>
         </div>
       ) : effectiveState === "error" ? (
         <div
@@ -88,9 +100,9 @@ export function RecordCodeComparison({
               </dt>
             </div>
             <div className="rounded-[var(--air-radius-lg)] bg-[var(--air-color-bg-subtle)] p-3">
-              <dd className="text-lg font-semibold">{code.eligibleSessionCount}</dd>
+              <dd className="text-lg font-semibold">{code.sessionCount}</dd>
               <dt className="mt-1 text-xs text-[var(--air-color-text-secondary)]">
-                Eligible Sessions
+                Sessions
               </dt>
             </div>
             <div className="rounded-[var(--air-radius-lg)] bg-[var(--air-color-bg-subtle)] p-3">
@@ -100,17 +112,6 @@ export function RecordCodeComparison({
               </dt>
             </div>
           </dl>
-
-          <div className="grid gap-1 rounded-[var(--air-radius-lg)] bg-[var(--air-color-bg-subtle)] p-4">
-            <p className="text-sm font-semibold">
-              {code.knowledgeItemCount} Record Knowledge{" "}
-              {code.knowledgeItemCount === 1 ? "item matches" : "items match"} this Code
-            </p>
-            <p className="text-xs text-[var(--air-color-text-secondary)]">
-              Requirements, Decisions, and Action Items linked to this Code remain available in
-              Record Knowledge.
-            </p>
-          </div>
 
           <div className="grid gap-6">
             <h3 className="text-lg font-semibold">Supporting Highlights by Session</h3>

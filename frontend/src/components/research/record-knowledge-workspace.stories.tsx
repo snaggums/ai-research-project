@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { recordSynthesisItems } from "@/mocks/fixtures/records";
+import { recordKnowledge } from "@/mocks/fixtures/records";
 import {
   RecordKnowledgeWorkspace,
   type RecordKnowledgeWorkspaceProps,
@@ -54,10 +54,9 @@ const meta = {
   parameters: { layout: "fullscreen" },
   decorators: [(Story) => <main className="min-h-screen bg-[var(--air-color-bg-canvas)] p-8"><Story /></main>],
   args: {
-    items: recordSynthesisItems,
+    items: recordKnowledge.items,
     onOpenEvidence: () => undefined,
     onRetry: () => undefined,
-    onStatusChange: () => undefined,
   },
 } satisfies Meta<typeof WorkspaceStory>;
 
@@ -82,11 +81,26 @@ export const LongContent: Story = {
   args: {
     items: [
       {
-        ...recordSynthesisItems[0],
+        ...recordKnowledge.items[0],
         title: "Checkout confirmation must explain payment success while preserving complete order, delivery, and participant context",
         summary: "This deliberately long summary verifies that the approved disclosure, lifecycle badge, provenance, source summary, and evidence actions wrap without clipping or changing their logical reading order.",
       },
-      ...recordSynthesisItems.slice(1),
+      ...recordKnowledge.items.slice(1),
+    ],
+  },
+};
+export const DuplicateItemsFromDifferentSessions: Story = {
+  args: {
+    items: [
+      recordKnowledge.items[0],
+      {
+        ...recordKnowledge.items[0],
+        id: "duplicate-approved-requirement",
+        sourceSessionId: "second-approved-session",
+        sourceSessionTitle: "Second approved Session",
+        sourceReportId: "second-approved-report",
+        sourceReportItemId: "second-approved-report-item",
+      },
     ],
   },
 };

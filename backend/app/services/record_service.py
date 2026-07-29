@@ -10,6 +10,8 @@ from app.models.document import Document
 from app.models.project import Project
 from app.models.record import (
     ProductRecord,
+    RecordKnowledgeItem,
+    RecordKnowledgePromotion,
     RecordSynthesisEvidence,
     RecordSynthesisItem,
     RecordSynthesisItemSource,
@@ -31,10 +33,12 @@ from app.schemas.record import (
     RecordSynthesisItemRead,
     RecordSynthesisRead,
     RecordSynthesisSourceSessionRead,
+    RecordKnowledgeRead,
 )
 from app.schemas.chat import ChatCitation
 from app.schemas.research_session import SessionRead
-from app.services import ai_settings_service, chat_service, research_session_service, theme_service, transcript_service
+from app.services import ai_settings_service, chat_service, record_knowledge_service, research_session_service, theme_service, transcript_service
+from app.services.ai_completion_options import completion_model_options
 from app.services.embedding_service import embed_text
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -102,14 +106,17 @@ def get_chat_source_availability(db: Session, record_id: str) -> RecordChatSourc
             Document.document_type == "transcript",
         )
     ) or 0
-    reviewed_report_count = len(_eligible_source_reports(db, record_id))
-    record_knowledge_available = db.scalar(
-        select(RecordSynthesisRun.id)
-        .where(
-            RecordSynthesisRun.record_id == record_id,
-            RecordSynthesisRun.status == "complete",
+    reviewed_report_count = db.scalar(
+        select(func.count(func.distinct(RecordKnowledgePromotion.report_id))).where(
+            RecordKnowledgePromotion.record_id == record_id
         )
-        .order_by(RecordSynthesisRun.created_at.desc())
+    ) or 0
+    record_knowledge_available = db.scalar(
+        select(RecordKnowledgeItem.id)
+        .where(
+            RecordKnowledgeItem.record_id == record_id,
+            RecordKnowledgeItem.status == "current",
+        )
         .limit(1)
     ) is not None
     return RecordChatSourceAvailabilityRead(
@@ -140,14 +147,14 @@ def answer_record_question(
             "This Record has no processed primary transcript evidence available to search."
         )
 
-    knowledge = get_latest_synthesis(db, record_id)
-    knowledge_available = knowledge is not None and knowledge.status == "complete"
+    knowledge = record_knowledge_service.list_knowledge(db, record_id)
+    knowledge_available = bool(knowledge.items)
     traceability_note = (
-        "Trace: latest Record Knowledge → reviewed Session Report items → cited primary transcript passages."
+        "Trace: Record Knowledge → approved Session Report items → cited primary transcript passages."
         if knowledge_available
         else (
-            "Trace: reviewed or approved Session Reports → cited primary transcript passages. "
-            "This answer is not consolidated through Record Knowledge."
+            "Trace: approved Session Reports → cited primary transcript passages. "
+            "This answer is not supported by promoted Record Knowledge."
         )
     )
     supporting = [
@@ -441,30 +448,37 @@ def item_to_read(item: RecordSynthesisItem) -> RecordSynthesisItemRead:
 
 
 def _record_to_read(db: Session, record: ProductRecord) -> RecordCatalogRead:
-    eligibility = get_eligibility(db, record.id)
     related_count = db.query(SessionRecord).filter(SessionRecord.record_id == record.id).count()
     latest = db.scalar(select(RecordSynthesisRun).where(RecordSynthesisRun.record_id == record.id).order_by(RecordSynthesisRun.created_at.desc()))
     latest_at = latest.completed_at if latest and latest.status == "complete" else None
-    if len(eligibility.included_sessions) < MINIMUM_ELIGIBLE_SESSIONS:
-        readiness = "needs-data"
-    elif latest_at is not None:
-        latest_report_update = db.scalar(
-            select(SessionReport.updated_at)
-            .where(SessionReport.id.in_([source.report_id for source in eligibility.included_sessions]))
-            .order_by(SessionReport.updated_at.desc())
-            .limit(1)
+    approved_report_count = db.scalar(
+        select(func.count(func.distinct(RecordKnowledgePromotion.report_id))).where(
+            RecordKnowledgePromotion.record_id == record.id
         )
-        readiness = "up-to-date" if latest_report_update is None or latest_at >= latest_report_update else "ready"
-    else:
-        readiness = "ready"
+    ) or 0
+    knowledge_item_count = db.scalar(
+        select(func.count(RecordKnowledgeItem.id)).where(
+            RecordKnowledgeItem.record_id == record.id,
+            RecordKnowledgeItem.status == "current",
+        )
+    ) or 0
+    knowledge_updated_at = db.scalar(
+        select(func.max(RecordKnowledgePromotion.promoted_at)).where(
+            RecordKnowledgePromotion.record_id == record.id
+        )
+    )
+    readiness = "up-to-date" if approved_report_count else "needs-data"
     return RecordCatalogRead(
         id=record.id,
         name=record.name,
         description=record.description,
         related_session_count=related_count,
-        eligible_session_count=len(eligibility.included_sessions),
+        eligible_session_count=approved_report_count,
         readiness=readiness,
         latest_synthesis_at=latest_at,
+        approved_report_count=approved_report_count,
+        knowledge_item_count=knowledge_item_count,
+        knowledge_updated_at=knowledge_updated_at,
     )
 
 
@@ -556,10 +570,10 @@ def _record_chat_citations(
 def _record_interpretation_context(
     db: Session,
     record_id: str,
-    knowledge: RecordSynthesisRead | None,
+    knowledge: RecordKnowledgeRead,
 ) -> str:
     sections: list[str] = []
-    if knowledge is not None and knowledge.status == "complete":
+    if knowledge.items:
         items = "\n".join(
             f"- {item.type}: {item.title}. {item.summary}"
             for item in knowledge.items[:12]
@@ -568,7 +582,7 @@ def _record_interpretation_context(
             sections.append(f"Latest Record Knowledge:\n{items}")
 
     reports: list[str] = []
-    for research_session, report in _eligible_source_reports(db, record_id):
+    for research_session, report in _approved_source_reports(db, record_id):
         report_items = " ".join(
             f"{item.title}: {item.summary}"
             for item in report.items
@@ -580,7 +594,7 @@ def _record_interpretation_context(
         )
     if reports:
         sections.append(
-            "Reviewed or approved Session Reports:\n" + "\n".join(reports[:12])
+            "Approved Session Reports:\n" + "\n".join(reports[:12])
         )
     return "\n\n".join(sections)
 
@@ -640,6 +654,22 @@ def _eligible_source_reports(db: Session, record_id: str) -> list[tuple[Research
     for research_session in _record_sessions_with_reports(db, record_id):
         latest = max(research_session.reports, key=lambda report: (report.updated_at, report.created_at), default=None)
         if latest is not None and _ineligibility_reason(latest) is None:
+            sources.append((research_session, latest))
+    return sources
+
+
+def _approved_source_reports(db: Session, record_id: str) -> list[tuple[ResearchSession, SessionReport]]:
+    sources: list[tuple[ResearchSession, SessionReport]] = []
+    for research_session in _record_sessions_with_reports(db, record_id):
+        approved = [
+            report for report in research_session.reports if report.status == "approved"
+        ]
+        latest = max(
+            approved,
+            key=lambda report: (report.updated_at, report.created_at),
+            default=None,
+        )
+        if latest is not None:
             sources.append((research_session, latest))
     return sources
 
@@ -725,9 +755,9 @@ def _generate_with_litellm(settings, record_name: str, source_pairs: list[tuple[
             model=settings.model,
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0.2,
             api_key=theme_service._api_key_for_provider(settings.provider),
             api_base=settings.base_url,
+            **completion_model_options(settings.provider, settings.model),
         )
     except Exception as exc:
         raise ValueError(

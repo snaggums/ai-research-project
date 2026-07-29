@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 
 import {
   RecordCodeWorkspace,
@@ -73,11 +73,11 @@ const meta = {
   parameters: { layout: "fullscreen" },
   args: {
     details: recordCodeDetails,
-    eligibleSessionCount: 5,
     onOpenInTranscriptCoding: fn(),
     onRetryCollection: fn(),
     onRetryComparison: fn(),
     onViewRelatedSessions: fn(),
+    sessionCount: 5,
     totalCodeCount: recordCodeDetails.length,
   },
   decorators: [
@@ -94,14 +94,45 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Ready: Story = {};
+export const Ready: Story = {
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("22 Codes from 5 Sessions")).toBeInTheDocument();
+    await expect(
+      canvas.getByRole("heading", {
+        name: "Decision support for legally meaningful actions",
+      }),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      canvas.getAllByRole("button", { name: "Open in Transcript Coding" })[0],
+    );
+    await expect(args.onOpenInTranscriptCoding).toHaveBeenCalled();
+  },
+};
 export const SortOpen: Story = { args: { defaultSortOpen: true } };
 export const NoResults: Story = { args: { initialQuery: "delivery" } };
+export const CollectionLoading: Story = {
+  args: {
+    collectionState: "loading",
+    comparisonState: "no-selection",
+    details: [],
+    initialSelectedCodeId: "",
+    sessionCount: 0,
+    totalCodeCount: 0,
+  },
+};
+export const SupportingHighlightsLoading: Story = {
+  args: {
+    comparisonState: "loading",
+    initialSelectedCodeId: "",
+  },
+};
 export const Empty: Story = {
   args: {
     collectionState: "empty",
     details: [],
     initialSelectedCodeId: "",
+    sessionCount: 5,
     totalCodeCount: 0,
   },
 };

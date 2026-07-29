@@ -9,6 +9,7 @@ from uuid import uuid4
 from app.core.domain_errors import ApplicationError
 from app.models.chunk import Chunk
 from app.models.document import Document
+from app.models.project import Project
 from app.models.record import ProductRecord, SessionRecord
 from app.models.research_session import ResearchSession
 from app.models.transcript_coding import (
@@ -23,9 +24,13 @@ from app.models.transcript_block import TranscriptBlockRecord
 from app.schemas.research_session import SessionReference
 from app.schemas.transcript_coding import (
     HighlightCodesUpdate,
+    RecordAcceptedCodeRead,
     RecordCodeCreate,
+    RecordCodeEvidenceGroupRead,
     RecordCodeRead,
+    RecordCodeSupportingHighlightRead,
     RecordCodeUpdate,
+    RecordTranscriptCodesRead,
     SuggestionRunRead,
     TranscriptAnchor,
     TranscriptAnchorCreate,
@@ -40,6 +45,7 @@ from app.schemas.transcript_coding import (
     TranscriptHighlightUpdate,
 )
 from app.services import ai_settings_service, research_session_service, theme_service
+from app.services.ai_completion_options import completion_model_options
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -310,6 +316,121 @@ def remove_highlight_code(
 def list_codes(db: Session, record_id: str) -> list[RecordCodeRead]:
     _require_record(db, record_id)
     return [code_to_read(value) for value in _active_codes(db, record_id)]
+
+
+def list_accepted_record_codes(
+    db: Session,
+    record_id: str,
+) -> RecordTranscriptCodesRead:
+    _require_record(db, record_id)
+    rows = db.execute(
+        select(
+            RecordCode,
+            TranscriptHighlight,
+            ResearchSession.title,
+            Project.name,
+        )
+        .join(
+            HighlightCodeAssignment,
+            HighlightCodeAssignment.code_id == RecordCode.id,
+        )
+        .join(
+            TranscriptHighlight,
+            TranscriptHighlight.id == HighlightCodeAssignment.highlight_id,
+        )
+        .join(
+            SessionRecord,
+            SessionRecord.session_id == TranscriptHighlight.session_id,
+        )
+        .join(
+            ResearchSession,
+            ResearchSession.id == TranscriptHighlight.session_id,
+        )
+        .join(Project, Project.id == TranscriptHighlight.project_id)
+        .join(Document, Document.id == TranscriptHighlight.document_id)
+        .where(
+            RecordCode.record_id == record_id,
+            RecordCode.status == "active",
+            HighlightCodeAssignment.removed_at.is_(None),
+            TranscriptHighlight.deleted_at.is_(None),
+            SessionRecord.record_id == record_id,
+            Document.lifecycle_status == "active",
+        )
+        .order_by(
+            RecordCode.normalized_name,
+            ResearchSession.title,
+            TranscriptHighlight.start_char,
+            TranscriptHighlight.id,
+        )
+    ).all()
+
+    code_groups: dict[str, dict[str, object]] = {}
+    record_session_ids: set[str] = set()
+    for code, highlight, session_title, project_name in rows:
+        record_session_ids.add(highlight.session_id)
+        code_group = code_groups.setdefault(
+            code.id,
+            {
+                "code": code,
+                "highlights": [],
+                "latest_evidence_at": highlight.updated_at,
+                "sessions": {},
+            },
+        )
+        code_group["highlights"].append(highlight)
+        if highlight.updated_at > code_group["latest_evidence_at"]:
+            code_group["latest_evidence_at"] = highlight.updated_at
+        sessions = code_group["sessions"]
+        session_group = sessions.setdefault(
+            highlight.session_id,
+            {
+                "session_title": session_title,
+                "highlights": [],
+            },
+        )
+        session_group["highlights"].append(
+            RecordCodeSupportingHighlightRead(
+                id=highlight.id,
+                project_id=highlight.project_id,
+                project_name=project_name,
+                session_id=highlight.session_id,
+                session_title=session_title,
+                excerpt=highlight.excerpt_snapshot,
+                speaker=highlight.speaker,
+                location=highlight.location,
+            )
+        )
+
+    codes: list[RecordAcceptedCodeRead] = []
+    for value in code_groups.values():
+        code = value["code"]
+        sessions = value["sessions"]
+        codes.append(
+            RecordAcceptedCodeRead(
+                id=code.id,
+                record_id=code.record_id,
+                name=code.name,
+                description=code.description,
+                accepted_highlight_count=len(value["highlights"]),
+                session_count=len(sessions),
+                latest_evidence_at=value["latest_evidence_at"],
+                evidence_groups=[
+                    RecordCodeEvidenceGroupRead(
+                        session_id=session_id,
+                        session_title=session["session_title"],
+                        highlights=session["highlights"],
+                    )
+                    for session_id, session in sessions.items()
+                ],
+            )
+        )
+
+    return RecordTranscriptCodesRead(
+        record_id=record_id,
+        accepted_code_count=len(codes),
+        session_count=len(record_session_ids),
+        codes=codes,
+    )
 
 
 def create_code(db: Session, record_id: str, payload: RecordCodeCreate) -> RecordCodeRead:
@@ -1046,9 +1167,9 @@ def _live_suggestions(settings, chunks: list[Chunk]) -> list[GeneratedSuggestion
             {"role": "user", "content": json.dumps(context)},
         ],
         response_format={"type": "json_object"},
-        temperature=0.2,
         api_key=theme_service._api_key_for_provider(settings.provider),
         api_base=settings.base_url,
+        **completion_model_options(settings.provider, settings.model),
     )
     payload = json.loads(response.choices[0].message.content)
     chunk_map = {value.id: value for value in chunks}

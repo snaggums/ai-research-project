@@ -2,11 +2,11 @@ import * as React from "react";
 import { ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { LifecycleStatus, RecordSynthesisItem } from "@/domain/types";
+import type { LifecycleStatus, RecordKnowledgeItem, RecordSynthesisItem } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 export interface RecordKnowledgeDetailsProps extends React.HTMLAttributes<HTMLDivElement> {
-  item: RecordSynthesisItem;
+  item: RecordKnowledgeItem | RecordSynthesisItem;
   onOpenEvidence?: () => void;
   onStatusChange?: (status: LifecycleStatus) => void;
   showActions?: boolean;
@@ -17,18 +17,8 @@ export function RecordKnowledgeDetails({
   className,
   item,
   onOpenEvidence,
-  onStatusChange,
-  showActions = true,
-  statusUpdating = false,
   ...props
 }: RecordKnowledgeDetailsProps) {
-  const nextStatus = item.status === "ai-generated"
-    ? "researcher-reviewed"
-    : item.status === "researcher-reviewed"
-      ? "approved"
-      : undefined;
-  const statusActionLabel = item.status === "ai-generated" ? "Mark reviewed" : "Approve item";
-
   return (
     <div
       className={cn(
@@ -43,27 +33,27 @@ export function RecordKnowledgeDetails({
           “{item.evidencePreview}”
         </blockquote>
       </div>
-      <div className="flex flex-col gap-4 text-xs text-[var(--air-color-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
-        <span>{item.provenance}</span>
-        {showActions ? (
-          <div className="flex flex-wrap gap-2">
-            {onOpenEvidence ? (
-              <Button onClick={onOpenEvidence} size="small" variant="gray-subtle">
-                Open evidence
-                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-              </Button>
-            ) : null}
-            {nextStatus && onStatusChange ? (
-              <Button
-                disabled={statusUpdating}
-                onClick={() => onStatusChange(nextStatus)}
-                size="small"
-                variant="gray-subtle"
-              >
-                {statusUpdating ? "Saving…" : statusActionLabel}
-              </Button>
-            ) : null}
+      {"ownership" in item && item.ownership ? (
+        <dl className="grid gap-2 rounded-[var(--air-radius-md)] bg-[var(--air-color-bg-subtle)] p-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-[var(--air-color-text-secondary)]">
+              {item.ownership.role === "assignee" ? "Assignee" : "Decision maker"}
+            </dt>
+            <dd className="mt-1">{item.ownership.value ?? "Not assigned"}</dd>
           </div>
+          <div>
+            <dt className="text-xs text-[var(--air-color-text-secondary)]">Ownership status</dt>
+            <dd className="mt-1">{item.ownership.status.replace(/-/g, " ")}</dd>
+          </div>
+        </dl>
+      ) : null}
+      <div className="flex flex-col gap-4 text-xs text-[var(--air-color-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
+        <span>{item.provenance} · Approved Session Report</span>
+        {onOpenEvidence && item.evidenceIds.length ? (
+          <Button onClick={onOpenEvidence} size="small" variant="gray-subtle">
+            Open evidence
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </Button>
         ) : null}
       </div>
     </div>

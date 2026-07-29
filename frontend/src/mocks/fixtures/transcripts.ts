@@ -29,7 +29,7 @@ export const transcriptApiFixtures: TranscriptDocument[] = [
 ];
 
 export const transcriptSearchFixtures: TranscriptSearchResult[] = [
-  { id: "result-1", document_id: "checkout-transcript", speaker: "Jordan Moore", location: "00:01:12", excerpt: transcriptBlocks[1].text, relevance: 0.91, block_index: 1 },
-  { id: "result-2", document_id: "checkout-transcript", speaker: "Maya Chen (Moderator)", location: "00:00:58", excerpt: "What stood out as confusing while you moved from the cart into checkout?", relevance: 0.84, block_index: 0 },
-  { id: "result-3", document_id: "checkout-transcript", speaker: "Jordan Moore", location: "00:02:48", excerpt: "A clear progress indicator would help me understand where I am and whether I can safely return to the previous step.", relevance: 0.79, block_index: 3 },
+  { id: "result-1", document_id: "checkout-transcript", speaker: "Jordan Moore", location: "00:01:12", excerpt: "The navigation confusion started when the cart summary disappeared while I entered delivery information.", relevance: 1, block_index: 1 },
+  { id: "result-2", document_id: "checkout-transcript", speaker: "Maya Chen (Moderator)", location: "00:00:58", excerpt: "What navigation confusion stood out while you moved from the cart into checkout?", relevance: 1, block_index: 0 },
+  { id: "result-3", document_id: "checkout-transcript", speaker: "Jordan Moore", location: "00:02:48", excerpt: "The navigation confusion would be reduced by a clear progress indicator and persistent order summary.", relevance: 1, block_index: 3 },
 ];

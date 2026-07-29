@@ -130,6 +130,36 @@ describe("Transcript Coding Research Objects", () => {
     ).toBeInTheDocument();
   });
 
+  it("constrains long accepted-highlight content to the right-rail width", () => {
+    const longCodeName = "Evidence needs structured allegation-linked organization";
+    render(
+      <div className="w-[24.5rem]">
+        <TranscriptCodeSuggestion
+          codeName={longCodeName}
+          description="Flat evidence lists lack types, clear labels, and links to the allegations each file supports, limiting later reviewers' ability to understand evidence context."
+          evidence={[{
+            ...evidence[0],
+            excerpt: "I uploaded the four synthetic supporting documents and added a short description to each. Once I add the claim extract, audit spreadsheet, provider profile, and correspondence, they appear as one flat list.",
+          }]}
+          onDeleteHighlight={() => undefined}
+          onRemoveCode={() => undefined}
+          provenance="Researcher accepted AI suggestion"
+          status="accepted"
+        />
+      </div>,
+    );
+
+    const title = screen.getAllByText(longCodeName)[0];
+    const card = title.closest("article");
+    const codeChip = screen.getAllByText(longCodeName)
+      .map((node) => node.closest(".air-chip"))
+      .find(Boolean);
+
+    expect(card).toHaveClass("min-w-0", "overflow-hidden");
+    expect(screen.getByText("Accepted")).toHaveClass("shrink-0");
+    expect(codeChip).toHaveClass("max-w-full");
+  });
+
   it("removes the entire accepted Code section through its card-level action", async () => {
     const user = userEvent.setup();
     const onRemoveAcceptedCode = vi.fn();

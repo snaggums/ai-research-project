@@ -26,7 +26,7 @@ from app.schemas.synthesis import (
     SessionThemeRead,
     SessionThemeUpdate,
 )
-from app.services import ai_settings_service, chat_service, theme_service
+from app.services import ai_settings_service, chat_service, record_knowledge_service, theme_service
 from app.services.embedding_service import embed_text
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
@@ -177,14 +177,45 @@ def update_session_report(db: Session, research_session: ResearchSession, payloa
     if report is None:
         return None
     values = payload.model_dump(exclude_unset=True, exclude_none=True)
-    if values.get("status") is not None:
-        report.status = values["status"]
+    if report.status == "approved" and (
+        any(key in values for key in ("executive_summary", "detailed_notes"))
+        or values.get("status") not in {None, "approved"}
+    ):
+        raise ValueError(
+            "Approved Session Reports are preserved. Create a new revision before making changes."
+        )
+    requested_status = values.get("status")
+    if (
+        report.status == "approved"
+        and requested_status == "approved"
+        and set(values) == {"status"}
+    ):
+        if report.approved_at is None:
+            report.approved_at = datetime.now(timezone.utc)
+            db.add(report)
+            db.flush()
+        record_knowledge_service.promote_approved_report(
+            db, research_session, report
+        )
+        db.commit()
+        loaded = db.scalar(_report_select().where(SessionReport.id == report.id))
+        return _report_to_read(loaded, research_session) if loaded else None
+    if requested_status is not None:
+        report.status = requested_status
     if values.get("executive_summary") is not None:
         report.executive_summary = values["executive_summary"].strip()
     if values.get("detailed_notes") is not None:
         report.detailed_notes = values["detailed_notes"].strip()
-    report.updated_at = datetime.now(timezone.utc)
+    updated_at = datetime.now(timezone.utc)
+    if requested_status == "approved" and report.approved_at is None:
+        report.approved_at = updated_at
+    report.updated_at = updated_at
     db.add(report)
+    db.flush()
+    if requested_status == "approved":
+        record_knowledge_service.promote_approved_report(
+            db, research_session, report
+        )
     db.commit()
     loaded = db.scalar(_report_select().where(SessionReport.id == report.id))
     return _report_to_read(loaded, research_session) if loaded else None
@@ -199,6 +230,10 @@ def update_session_report_item(
     report = db.scalar(_report_select().where(SessionReport.session_id == research_session.id).order_by(SessionReport.created_at.desc()))
     if report is None:
         return None
+    if report.status == "approved":
+        raise ValueError(
+            "Approved Session Reports are preserved. Create a new revision before editing an item."
+        )
     item = next((candidate for candidate in report.items if candidate.id == item_id), None)
     if item is None:
         return None
@@ -528,9 +563,12 @@ def _report_detailed_notes(report: SessionReport, research_session: ResearchSess
 
 
 def _report_item_title(item_type: str, theme_name: str) -> str:
+    if item_type == "decision":
+        decision_title = theme_name.strip()
+        return f"{decision_title[:1].upper()}{decision_title[1:]}"
+
     prefixes = {
         "requirement": "Address",
-        "decision": "Decide how to address",
         "action-item": "Validate",
         "open-question": "Clarify",
         "key-insight": "Key insight:",

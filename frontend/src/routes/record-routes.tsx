@@ -1,7 +1,12 @@
 import * as React from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { toRecordSummary, toRecordSynthesis, toRecordSynthesisScope } from "@/adapters/records";
+import {
+  toRecordKnowledge,
+  toRecordKnowledgeScope,
+  toRecordSummary,
+  toRecordTranscriptCodes,
+} from "@/adapters/records";
 import { toSessionSummary } from "@/adapters/sessions";
 import { toTranscriptContext } from "@/adapters/transcripts";
 import { RecordApiError } from "@/api/records";
@@ -13,21 +18,20 @@ import type {
 import type { EvidenceCitation } from "@/components/research/evidence-citation-card";
 import {
   useAskRecord,
-  useGenerateRecordSynthesis,
-  useLatestRecordSynthesis,
   useRecord,
   useRecordChatSources,
+  useRecordKnowledge,
+  useRecordKnowledgeEvidence,
+  useRecordKnowledgeSources,
+  useRecordSynthesisEvidence,
+  useRecordTranscriptCodes,
   useRecords,
   useRecordSessions,
-  useRecordSynthesisEligibility,
-  useRecordSynthesisEvidence,
-  useUpdateRecordSynthesisItem,
 } from "@/hooks/useRecords";
 import {
   RecordDetailView,
   RecordEvidenceDetailView,
   RecordsCollectionView,
-  RecordSynthesisView,
 } from "@/pages/record-views";
 
 const notFound = (error: unknown) => error instanceof RecordApiError && error.status === 404;
@@ -137,29 +141,41 @@ export function RecordDetailRoute() {
         : "overview";
   const record = useRecord(recordId);
   const sessions = useRecordSessions(recordId);
-  const eligibility = useRecordSynthesisEligibility(recordId);
-  const synthesis = useLatestRecordSynthesis(recordId);
-  const generate = useGenerateRecordSynthesis(recordId);
-  const updateItem = useUpdateRecordSynthesisItem(recordId);
+  const knowledgeSources = useRecordKnowledgeSources(recordId);
+  const knowledge = useRecordKnowledge(recordId, true);
+  const transcriptCodes = useRecordTranscriptCodes(
+    recordId,
+    activeView === "transcript-codes",
+  );
   const chatSources = useRecordChatSources(recordId, activeView === "ask-record");
   const askRecordMutation = useAskRecord(recordId);
   const [chatTurns, setChatTurns] = React.useState<AskRecordConversationTurn[]>([]);
   const [chatQuestion, setChatQuestion] = React.useState("");
   const lastQuestionRef = React.useRef("");
-  const criticalErrors = [record.error, sessions.error, eligibility.error];
+  const criticalErrors = [record.error, sessions.error, knowledgeSources.error];
   const routeState = criticalErrors.some(notFound)
     ? "not-found"
-    : record.isPending || sessions.isPending || eligibility.isPending
+    : record.isPending || sessions.isPending || knowledgeSources.isPending
       ? "loading"
       : criticalErrors.some(Boolean)
         ? "error"
         : "ready";
-  const synthesisValue = synthesis.data ? toRecordSynthesis(synthesis.data) : undefined;
-  const knowledgeState = synthesis.isPending
+  const knowledgeValue = knowledge.data ? toRecordKnowledge(knowledge.data) : undefined;
+  const knowledgeState = knowledge.isPending
     ? "loading"
-    : synthesis.isError
+    : knowledge.isError
       ? "error"
-      : synthesisValue?.status === "complete" && synthesisValue.items.length
+      : knowledgeValue?.items.length
+        ? "ready"
+        : "empty";
+  const transcriptCodeValue = transcriptCodes.data
+    ? toRecordTranscriptCodes(transcriptCodes.data)
+    : undefined;
+  const transcriptCodeState = transcriptCodes.isPending
+    ? "loading"
+    : transcriptCodes.isError
+      ? "error"
+      : transcriptCodeValue?.codes.length
         ? "ready"
         : "empty";
 
@@ -210,7 +226,7 @@ export function RecordDetailRoute() {
           value: String(chatSources.data.primary_transcript_count),
         },
         {
-          label: "Reviewed or approved Session Reports",
+          label: "Approved Session Reports",
           value: String(chatSources.data.reviewed_report_count),
         },
         {
@@ -253,9 +269,8 @@ export function RecordDetailRoute() {
       suggestedQuestions: suggestedRecordQuestions,
       turns: chatTurns,
     }}
-    generating={generate.isPending}
+    knowledge={knowledgeValue}
     knowledgeState={knowledgeState}
-    onGenerate={() => generate.mutate()}
     onOpenInTranscriptCoding={(highlight) => {
       const params = new URLSearchParams({
         highlight: highlight.id,
@@ -268,13 +283,11 @@ export function RecordDetailRoute() {
       );
     }}
     onOpenEvidence={(itemId) => {
-      const evidenceId = synthesisValue?.items.find((item) => item.id === itemId)?.evidenceIds[0];
-      if (evidenceId) navigate(`${root}/${recordId}/synthesis/items/${itemId}/evidence/${evidenceId}`);
+      const evidenceId = knowledgeValue?.items.find((item) => item.id === itemId)?.evidenceIds[0];
+      if (evidenceId) navigate(`${root}/${recordId}/knowledge/items/${itemId}/evidence/${evidenceId}`);
     }}
-    onRetry={() => { void record.refetch(); void sessions.refetch(); void eligibility.refetch(); void synthesis.refetch(); }}
-    onRetryKnowledge={() => { void synthesis.refetch(); }}
-    onStatusChange={(itemId, status) => updateItem.mutate({ itemId, status })}
-    onOpenSynthesis={() => navigate(`${root}/${recordId}/synthesis`)}
+    onRetry={() => { void record.refetch(); void sessions.refetch(); void knowledgeSources.refetch(); void knowledge.refetch(); }}
+    onRetryKnowledge={() => { void knowledge.refetch(); }}
     onViewChange={(view) => {
       setSearchParams((current) => {
         const next = new URLSearchParams(current);
@@ -286,60 +299,48 @@ export function RecordDetailRoute() {
       });
     }}
     record={record.data ? toRecordSummary(record.data) : undefined}
+    recordCodes={transcriptCodeValue?.codes}
+    recordCodeSessionCount={transcriptCodeValue?.sessionCount}
+    recordCodeState={transcriptCodeState}
     recordRootPath={root}
     routeState={routeState}
-    scope={eligibility.data ? toRecordSynthesisScope(eligibility.data) : undefined}
+    scope={knowledgeSources.data ? toRecordKnowledgeScope(knowledgeSources.data) : undefined}
     sessions={(sessions.data ?? []).map(toSessionSummary)}
-    statusUpdatingItemId={updateItem.isPending ? updateItem.variables?.itemId : undefined}
-    synthesis={synthesisValue}
+    onRetryRecordCodes={() => void transcriptCodes.refetch()}
   />;
 }
 
 export function RecordSynthesisRoute() {
-  const navigate = useNavigate();
   const { projectId, recordId = "" } = useParams();
   const root = recordRootPath(projectId);
+  return <Navigate replace to={`${root}/${recordId}?view=knowledge`} />;
+}
+
+export function RecordKnowledgeEvidenceDetailRoute() {
+  const { projectId, recordId = "", itemId = "", evidenceId = "" } = useParams();
+  const root = recordRootPath(projectId);
   const record = useRecord(recordId);
-  const eligibility = useRecordSynthesisEligibility(recordId);
-  const synthesis = useLatestRecordSynthesis(recordId);
-  const generate = useGenerateRecordSynthesis(recordId);
-  const updateItem = useUpdateRecordSynthesisItem(recordId);
-  const errors = [record.error, eligibility.error, synthesis.error];
-  if (record.isPending || eligibility.isPending || synthesis.isPending) return <RecordDetailView recordRootPath={root} routeState="loading" sessions={[]} />;
-  if (errors.some(notFound) || !record.data || !eligibility.data) return <RecordDetailView recordRootPath={root} routeState="not-found" sessions={[]} />;
-  if (errors.some(Boolean)) return <RecordDetailView onRetry={() => { void record.refetch(); void eligibility.refetch(); void synthesis.refetch(); }} recordRootPath={root} routeState="error" sessions={[]} />;
-  const scope = toRecordSynthesisScope(eligibility.data);
-  const value = synthesis.data ? toRecordSynthesis(synthesis.data) : undefined;
-  const insufficient = scope.includedSessions.length < scope.minimumEligibleSessions;
-  const state = generate.isPending
-    ? "processing"
-    : insufficient
-      ? "insufficient"
-      : value?.status === "processing"
-        ? "processing"
-        : value?.status === "failed" || generate.isError
-          ? "failed"
-          : value?.status === "complete"
-            ? "results"
-            : "empty";
-  return <RecordSynthesisView
-    onGenerate={() => generate.mutate()}
-    onOpenEvidence={(itemId) => {
-      const evidenceId = value?.items.find((item) => item.id === itemId)?.evidenceIds[0];
-      if (evidenceId) navigate(`${root}/${recordId}/synthesis/items/${itemId}/evidence/${evidenceId}`);
-    }}
-    onRetry={() => generate.mutate()}
-    onStatusChange={(itemId, status) => updateItem.mutate({ itemId, status })}
-    record={toRecordSummary(record.data)}
+  const evidence = useRecordKnowledgeEvidence(recordId, itemId, evidenceId);
+  const state = record.isPending || evidence.isPending
+    ? "loading"
+    : notFound(record.error) || notFound(evidence.error)
+      ? "not-found"
+      : record.isError || evidence.isError
+        ? "error"
+        : "ready";
+  return <RecordEvidenceDetailView
+    context={evidence.data ? toTranscriptContext(evidence.data.context) : undefined}
+    evidenceId={evidenceId}
+    itemTitle={evidence.data?.item_title}
+    onRetry={() => { void record.refetch(); void evidence.refetch(); }}
+    record={record.data ? toRecordSummary(record.data) : undefined}
     recordRootPath={root}
-    scope={scope}
+    sessionTitle={evidence.data?.session_title}
     state={state}
-    statusUpdatingItemId={updateItem.isPending ? updateItem.variables?.itemId : undefined}
-    synthesis={value ?? (generate.data ? toRecordSynthesis(generate.data) : undefined)}
   />;
 }
 
-export function RecordEvidenceDetailRoute() {
+export function RecordSynthesisEvidenceDetailRoute() {
   const { projectId, recordId = "", itemId = "", evidenceId = "" } = useParams();
   const root = recordRootPath(projectId);
   const record = useRecord(recordId);
@@ -359,6 +360,7 @@ export function RecordEvidenceDetailRoute() {
     record={record.data ? toRecordSummary(record.data) : undefined}
     recordRootPath={root}
     sessionTitle={evidence.data?.session_title}
+    sourceType="synthesis"
     state={state}
   />;
 }

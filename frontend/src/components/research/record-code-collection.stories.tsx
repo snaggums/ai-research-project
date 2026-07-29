@@ -51,11 +51,11 @@ const meta = {
   tags: ["autodocs"],
   args: {
     codes: recordCodeDetails,
-    eligibleSessionCount: 5,
     onRetry: fn(),
     onSelectCode: fn(),
     onViewRelatedSessions: fn(),
     selectedCodeId: recordCodeDetails[0].id,
+    sessionCount: 5,
     totalCodeCount: recordCodeDetails.length,
   },
   decorators: [(Story) => <div className="min-h-[980px] p-6"><Story /></div>],
@@ -82,27 +82,46 @@ export const SortInteraction: Story = {
 
     await userEvent.click(sortBy);
     await userEvent.click(canvas.getByRole("option", { name: "Name Z–A" }));
-    await expect(codeList()[0]).toHaveTextContent("Table navigation");
+    await expect(codeList()[0]).toHaveTextContent(
+      "Submission readiness requires explicit criteria and audit receipt",
+    );
 
     await userEvent.click(sortBy);
     await userEvent.click(canvas.getByRole("option", { name: "Name A–Z" }));
-    await expect(codeList()[0]).toHaveTextContent("Confirmation and reversibility");
+    await expect(codeList()[0]).toHaveTextContent(
+      "Allegation classification is ambiguous for overlapping fraud types",
+    );
 
     await userEvent.click(sortBy);
     await userEvent.click(canvas.getByRole("option", { name: "Most recent evidence" }));
-    await expect(codeList()[1]).toHaveTextContent("Navigation terminology");
+    await expect(codeList()[1]).toHaveTextContent(
+      "Need for clear supervisory workflow controls",
+    );
 
     await userEvent.click(sortBy);
     await userEvent.click(canvas.getByRole("option", { name: "Most Sessions" }));
-    await expect(codeList()[2]).toHaveTextContent("Confirmation and reversibility");
+    await expect(codeList()[2]).toHaveTextContent(
+      "Explicit submission readiness and audit receipt",
+    );
 
     await userEvent.click(sortBy);
     await userEvent.click(canvas.getByRole("option", { name: "Most highlights" }));
-    await expect(codeList()[2]).toHaveTextContent("Error recovery");
+    await expect(codeList()[2]).toHaveTextContent(
+      "Explicit submission readiness and audit receipt",
+    );
   },
 };
-export const NoResults: Story = { args: { codes: [], initialQuery: "delivery" } };
+export const Loading: Story = {
+  args: {
+    codes: [],
+    selectedCodeId: undefined,
+    sessionCount: 0,
+    state: "loading",
+    totalCodeCount: 0,
+  },
+};
+export const NoResults: Story = { args: { initialQuery: "delivery" } };
 export const Empty: Story = {
-  args: { codes: [], eligibleSessionCount: 5, state: "empty", totalCodeCount: 0 },
+  args: { codes: [], sessionCount: 5, state: "empty", totalCodeCount: 0 },
 };
 export const Error: Story = { args: { codes: [], state: "error" } };

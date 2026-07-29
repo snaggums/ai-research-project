@@ -4,9 +4,10 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type {
+  RecordKnowledgeItem,
+  RecordKnowledgeItemType,
   LifecycleStatus,
   RecordSynthesisItem,
-  RecordSynthesisItemType,
 } from "@/domain/types";
 import { cn } from "@/lib/utils";
 import { RecordKnowledgeRow } from "./record-knowledge-row";
@@ -15,7 +16,7 @@ export type RecordKnowledgeSectionState = "populated" | "empty" | "loading" | "e
 
 export interface RecordKnowledgeSectionProps extends React.HTMLAttributes<HTMLElement> {
   expandedItemIds?: ReadonlySet<string>;
-  items: RecordSynthesisItem[];
+  items: Array<RecordKnowledgeItem | RecordSynthesisItem>;
   label: string;
   onOpenEvidence?: (itemId: string) => void;
   onRetry?: () => void;
@@ -23,13 +24,13 @@ export interface RecordKnowledgeSectionProps extends React.HTMLAttributes<HTMLEl
   onToggleItem?: (itemId: string) => void;
   state?: RecordKnowledgeSectionState;
   statusUpdatingItemId?: string;
-  type: RecordSynthesisItemType;
+  type: RecordKnowledgeItemType;
 }
 
-const emptyDescriptions: Record<RecordSynthesisItemType, string> = {
-  requirement: "No Requirements are available in the latest Record synthesis.",
-  decision: "No Decisions are available in the latest Record synthesis.",
-  "action-item": "No Action items are available in the latest Record synthesis.",
+const emptyDescriptions: Record<RecordKnowledgeItemType, string> = {
+  requirement: "No approved Session Report Requirements are available.",
+  decision: "No approved Session Report Decisions are available.",
+  "action-item": "No approved Session Report Action Items are available.",
 };
 
 export function RecordKnowledgeSection({
@@ -39,10 +40,8 @@ export function RecordKnowledgeSection({
   label,
   onOpenEvidence,
   onRetry,
-  onStatusChange,
   onToggleItem,
   state = items.length ? "populated" : "empty",
-  statusUpdatingItemId,
   type,
   ...props
 }: RecordKnowledgeSectionProps) {
@@ -81,7 +80,7 @@ export function RecordKnowledgeSection({
       {state === "error" ? (
         <div className="mt-4 grid gap-3">
           <Alert
-            message={`The latest ${label} could not be loaded. Existing synthesis data has not been changed.`}
+            message={`${label} could not be loaded. Approved Session Reports have not been changed.`}
             title={`${label} could not be loaded`}
             tone="error"
           />
@@ -101,9 +100,7 @@ export function RecordKnowledgeSection({
                 expanded={expandedItemIds.has(item.id)}
                 item={item}
                 onOpenEvidence={onOpenEvidence ? () => onOpenEvidence(item.id) : undefined}
-                onStatusChange={onStatusChange ? (status) => onStatusChange(item.id, status) : undefined}
                 onToggle={() => onToggleItem?.(item.id)}
-                statusUpdating={statusUpdatingItemId === item.id}
               />
             </li>
           ))}

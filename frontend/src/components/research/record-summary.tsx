@@ -18,8 +18,8 @@ export function RecordSummary({ className, layout = "default", record, ...props 
   const compact = layout === "compact";
   const metadata = [
     { label: "Related Sessions", value: `${record.relatedSessionCount} related ${record.relatedSessionCount === 1 ? "Session" : "Sessions"}` },
-    { label: "Eligible Sessions", value: `${record.eligibleSessionCount} eligible ${record.eligibleSessionCount === 1 ? "Session" : "Sessions"}` },
-    { label: "Latest synthesis", value: record.latestSynthesisAt ? `Generated ${formatRecordSynthesisDate(record.latestSynthesisAt)}` : "Not yet synthesized" },
+    { label: "Approved Session Reports", value: `${record.approvedReportCount ?? record.eligibleSessionCount} approved ${(record.approvedReportCount ?? record.eligibleSessionCount) === 1 ? "report" : "reports"}` },
+    { label: "Record Knowledge", value: record.knowledgeUpdatedAt ? `Updated ${formatRecordSynthesisDate(record.knowledgeUpdatedAt)}` : "No approved knowledge yet" },
   ];
 
   return (

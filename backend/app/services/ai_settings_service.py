@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from app.core.config import settings as app_settings
 from app.models.settings import AISettings
 from app.schemas.settings import AISettingsTestResponse, AISettingsUpdate
+from app.services.ai_completion_options import completion_model_options
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -181,6 +182,7 @@ def _verify_provider_connection(settings: AISettings) -> None:
         api_key=_api_key_for_provider(settings.provider),
         api_base=settings.base_url,
         timeout=15,
+        **completion_model_options(settings.provider, settings.model),
     )
 
 

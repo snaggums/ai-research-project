@@ -21,6 +21,20 @@ describe("Session synthesis Research Objects", () => {
     expect(screen.getAllByRole("link", { name: /Open transcript context/ })).toHaveLength(3);
   });
 
+  it("keeps Edit available for Approved and Rejected Themes", () => {
+    const approved = toSessionTheme(sessionThemeFixtures[2]);
+    const rejected = { ...toSessionTheme(sessionThemeFixtures[0]), status: "rejected" as const };
+    const { rerender } = render(<ThemeCard theme={approved} />);
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review theme" })).not.toBeInTheDocument();
+
+    rerender(<ThemeCard theme={rejected} />);
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review theme" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+
   it("renders Session Report sections in the approved canonical order", () => {
     render(<SessionReport report={toSessionReport(sessionReportFixture)} />);
     const headings = screen.getAllByRole("heading").map((heading) => heading.textContent);

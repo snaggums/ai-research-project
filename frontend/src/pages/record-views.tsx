@@ -33,6 +33,7 @@ import { Tabs } from "@/components/ui/tabs";
 import type {
   RecordSummary as RecordSummaryValue,
   LifecycleStatus,
+  RecordKnowledge,
   RecordSynthesis,
   RecordSynthesisScope,
   SessionSummary,
@@ -49,7 +50,7 @@ export interface RecordsCollectionViewProps {
 
 export function RecordsCollectionView({ onOpenRecord, onRetry, recordRootPath = "/records", records, state = "ready" }: RecordsCollectionViewProps) {
   return <div className="grid gap-6">
-    <PageHeader breadcrumbs={[{ label: "Records" }]} description="Review the fixed Record catalog and synthesize eligible research across Sessions." title="Records" />
+    <PageHeader breadcrumbs={[{ label: "Records" }]} description="Review approved Requirements, Decisions, and Action Items collected across Sessions." title="Records" />
     <EntityCollection
       countLabel={state === "loading" ? "Loading records..." : `${records.length} ${records.length === 1 ? "record" : "records"}`}
       countPosition="below"
@@ -71,6 +72,7 @@ export interface RecordDetailViewProps {
   askRecordProps?: AskRecordWorkspaceProps;
   generating?: boolean;
   knowledgeState?: RecordKnowledgeWorkspaceState;
+  knowledge?: RecordKnowledge;
   onGenerate?: () => void;
   onOpenInTranscriptCoding?: (highlight: RecordCodeSupportingHighlightValue) => void;
   onOpenSynthesis?: () => void;
@@ -81,7 +83,7 @@ export interface RecordDetailViewProps {
   onRetry?: () => void;
   onViewChange?: (view: "overview" | "knowledge" | "transcript-codes" | "ask-record") => void;
   record?: RecordSummaryValue;
-  recordCodeEligibleSessionCount?: number;
+  recordCodeSessionCount?: number;
   recordCodes?: RecordCodeDetailValue[];
   recordCodeState?: RecordCodeCollectionState;
   recordRootPath?: string;
@@ -95,27 +97,22 @@ export interface RecordDetailViewProps {
 export function RecordDetailView({
   activeView = "overview",
   askRecordProps,
-  generating = false,
   knowledgeState,
-  onGenerate,
+  knowledge: recordKnowledge,
   onOpenEvidence,
   onOpenInTranscriptCoding,
-  onOpenSynthesis,
   onRetry,
   onRetryKnowledge,
   onRetryRecordCodes,
-  onStatusChange,
   onViewChange,
   record,
-  recordCodeEligibleSessionCount = 0,
+  recordCodeSessionCount = 0,
   recordCodes = [],
   recordCodeState,
   recordRootPath = "/records",
   routeState = "ready",
   scope,
   sessions,
-  statusUpdatingItemId,
-  synthesis,
 }: RecordDetailViewProps) {
   const [knowledgeQuery, setKnowledgeQuery] = React.useState("");
   const [recordCodeQuery, setRecordCodeQuery] = React.useState("");
@@ -129,10 +126,9 @@ export function RecordDetailView({
   if (routeState === "loading") return <SharedRouteState state="loading" />;
   if (routeState === "error") return <SharedRouteState onRetry={onRetry} state="recoverable-error" />;
   if (routeState === "not-found" || !record || !scope) return <SharedRouteState returnHref={recordRootPath} state="not-found" />;
-  const eligible = scope.includedSessions.length >= scope.minimumEligibleSessions;
   const resolvedKnowledgeState = knowledgeState
-    ?? (synthesis?.status === "complete"
-      ? synthesis.items.length
+    ?? (recordKnowledge
+      ? recordKnowledge.items.length
         ? "ready"
         : "empty"
       : "empty");
@@ -166,46 +162,32 @@ export function RecordDetailView({
       <EntityCollection countLabel={`${sessions.length} related ${sessions.length === 1 ? "Session" : "Sessions"}`} title="Related Sessions">
         {sessions.length ? <div className="grid gap-4">{sessions.map((session) => <SessionCollectionItem href={`/projects/${session.projectId}/sessions/${session.id}/overview`} key={session.id} session={session} />)}</div> : <EmptyState description="Assign this Record from a Session form to include that Session here." title="No related Sessions" />}
       </EntityCollection>
-      {synthesis?.status === "complete" ? (
-        <div className="grid gap-4">
-          {onOpenSynthesis ? (
-            <div className="flex justify-end">
-              <Button onClick={onOpenSynthesis} size="small" variant="gray-subtle">
-                Review synthesis
-              </Button>
-            </div>
-          ) : null}
-          <RecordSynthesisResults
-            onOpenEvidence={onOpenEvidence}
-            onStatusChange={onStatusChange}
-            statusUpdatingItemId={statusUpdatingItemId}
-            synthesis={synthesis}
-          />
-        </div>
-      ) : null}
     </div>
   );
 
   const knowledge = (
     <RecordKnowledgeWorkspace
       expandedItemIds={expandedItemIds}
-      items={synthesis?.status === "complete" ? synthesis.items : []}
+      items={recordKnowledge?.items ?? []}
       onOpenEvidence={onOpenEvidence}
       onQueryChange={setKnowledgeQuery}
       onRetry={onRetryKnowledge}
-      onStatusChange={onStatusChange}
       onToggleItem={toggleKnowledgeItem}
       query={knowledgeQuery}
       state={resolvedKnowledgeState}
-      statusUpdatingItemId={statusUpdatingItemId}
     />
   );
   const transcriptCodes = (
     <RecordCodeWorkspace
       codes={visibleRecordCodes}
       collectionState={resolvedRecordCodeState}
-      comparisonState={resolvedRecordCodeState === "error" ? "error" : "ready"}
-      eligibleSessionCount={recordCodeEligibleSessionCount}
+      comparisonState={
+        resolvedRecordCodeState === "error"
+          ? "error"
+          : resolvedRecordCodeState === "loading"
+            ? "loading"
+            : "ready"
+      }
       headingLevel="h2"
       onClearSearch={() => setRecordCodeQuery("")}
       onOpenInTranscriptCoding={onOpenInTranscriptCoding}
@@ -217,54 +199,22 @@ export function RecordDetailView({
       onViewRelatedSessions={() => onViewChange?.("overview")}
       query={recordCodeQuery}
       selectedCode={selectedRecordCode}
+      sessionCount={recordCodeSessionCount}
       sort={recordCodeSort}
       totalCodeCount={recordCodes.length}
     />
   );
   const askRecord = askRecordProps ? (
-    <AskRecordWorkspace
-      {...askRecordProps}
-      recordName={askRecordProps.recordName ?? record.name}
-    />
+    <AskRecordWorkspace {...askRecordProps} />
   ) : null;
 
   return <div className="grid gap-6">
     <PageHeader
       breadcrumbs={[{ href: recordRootPath, label: "Records" }, { label: record.name }]}
-      description="Cross-session synthesis of requirements, decisions, and action items."
+      description="Approved Requirements, Decisions, and Action Items collected exactly from Session Reports."
       title={record.name}
     />
     <RecordSummary record={record} />
-    {activeView === "overview" ? <section className="flex flex-col gap-4 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="record-synthesis-action-title">
-      <div>
-        <h2 className="text-sm font-semibold" id="record-synthesis-action-title">
-          {eligible ? "Ready to synthesize" : "More research required"}
-        </h2>
-        <p className="mt-1 text-sm text-[var(--air-color-text-secondary)]">
-          {eligible
-            ? "Uses only eligible Session Reports in this Record."
-            : `At least ${scope.minimumEligibleSessions} eligible Session Reports are required.`}
-        </p>
-      </div>
-      {onGenerate ? (
-        <Button disabled={!eligible || generating} onClick={onGenerate} size="small">
-          <Sparkles aria-hidden="true" className="h-4 w-4" />
-          {generating ? "Generating…" : "Generate synthesis"}
-        </Button>
-      ) : eligible ? (
-        <Button asChild size="small">
-          <a href={`${recordRootPath}/${record.id}/synthesis`}>
-            <Sparkles aria-hidden="true" className="h-4 w-4" />
-            Generate synthesis
-          </a>
-        </Button>
-      ) : (
-        <Button disabled size="small">
-          <Sparkles aria-hidden="true" className="h-4 w-4" />
-          Generate synthesis
-        </Button>
-      )}
-    </section> : null}
     <Tabs
       aria-label="Record views"
       items={[
@@ -276,7 +226,7 @@ export function RecordDetailView({
           value: "transcript-codes",
         },
         ...(askRecord
-          ? [{ content: askRecord, label: "Ask Record", value: "ask-record" }]
+          ? [{ content: askRecord, label: "Ask this record", value: "ask-record" }]
           : []),
       ]}
       onValueChange={(value) =>
@@ -327,18 +277,29 @@ export interface RecordEvidenceDetailViewProps {
   record?: RecordSummaryValue;
   recordRootPath?: string;
   sessionTitle?: string;
+  sourceType?: "knowledge" | "synthesis";
   state?: "ready" | "loading" | "error" | "not-found";
 }
 
-export function RecordEvidenceDetailView({ context, evidenceId, itemTitle, onRetry, record, recordRootPath = "/records", sessionTitle, state = "ready" }: RecordEvidenceDetailViewProps) {
+export function RecordEvidenceDetailView({ context, evidenceId, itemTitle, onRetry, record, recordRootPath = "/records", sessionTitle, sourceType = "knowledge", state = "ready" }: RecordEvidenceDetailViewProps) {
+  const isSynthesis = sourceType === "synthesis";
+  const returnHref = record
+    ? isSynthesis
+      ? `${recordRootPath}/${record.id}/synthesis`
+      : `${recordRootPath}/${record.id}?view=knowledge`
+    : recordRootPath;
   if (state === "loading") return <SharedRouteState state="loading" />;
-  if (state === "error") return <SharedRouteState onRetry={onRetry} returnHref={record ? `${recordRootPath}/${record.id}/synthesis` : recordRootPath} state="recoverable-error" />;
+  if (state === "error") return <SharedRouteState onRetry={onRetry} returnHref={returnHref} state="recoverable-error" />;
   if (state === "not-found" || !context || !record) return <SharedRouteState returnHref={recordRootPath} state="not-found" />;
   return <div className="grid gap-6">
-    <PageHeader breadcrumbs={[{ href: recordRootPath, label: "Records" }, { href: `${recordRootPath}/${record.id}`, label: record.name }, { href: `${recordRootPath}/${record.id}/synthesis`, label: "Synthesis" }, { label: "Evidence" }]} description="Review the cited source passage and its surrounding transcript context." title="Synthesis evidence" />
-    <Button asChild className="justify-self-start" size="small" variant="text"><a href={`${recordRootPath}/${record.id}/synthesis`}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to Synthesis</a></Button>
+    <PageHeader
+      breadcrumbs={[{ href: recordRootPath, label: "Records" }, { href: `${recordRootPath}/${record.id}`, label: record.name }, { href: returnHref, label: isSynthesis ? "Synthesis" : "Knowledge" }, { label: "Evidence" }]}
+      description={isSynthesis ? "Review the cited source passage and its surrounding transcript context." : "Review the approved source passage and its surrounding transcript context."}
+      title={isSynthesis ? "Synthesis evidence" : "Record Knowledge evidence"}
+    />
+    <Button asChild className="justify-self-start" size="small" variant="text"><a href={returnHref}><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to {isSynthesis ? "Synthesis" : "Knowledge"}</a></Button>
     <article className="grid gap-5 rounded-[var(--air-radius-lg)] border border-[var(--air-color-border-default)] bg-[var(--air-color-bg-surface)] p-5 md:p-6">
-      <header><p className="text-xs font-semibold uppercase tracking-wide text-[var(--air-color-text-secondary)]">{sessionTitle ?? "Source Session"}</p><h2 className="mt-1 text-2xl font-semibold">{itemTitle ?? "Synthesis item evidence"}</h2><p className="mt-2 text-sm text-[var(--air-color-text-secondary)]">Evidence ID: {evidenceId}</p></header>
+        <header><p className="text-xs font-semibold uppercase tracking-wide text-[var(--air-color-text-secondary)]">{sessionTitle ?? "Source Session"}</p><h2 className="mt-1 text-2xl font-semibold">{itemTitle ?? (isSynthesis ? "Synthesis item evidence" : "Record Knowledge evidence")}</h2><p className="mt-2 text-sm text-[var(--air-color-text-secondary)]">Evidence ID: {evidenceId}</p></header>
       <TranscriptContextPassage context={context} />
     </article>
   </div>;

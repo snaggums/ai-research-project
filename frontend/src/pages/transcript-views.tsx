@@ -23,6 +23,7 @@ export interface SessionTranscriptWorkspaceViewProps {
   documents: TranscriptDocumentDetail[];
   errorMessage?: string;
   onDelete: (documentId: string) => void;
+  onClearSearch?: () => void;
   onOpenContext?: (href: string) => void;
   onRetry: (documentId: string) => void;
   onRetryLoad?: () => void;
@@ -43,7 +44,7 @@ export interface SessionTranscriptWorkspaceViewProps {
   replacing?: boolean;
 }
 
-export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, dependencies, dependenciesPending = false, documents, errorMessage, onDelete, onOpenContext, onReplace, onRetry, onRetryLoad, onSearch, onUpload, projectId, replacementError, replacing = false, retryingId, searchError, searchQuery = "", searchResults, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
+export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, dependencies, dependenciesPending = false, documents, errorMessage, onClearSearch, onDelete, onOpenContext, onReplace, onRetry, onRetryLoad, onSearch, onUpload, projectId, replacementError, replacing = false, retryingId, searchError, searchQuery = "", searchResults, sessionId, state = "ready", uploadError, uploading = false }: SessionTranscriptWorkspaceViewProps) {
   const [selectedFile, setSelectedFile] = React.useState<File>();
   const [replacementFile, setReplacementFile] = React.useState<File>();
   const [viewingId, setViewingId] = React.useState<string>();
@@ -133,6 +134,7 @@ export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, d
       onRetryActive={() => onRetry(activeDocument.id)}
       onRetryReplacement={() => void submitReplacement()}
       onRetryReplacementProcessing={replacementDocument ? () => onRetry(replacementDocument.id) : undefined}
+      onClearSearch={onClearSearch}
       onSearch={(query) => onSearch(activeDocument.id, query)}
       onViewTranscript={setViewingId}
       replacement={replacement}
@@ -141,7 +143,7 @@ export function SessionTranscriptWorkspaceView({ actionError, deletePendingId, d
       searchQuery={searchQuery}
     />
     {searchError ? <Alert message={searchError} size="large" title="Transcript search failed" tone="error" /> : null}
-    {searchResults ? <div className="grid gap-2"><p className="text-sm font-medium">{searchResults.length} relevant {searchResults.length === 1 ? "excerpt" : "excerpts"}</p>{searchResults.length ? searchResults.map((result) => { const href = contextHref(result); return <TranscriptSearchResult href={href} key={result.id} onOpen={onOpenContext ? (event) => { event.preventDefault(); onOpenContext(href); } : undefined} result={result} />; }) : <EmptyState description="Try another speaker, phrase, or topic." title="No relevant excerpts" />}</div> : null}
+    {searchResults ? <div className="grid gap-2"><p className="text-sm font-medium">{searchResults.length} matching {searchResults.length === 1 ? "excerpt" : "excerpts"}</p>{searchResults.length ? searchResults.map((result) => { const href = contextHref(result); return <TranscriptSearchResult href={href} key={result.id} onOpen={onOpenContext ? (event) => { event.preventDefault(); onOpenContext(href); } : undefined} result={result} />; }) : <EmptyState description="Try another speaker or exact phrase." title="No matching excerpts" />}</div> : null}
   </section>;
 }
 

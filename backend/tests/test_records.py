@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.record import (
     ProductRecord,
+    RecordKnowledgeItem,
+    RecordKnowledgePromotion,
     RecordSynthesisEvidence,
     RecordSynthesisItem,
     RecordSynthesisItemSource,
@@ -110,8 +112,10 @@ def test_record_eligibility_uses_reviewed_evidence_linked_reports(client: TestCl
     }]
     record = client.get("/api/records/record-1").json()
     assert record["related_session_count"] == 3
-    assert record["eligible_session_count"] == 2
-    assert record["readiness"] == "ready"
+    assert record["eligible_session_count"] == 1
+    assert record["approved_report_count"] == 1
+    assert record["knowledge_item_count"] == 3
+    assert record["readiness"] == "up-to-date"
 
 
 def test_record_chat_searches_all_related_transcripts_without_persisting_history(
@@ -154,7 +158,7 @@ def test_record_chat_searches_all_related_transcripts_without_persisting_history
     assert sources.json() == {
         "record_id": "record-1",
         "primary_transcript_count": 2,
-        "reviewed_report_count": 1,
+        "reviewed_report_count": 0,
         "record_knowledge_available": False,
         "searchable": True,
     }
@@ -168,7 +172,7 @@ def test_record_chat_searches_all_related_transcripts_without_persisting_history
     assert body["status"] == "answered"
     assert body["answer"]
     assert body["record_knowledge_used"] is False
-    assert "not consolidated through Record Knowledge" in body["traceability_note"]
+    assert "not supported by promoted Record Knowledge" in body["traceability_note"]
     assert body["citations"][0]["session_id"] == excluded["id"]
     assert body["citations"][0]["project_name"] == project["name"]
     assert body["citations"][0]["context_result_id"]
@@ -248,11 +252,11 @@ def test_record_synthesis_generation_is_evidence_linked_and_idempotent(client: T
     assert evidence.status_code == 200
     assert evidence.json()["session_id"] in {first["id"], second["id"]}
     deleted = client.delete(f"/api/projects/{project['id']}")
-    assert deleted.status_code == 204
-    assert db_session.scalar(select(func.count()).select_from(RecordSynthesisRun)) == 0
+    assert deleted.status_code == 409
+    assert db_session.scalar(select(func.count()).select_from(RecordSynthesisRun)) == 1
 
 
-def test_deleting_a_source_session_invalidates_affected_record_synthesis(client: TestClient, db_session: Session) -> None:
+def test_approved_record_knowledge_blocks_source_session_deletion(client: TestClient, db_session: Session) -> None:
     project = _project(client)
     first, _first_report = _eligible_session(client, project["id"], "Checkout interview", "approved")
     second, _second_report = _eligible_session(client, project["id"], "Checkout usability test", "approved")
@@ -264,9 +268,133 @@ def test_deleting_a_source_session_invalidates_affected_record_synthesis(client:
     assert db_session.scalar(select(func.count()).select_from(RecordSynthesisRun)) == 1
 
     deleted = client.delete(f"/api/projects/{project['id']}/sessions/{first['id']}")
-    assert deleted.status_code == 204
-    assert db_session.scalar(select(func.count()).select_from(RecordSynthesisRun)) == 0
+    assert deleted.status_code == 409
+    assert "approved Record Knowledge" in deleted.json()["detail"]
+    assert db_session.scalar(select(func.count()).select_from(RecordSynthesisRun)) == 1
     assert client.get(f"/api/projects/{project['id']}/sessions/{second['id']}").status_code == 200
+
+
+def test_assigning_an_approved_session_promotes_its_report_to_record_knowledge(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    project = _project(client)
+    research_session = _session(client, project["id"], "Approved before assignment")
+    root = f"/api/projects/{project['id']}/sessions/{research_session['id']}"
+    upload = client.post(
+        f"{root}/documents",
+        files={
+            "file": (
+                "approved-before-assignment.txt",
+                b"Jordan Moore:\nThe approved requirement and decision must remain traceable.",
+                "text/plain",
+            )
+        },
+    )
+    assert upload.status_code == 201
+    assert client.post(f"{root}/themes/generate").status_code == 200
+    generated = client.post(f"{root}/report/generate")
+    assert generated.status_code == 200
+    approved = client.patch(f"{root}/report", json={"status": "approved"})
+    assert approved.status_code == 200
+    first_report_id = approved.json()["id"]
+    revision = client.post(f"{root}/report/revisions")
+    assert revision.status_code == 201
+    approved_revision = client.patch(f"{root}/report", json={"status": "approved"})
+    assert approved_revision.status_code == 200
+    assert client.get("/api/records/record-1/knowledge").json()["total_count"] == 0
+
+    assigned = client.put(f"{root}/record", json={"record_id": "record-1"})
+    assert assigned.status_code == 200
+    knowledge = client.get("/api/records/record-1/knowledge").json()
+    assert knowledge["total_count"] == 3
+    assert {
+        item["source_report_id"] for item in knowledge["items"]
+    } == {approved_revision.json()["id"]}
+    history = client.get(
+        "/api/records/record-1/knowledge?include_superseded=true"
+    ).json()
+    assert {
+        item["source_report_id"] for item in history["items"]
+    } == {first_report_id, approved_revision.json()["id"]}
+    assert db_session.scalar(
+        select(func.count()).select_from(RecordKnowledgePromotion)
+    ) == 2
+
+
+def test_approved_report_promotes_exact_record_knowledge_and_preserves_revision_history(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    project = _project(client)
+    research_session, approved = _eligible_session(
+        client,
+        project["id"],
+        "Exact knowledge interview",
+        "approved",
+    )
+    eligible_report_items = [
+        item
+        for item in approved["items"]
+        if item["type"] in {"requirement", "decision", "action-item"}
+    ]
+
+    knowledge = client.get("/api/records/record-1/knowledge")
+    assert knowledge.status_code == 200
+    body = knowledge.json()
+    assert body["total_count"] == len(eligible_report_items)
+    assert {
+        (item["type"], item["title"], item["summary"])
+        for item in body["items"]
+    } == {
+        (item["type"], item["title"], item["summary"])
+        for item in eligible_report_items
+    }
+    assert all(
+        not item["title"].lower().startswith("decide how to address")
+        for item in body["items"]
+        if item["type"] == "decision"
+    )
+    assert all(item["status"] == "current" for item in body["items"])
+    assert all(item["source_session_id"] == research_session["id"] for item in body["items"])
+
+    root = f"/api/projects/{project['id']}/sessions/{research_session['id']}"
+    approved_updated_at = db_session.get(SessionReport, approved["id"]).updated_at
+    replay = client.patch(f"{root}/report", json={"status": "approved"})
+    assert replay.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(SessionReport, approved["id"]).updated_at == approved_updated_at
+    assert db_session.scalar(select(func.count()).select_from(RecordKnowledgePromotion)) == 1
+    assert db_session.scalar(select(func.count()).select_from(RecordKnowledgeItem)) == len(eligible_report_items)
+    immutable = client.patch(
+        f"{root}/report/items/{eligible_report_items[0]['id']}",
+        json={"title": "This direct edit must not be saved"},
+    )
+    assert immutable.status_code == 400
+    assert "Create a new revision" in immutable.json()["detail"]
+
+    revision = client.post(f"{root}/report/revisions")
+    assert revision.status_code == 201
+    requirement = next(item for item in revision.json()["items"] if item["type"] == "requirement")
+    changed_title = "Preserve this exact revised requirement"
+    edited = client.patch(
+        f"{root}/report/items/{requirement['id']}",
+        json={"title": changed_title},
+    )
+    assert edited.status_code == 200
+    approved_revision = client.patch(f"{root}/report", json={"status": "approved"})
+    assert approved_revision.status_code == 200
+
+    current = client.get("/api/records/record-1/knowledge").json()
+    assert changed_title in {item["title"] for item in current["items"]}
+    assert all(item["status"] == "current" for item in current["items"])
+    history = client.get(
+        "/api/records/record-1/knowledge?include_superseded=true"
+    ).json()
+    assert {item["status"] for item in history["items"]} == {
+        "current",
+        "superseded",
+    }
 
 
 def test_record_synthesis_requires_two_eligible_reports_and_preserves_source_snapshots(client: TestClient, db_session: Session) -> None:

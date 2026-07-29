@@ -2,14 +2,13 @@ import * as React from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import type { LifecycleStatus, RecordSynthesisItem } from "@/domain/types";
+import type { LifecycleStatus, RecordKnowledgeItem, RecordSynthesisItem } from "@/domain/types";
 import { cn } from "@/lib/utils";
-import { lifecycleStatusLabels, lifecycleStatusTone } from "./record-presentation";
 import { RecordKnowledgeDetails } from "./record-knowledge-details";
 
 export interface RecordKnowledgeRowProps extends React.HTMLAttributes<HTMLElement> {
   expanded: boolean;
-  item: RecordSynthesisItem;
+  item: RecordKnowledgeItem | RecordSynthesisItem;
   onOpenEvidence?: () => void;
   onStatusChange?: (status: LifecycleStatus) => void;
   onToggle: () => void;
@@ -22,15 +21,14 @@ export function RecordKnowledgeRow({
   expanded,
   item,
   onOpenEvidence,
-  onStatusChange,
   onToggle,
-  showActions = true,
-  statusUpdating = false,
   ...props
 }: RecordKnowledgeRowProps) {
   const disclosureId = React.useId();
   const detailsId = `${disclosureId}-details`;
-  const sourceSummary = `${item.sourceSessionCount} ${item.sourceSessionCount === 1 ? "Session" : "Sessions"} · ${item.sourceReportItemCount} Report ${item.sourceReportItemCount === 1 ? "item" : "items"}`;
+  const sourceSummary = "sourceSessionTitle" in item
+    ? `${item.sourceSessionTitle} · ${item.evidenceIds.length} supporting ${item.evidenceIds.length === 1 ? "passage" : "passages"}`
+    : `${item.sourceSessionCount} ${item.sourceSessionCount === 1 ? "Session" : "Sessions"}`;
   const DisclosureIcon = expanded ? ChevronUp : ChevronDown;
 
   return (
@@ -60,10 +58,10 @@ export function RecordKnowledgeRow({
           </span>
         </span>
         <span className="flex max-w-full flex-wrap items-center gap-3 md:flex-nowrap md:justify-self-end">
-          <Badge showIcon={false} tone={lifecycleStatusTone(item.status)}>
-            {lifecycleStatusLabels[item.status]}
+          <Badge showIcon={false} tone={item.status === "current" || item.status === "approved" ? "success" : "neutral"}>
+            {item.status === "current" || item.status === "approved" ? "Current" : "Superseded"}
           </Badge>
-          <span className="whitespace-nowrap text-xs text-[var(--air-color-text-secondary)]">{sourceSummary}</span>
+          <span className="text-xs text-[var(--air-color-text-secondary)]">{sourceSummary}</span>
           <DisclosureIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
         </span>
       </button>
@@ -73,10 +71,7 @@ export function RecordKnowledgeRow({
           id={detailsId}
           item={item}
           onOpenEvidence={onOpenEvidence}
-          onStatusChange={onStatusChange}
           role="region"
-          showActions={showActions}
-          statusUpdating={statusUpdating}
         />
       ) : null}
     </article>

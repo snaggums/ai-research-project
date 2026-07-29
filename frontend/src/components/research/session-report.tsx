@@ -79,6 +79,10 @@ export function SessionReport({
   const reportDate = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" })
     .format(new Date(report.generatedAt));
 
+  React.useLayoutEffect(() => {
+    if (validationErrors.length) validationSummaryRef.current?.focus();
+  }, [validationErrors]);
+
   function setItemExpanded(itemId: string, expanded: boolean) {
     setExpandedItemIds((current) => {
       const next = new Set(current);
@@ -110,7 +114,6 @@ export function SessionReport({
       }));
     if (errors.length) {
       setValidationErrors(errors);
-      requestAnimationFrame(() => validationSummaryRef.current?.focus());
       return;
     }
     setValidationErrors([]);

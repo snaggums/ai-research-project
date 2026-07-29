@@ -50,6 +50,7 @@ export interface SessionTranscriptLifecycleWorkspaceProps {
   onRetryActive?: () => void;
   onRetryReplacement?: () => void;
   onRetryReplacementProcessing?: () => void;
+  onClearSearch?: () => void;
   onSearch?: (query: string) => void;
   onViewTranscript?: (documentId: string) => void;
   replacement?: TranscriptReplacementPresentation;
@@ -82,6 +83,7 @@ export function SessionTranscriptLifecycleWorkspace({
   onRetryActive,
   onRetryReplacement,
   onRetryReplacementProcessing,
+  onClearSearch,
   onSearch,
   onViewTranscript,
   replacement,
@@ -94,6 +96,10 @@ export function SessionTranscriptLifecycleWorkspace({
     ? ["replacement-uploading", "replacement-processing"].includes(replacement.state)
     : false;
   const hasTranscriptHistory = removedDocuments.length > 0 || legacyDocuments.length > 0;
+
+  React.useEffect(() => {
+    setQuery(searchQuery);
+  }, [searchQuery]);
 
   const transcriptHistory = hasTranscriptHistory ? (
     <section aria-labelledby="transcript-history-heading" className="grid gap-3">
@@ -206,9 +212,13 @@ export function SessionTranscriptLifecycleWorkspace({
           }}
         >
           <SearchField
-            hint="Find relevant source excerpts by speaker, phrase, or topic."
+            hint="Find exact source excerpts by speaker or phrase."
             label="Search this transcript"
-            onChange={(event) => setQuery(event.currentTarget.value)}
+            onChange={(event) => {
+              const nextQuery = event.currentTarget.value;
+              setQuery(nextQuery);
+              if (!nextQuery) onClearSearch?.();
+            }}
             placeholder="Search this transcript"
             value={query}
           />

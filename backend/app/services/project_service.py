@@ -3,7 +3,7 @@ from pathlib import Path
 from app.models.document import Document
 from app.models.participant import Participant
 from app.models.project import Project
-from app.models.record import RecordSynthesisRun, RecordSynthesisSource
+from app.models.record import RecordKnowledgePromotion, RecordSynthesisRun, RecordSynthesisSource
 from app.models.research_session import ResearchSession
 from app.models.session_report import SessionReport
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
@@ -67,6 +67,15 @@ def update_project(db: Session, project: Project, payload: ProjectUpdate) -> Pro
 
 
 def delete_project(db: Session, project: Project) -> None:
+    promoted = db.scalar(
+        select(RecordKnowledgePromotion.id)
+        .where(RecordKnowledgePromotion.project_id == project.id)
+        .limit(1)
+    )
+    if promoted is not None:
+        raise ValueError(
+            "This Project contains approved Record Knowledge and cannot be deleted. Preserve it as part of the Record history."
+        )
     file_paths = list(
         db.scalars(select(Document.file_path).where(Document.project_id == project.id)).all()
     )

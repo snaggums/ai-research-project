@@ -4,6 +4,7 @@ from app.schemas.transcript_coding import (
     RecordCodeCreate,
     RecordCodeRead,
     RecordCodeUpdate,
+    RecordTranscriptCodesRead,
     TranscriptCodeSuggestionRead,
     TranscriptCodeSuggestionUpdate,
     TranscriptCodingWorkspaceRead,
@@ -132,6 +133,14 @@ def remove_highlight_code(
 @router.get("/records/{record_id}/codes", response_model=list[RecordCodeRead])
 def list_codes(record_id: str, db: Session = Depends(get_db)):
     return transcript_coding_service.list_codes(db, record_id)
+
+
+@router.get(
+    "/records/{record_id}/transcript-codes",
+    response_model=RecordTranscriptCodesRead,
+)
+def list_accepted_record_codes(record_id: str, db: Session = Depends(get_db)):
+    return transcript_coding_service.list_accepted_record_codes(db, record_id)
 
 
 @router.post("/records/{record_id}/codes", response_model=RecordCodeRead, status_code=status.HTTP_201_CREATED)

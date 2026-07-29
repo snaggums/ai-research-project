@@ -117,9 +117,16 @@ test("researcher completes the V2 Session evidence workflow", async ({ page, req
     expect(inputBox).not.toBeNull();
     expect(buttonBox).not.toBeNull();
     expect(Math.abs((inputBox!.y + inputBox!.height / 2) - (buttonBox!.y + buttonBox!.height / 2))).toBeLessThanOrEqual(1);
-    await transcriptSearch.fill("navigation confusing");
+    await transcriptSearch.fill("dashboard navigation was confusing");
     await searchButton.click();
-    const searchResultLink = page.getByRole("link", { name: "Open transcript context" }).first();
+    await expect(page.getByText("1 matching excerpt")).toBeVisible();
+    await transcriptSearch.fill("");
+    await expect(page.getByRole("link", { name: "Open transcript context" })).toHaveCount(0);
+    await expect(transcriptSearch).toBeFocused();
+
+    await transcriptSearch.fill("dashboard navigation was confusing");
+    await searchButton.click();
+    const searchResultLink = page.getByRole("link", { name: "Open transcript context" });
     const searchResult = searchResultLink.locator("xpath=ancestor::article");
     await expect(searchResult).toContainText(/dashboard navigation was confusing/i);
     await searchResultLink.click();
@@ -282,10 +289,15 @@ test("application shell remains aligned and usable at desktop, tablet, and mobil
   }
 });
 
-test("researcher generates and reviews Record synthesis from eligible Sessions", async ({ page, request }) => {
-  const project = await createProject(request, `Record Synthesis Project ${Date.now()}`);
+test("approved Session Reports promote exact items into Record Knowledge", async ({ page, request }) => {
+  const project = await createProject(request, `Record Knowledge Project ${Date.now()}`);
   const fixturePath = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "golden-path-interview.txt");
   const transcript = await readFile(fixturePath);
+  const expectedItems: Array<{
+    evidence: Array<{ id: string }>;
+    title: string;
+    type: "requirement" | "decision" | "action-item";
+  }> = [];
 
   try {
     const settings = await request.put(`${apiBaseUrl}/settings/ai`, {
@@ -326,30 +338,51 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
         themesResponse.ok(),
         `Theme generation failed (${themesResponse.status()}): ${await themesResponse.text()}`,
       ).toBeTruthy();
-      expect((await request.post(`${root}/report/generate`)).ok()).toBeTruthy();
+      const reportResponse = await request.post(`${root}/report/generate`);
+      expect(reportResponse.ok()).toBeTruthy();
+      const generated = await reportResponse.json() as {
+        report: {
+          items: Array<{
+            evidence: Array<{ id: string }>;
+            title: string;
+            type: "requirement" | "decision" | "action-item" | "open-question" | "key-insight";
+          }>;
+        };
+      };
+      expectedItems.push(
+        ...generated.report.items.filter(
+          (item): item is typeof item & { type: "requirement" | "decision" | "action-item" } =>
+            item.type === "requirement" || item.type === "decision" || item.type === "action-item",
+        ),
+      );
       expect((await request.patch(`${root}/report`, { data: { status: "approved" } })).ok()).toBeTruthy();
     }
 
     await page.goto("/records/record-1/synthesis");
-    await expect(page.getByRole("heading", { level: 1, name: "Medicare Fraud Documenter synthesis" })).toBeVisible();
-    await page.getByRole("button", { name: "Generate synthesis" }).click();
-    await expect(page.getByRole("heading", { name: "Requirements" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: "Decisions" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Action Items" })).toBeVisible();
-
-    const firstReviewButton = page.getByRole("button", { name: "Mark reviewed" }).first();
-    const firstItemTitle = await firstReviewButton.locator("xpath=ancestor::article").getByRole("heading").innerText();
-    await firstReviewButton.click();
-    const firstItem = page.locator("article").filter({ has: page.getByRole("heading", { name: firstItemTitle }) });
-    await expect(firstItem.getByText("Researcher Reviewed", { exact: true })).toBeVisible();
-
-    await page.goto("/records/record-1?view=knowledge");
     await expect(page.getByRole("heading", { level: 1, name: "Medicare Fraud Documenter" })).toBeVisible();
+    await expect(page).toHaveURL(/\/records\/record-1\?view=knowledge$/);
     await expect(page.getByRole("tab", { name: "Knowledge" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Requirements" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Decision Log" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Action items" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Generate synthesis/i })).toHaveCount(0);
+
+    for (const { title } of expectedItems) {
+      await expect(page.getByText(title, { exact: true }).first()).toBeVisible();
+    }
+
+    const evidenceItem = expectedItems.find((item) => item.evidence.length > 0);
+    expect(evidenceItem).toBeTruthy();
+    const matchingItemCount = expectedItems.filter((item) => item.title === evidenceItem!.title).length;
     const search = page.getByRole("searchbox", { name: "Search" });
-    await search.fill(firstItemTitle);
-    await expect(page.getByRole("status").getByText("1 item", { exact: true })).toBeVisible();
-    const knowledgeItem = page.locator("article").filter({ hasText: firstItemTitle });
+    await search.fill(evidenceItem!.title);
+    await expect(
+      page.getByRole("status").getByText(
+        `${matchingItemCount} ${matchingItemCount === 1 ? "item" : "items"}`,
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const knowledgeItem = page.locator("article").filter({ hasText: evidenceItem!.title }).first();
     await expect(knowledgeItem).toBeVisible();
     await page.getByRole("button", { name: "Clear search" }).click();
     await expect(search).toBeFocused();
@@ -357,10 +390,10 @@ test("researcher generates and reviews Record synthesis from eligible Sessions",
     await knowledgeItem.getByRole("button").first().click();
     await expect(knowledgeItem.getByRole("heading", { name: "Evidence preview" })).toBeVisible();
     await expect(knowledgeItem.getByRole("button", { name: "Open evidence" })).toBeVisible();
-    await knowledgeItem.getByRole("button", { name: "Approve item" }).click();
-    await expect(knowledgeItem.getByText("Approved", { exact: true })).toBeVisible();
+    await expect(knowledgeItem.getByText("Current", { exact: true })).toBeVisible();
+    await expect(knowledgeItem.getByRole("button", { name: "Approve item" })).toHaveCount(0);
     await knowledgeItem.getByRole("button", { name: "Open evidence" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Synthesis evidence" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Record Knowledge evidence" })).toBeVisible();
     await expect(page.getByText(/dashboard navigation was confusing/i)).toBeVisible();
   } finally {
     await deleteProject(request, project.id);

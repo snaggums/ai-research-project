@@ -61,14 +61,22 @@ export const TranscriptCodesReady: Story = {
   args: {
     activeView: "transcript-codes",
     onOpenInTranscriptCoding: fn(),
-    recordCodeEligibleSessionCount: 5,
+    recordCodeSessionCount: 5,
     recordCodes: recordCodeDetails,
+  },
+};
+export const TranscriptCodesLoading: Story = {
+  args: {
+    activeView: "transcript-codes",
+    recordCodeSessionCount: 0,
+    recordCodeState: "loading",
+    recordCodes: [],
   },
 };
 export const TranscriptCodesEmpty: Story = {
   args: {
     activeView: "transcript-codes",
-    recordCodeEligibleSessionCount: 5,
+    recordCodeSessionCount: 5,
     recordCodeState: "empty",
     recordCodes: [],
   },
@@ -77,6 +85,7 @@ export const TranscriptCodesError: Story = {
   args: {
     activeView: "transcript-codes",
     onRetryRecordCodes: fn(),
+    recordCodeSessionCount: 5,
     recordCodeState: "error",
     recordCodes: [],
   },

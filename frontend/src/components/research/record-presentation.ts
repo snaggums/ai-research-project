@@ -6,9 +6,9 @@ import type {
 } from "@/domain/types";
 
 export const recordReadinessLabels: Record<RecordReadiness, string> = {
-  ready: "Ready to synthesize",
-  "needs-data": "Needs more data",
-  "up-to-date": "Up to date",
+  ready: "Approval pending",
+  "needs-data": "No approved reports",
+  "up-to-date": "Knowledge available",
 };
 
 export const recordSynthesisItemLabels: Record<RecordSynthesisItemType, string> = {
@@ -44,7 +44,7 @@ export function lifecycleStatusTone(status: LifecycleStatus): NonNullable<BadgeP
 }
 
 export function formatRecordSynthesisDate(value?: string, includeTime = true) {
-  if (!value) return "Not yet synthesized";
+  if (!value) return "No approved knowledge yet";
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",

@@ -5,6 +5,9 @@ from app.schemas.record import (
     RecordChatRequest,
     RecordChatResponse,
     RecordChatSourceAvailabilityRead,
+    RecordKnowledgeEvidenceRead,
+    RecordKnowledgeRead,
+    RecordKnowledgeSourcesRead,
     RecordSynthesisEligibilityRead,
     RecordSynthesisEvidenceRead,
     RecordSynthesisGenerateRequest,
@@ -13,7 +16,7 @@ from app.schemas.record import (
     RecordSynthesisRead,
 )
 from app.schemas.research_session import SessionRead
-from app.services import record_service, research_session_service
+from app.services import record_knowledge_service, record_service, research_session_service
 from app.core.domain_errors import ApplicationError
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -47,6 +50,51 @@ def get_record_chat_sources(record_id: str, db: Session = Depends(get_db)):
     return record_service.get_chat_source_availability(db, record_id)
 
 
+@router.get("/records/{record_id}/knowledge", response_model=RecordKnowledgeRead)
+def list_record_knowledge(
+    record_id: str,
+    item_type: str | None = None,
+    q: str | None = None,
+    include_superseded: bool = False,
+    db: Session = Depends(get_db),
+):
+    _require_record(db, record_id)
+    if item_type is not None and item_type not in {"requirement", "decision", "action-item"}:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unsupported Record Knowledge item type")
+    return record_knowledge_service.list_knowledge(
+        db,
+        record_id,
+        item_type=item_type,
+        query=q,
+        include_superseded=include_superseded,
+    )
+
+
+@router.get("/records/{record_id}/knowledge/sources", response_model=RecordKnowledgeSourcesRead)
+def list_record_knowledge_sources(record_id: str, db: Session = Depends(get_db)):
+    _require_record(db, record_id)
+    return record_knowledge_service.list_sources(db, record_id)
+
+
+@router.get(
+    "/records/{record_id}/knowledge/items/{item_id}/evidence/{evidence_id}",
+    response_model=RecordKnowledgeEvidenceRead,
+)
+def get_record_knowledge_evidence(
+    record_id: str,
+    item_id: str,
+    evidence_id: str,
+    db: Session = Depends(get_db),
+):
+    _require_record(db, record_id)
+    evidence = record_knowledge_service.get_evidence(
+        db, record_id, item_id, evidence_id
+    )
+    if evidence is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
+    return evidence
+
+
 @router.post("/records/{record_id}/chat/ask", response_model=RecordChatResponse)
 def ask_record(record_id: str, payload: RecordChatRequest, db: Session = Depends(get_db)):
     _require_record(db, record_id)
@@ -75,6 +123,12 @@ def assign_session_record(project_id: str, session_id: str, payload: RecordAssig
             raise ApplicationError(
                 status.HTTP_409_CONFLICT,
                 "record_change_blocked_by_codes",
+                str(exc).partition(":")[2].strip(),
+            ) from exc
+        if str(exc).startswith("record_change_blocked_by_knowledge:"):
+            raise ApplicationError(
+                status.HTTP_409_CONFLICT,
+                "record_change_blocked_by_knowledge",
                 str(exc).partition(":")[2].strip(),
             ) from exc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

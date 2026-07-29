@@ -2,6 +2,10 @@ import type {
   RecordCatalogItem,
   RecordChatResponse,
   RecordChatSourceAvailability,
+  RecordKnowledge,
+  RecordKnowledgeEvidence,
+  RecordKnowledgeSources,
+  RecordTranscriptCodes,
   RecordSynthesis,
   RecordSynthesisEligibility,
   RecordSynthesisEvidence,
@@ -48,6 +52,23 @@ export function listRecordSessions(recordId: string) {
 
 export function getRecordChatSources(recordId: string) {
   return request<RecordChatSourceAvailability>(`${root(recordId)}/chat/sources`);
+}
+
+export function getRecordKnowledge(recordId: string, includeSuperseded = false) {
+  const params = includeSuperseded ? "?include_superseded=true" : "";
+  return request<RecordKnowledge>(`${root(recordId)}/knowledge${params}`);
+}
+
+export function getRecordKnowledgeSources(recordId: string) {
+  return request<RecordKnowledgeSources>(`${root(recordId)}/knowledge/sources`);
+}
+
+export function getRecordKnowledgeEvidence(recordId: string, itemId: string, evidenceId: string) {
+  return request<RecordKnowledgeEvidence>(`${root(recordId)}/knowledge/items/${itemId}/evidence/${evidenceId}`);
+}
+
+export function getRecordTranscriptCodes(recordId: string) {
+  return request<RecordTranscriptCodes>(`${root(recordId)}/transcript-codes`);
 }
 
 export function askRecord(recordId: string, question: string, limit = 6) {

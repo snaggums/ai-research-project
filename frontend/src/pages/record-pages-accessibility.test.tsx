@@ -33,7 +33,7 @@ describe("Record page accessibility", () => {
       <RecordDetailView
         activeView="transcript-codes"
         record={recordSummaries[0]}
-        recordCodeEligibleSessionCount={5}
+        recordCodeSessionCount={5}
         recordCodes={recordCodeDetails}
         scope={readyRecordScope}
         sessions={[]}

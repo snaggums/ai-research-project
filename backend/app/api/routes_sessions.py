@@ -37,6 +37,12 @@ def create_session(project_id: str, payload: SessionCreate, db: Session = Depend
                 "record_change_blocked_by_codes",
                 str(exc).partition(":")[2].strip(),
             ) from exc
+        if str(exc).startswith("record_change_blocked_by_knowledge:"):
+            raise ApplicationError(
+                status.HTTP_409_CONFLICT,
+                "record_change_blocked_by_knowledge",
+                str(exc).partition(":")[2].strip(),
+            ) from exc
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 

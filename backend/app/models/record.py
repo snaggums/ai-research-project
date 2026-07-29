@@ -26,6 +26,8 @@ class ProductRecord(Base):
 
     session_assignments: Mapped[list["SessionRecord"]] = relationship(back_populates="record", cascade="all, delete-orphan", passive_deletes=True)
     synthesis_runs: Mapped[list["RecordSynthesisRun"]] = relationship(back_populates="record", cascade="all, delete-orphan", passive_deletes=True)
+    knowledge_promotions: Mapped[list["RecordKnowledgePromotion"]] = relationship(back_populates="record", cascade="all, delete-orphan", passive_deletes=True)
+    knowledge_items: Mapped[list["RecordKnowledgeItem"]] = relationship(back_populates="record", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class SessionRecord(Base):
@@ -37,6 +39,85 @@ class SessionRecord(Base):
 
     session: Mapped["ResearchSession"] = relationship(back_populates="record_assignments")
     record: Mapped[ProductRecord] = relationship(back_populates="session_assignments")
+
+
+class RecordKnowledgePromotion(Base):
+    __tablename__ = "record_knowledge_promotions"
+    __table_args__ = (
+        UniqueConstraint("record_id", "report_id", name="uq_record_knowledge_promotions_record_report"),
+    )
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    record_id: Mapped[str] = mapped_column(Text, ForeignKey("records.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
+    report_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("session_reports.id", ondelete="RESTRICT"), nullable=False, index=True)
+    item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    promoted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    record: Mapped[ProductRecord] = relationship(back_populates="knowledge_promotions")
+    report: Mapped["SessionReport"] = relationship()
+    items: Mapped[list["RecordKnowledgeItem"]] = relationship(back_populates="promotion", cascade="all, delete-orphan", passive_deletes=True, order_by="RecordKnowledgeItem.position")
+
+
+class RecordKnowledgeItem(Base):
+    __tablename__ = "record_knowledge_items"
+    __table_args__ = (
+        CheckConstraint("item_type IN ('requirement','decision','action-item')", name="ck_record_knowledge_items_type"),
+        CheckConstraint("status IN ('current','superseded')", name="ck_record_knowledge_items_status"),
+        UniqueConstraint("record_id", "source_report_item_id", name="uq_record_knowledge_items_record_source"),
+    )
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    promotion_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("record_knowledge_promotions.id", ondelete="CASCADE"), nullable=False, index=True)
+    record_id: Mapped[str] = mapped_column(Text, ForeignKey("records.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False, index=True)
+    source_session_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False, index=True)
+    source_report_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("session_reports.id", ondelete="RESTRICT"), nullable=False, index=True)
+    source_report_item_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("session_report_items.id", ondelete="RESTRICT"), nullable=False, index=True)
+    item_type: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="current", server_default="current")
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    provenance: Mapped[str] = mapped_column(Text, nullable=False)
+    ownership_role: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ownership_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_session_title: Mapped[str] = mapped_column(Text, nullable=False)
+    source_report_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    promoted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    promotion: Mapped[RecordKnowledgePromotion] = relationship(back_populates="items")
+    record: Mapped[ProductRecord] = relationship(back_populates="knowledge_items")
+    source_report: Mapped["SessionReport"] = relationship(foreign_keys=[source_report_id])
+    source_report_item: Mapped["SessionReportItem"] = relationship()
+    evidence: Mapped[list["RecordKnowledgeEvidence"]] = relationship(back_populates="item", cascade="all, delete-orphan", passive_deletes=True, order_by="RecordKnowledgeEvidence.created_at")
+
+
+class RecordKnowledgeEvidence(Base):
+    __tablename__ = "record_knowledge_evidence"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
+    item_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("record_knowledge_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_report_evidence_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("session_report_evidence.id", ondelete="RESTRICT"), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("documents.id", ondelete="RESTRICT"), nullable=False, index=True)
+    chunk_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("chunks.id", ondelete="SET NULL"), nullable=True, index=True)
+    document_name: Mapped[str] = mapped_column(Text, nullable=False)
+    excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    speaker: Mapped[str | None] = mapped_column(Text, nullable=True)
+    location: Mapped[str | None] = mapped_column(Text, nullable=True)
+    relevance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5, server_default="0.5")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    item: Mapped[RecordKnowledgeItem] = relationship(back_populates="evidence")
+    document: Mapped["Document"] = relationship()
+    chunk: Mapped["Chunk | None"] = relationship()
 
 
 class RecordSynthesisRun(Base):

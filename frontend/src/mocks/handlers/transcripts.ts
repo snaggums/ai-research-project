@@ -16,6 +16,16 @@ resetTranscriptStore();
 const matches = (document: TranscriptDocument, projectId: string, sessionId: string) => document.project_id === projectId && document.session_id === sessionId;
 const routeRoot = `${TRANSCRIPTS_API_BASE_URL}/projects/:projectId/sessions/:sessionId/documents`;
 
+function matchesExactLiteral(value: string, query: string) {
+  const normalizedValue = value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+  const normalizedQuery = query.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!normalizedQuery) return false;
+  const escaped = normalizedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  const prefix = /^[\p{L}\p{N}]/u.test(normalizedQuery) ? "(?<![\\p{L}\\p{N}_])" : "";
+  const suffix = /[\p{L}\p{N}]$/u.test(normalizedQuery) ? "(?![\\p{L}\\p{N}_])" : "";
+  return new RegExp(`${prefix}${escaped}${suffix}`, "u").test(normalizedValue);
+}
+
 export const transcriptHandlers = [
   http.get(routeRoot, ({ params }) => HttpResponse.json(transcriptStore.filter((item) => matches(item, String(params.projectId), String(params.sessionId))))),
   http.post(routeRoot, async ({ params, request }) => {
@@ -107,8 +117,10 @@ export const transcriptHandlers = [
     const document = transcriptStore.find((item) => matches(item, String(params.projectId), String(params.sessionId)) && item.id === String(params.documentId));
     if (!document) return new HttpResponse("Transcript not found", { status: 404 });
     if (document.status !== "complete") return new HttpResponse("Transcript is not ready", { status: 409 });
-    const query = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
-    const results = query ? transcriptSearchFixtures.filter((result) => `${result.speaker} ${result.excerpt}`.toLowerCase().includes(query) || query === "navigation confusion") : [];
+    const query = new URL(request.url).searchParams.get("q")?.trim().replace(/\s+/g, " ") ?? "";
+    const results = query
+      ? transcriptSearchFixtures.filter((result) => matchesExactLiteral(`${result.speaker} ${result.excerpt}`, query))
+      : [];
     return HttpResponse.json({ query, results });
   }),
   http.get(`${routeRoot}/:documentId/context/:resultId`, ({ params }) => {

@@ -31,6 +31,9 @@ export type RecordSummary = {
   eligibleSessionCount: number;
   readiness: RecordReadiness;
   latestSynthesisAt?: string;
+  approvedReportCount?: number;
+  knowledgeItemCount?: number;
+  knowledgeUpdatedAt?: string;
 };
 
 export type RecordSynthesisSourceSession = {
@@ -81,6 +84,36 @@ export type RecordSynthesis = {
   promptVersion?: string;
   items: RecordSynthesisItem[];
   errorMessage?: string;
+};
+
+export type RecordKnowledgeItemType = "requirement" | "decision" | "action-item";
+
+export type RecordKnowledgeItem = {
+  id: EntityId;
+  type: RecordKnowledgeItemType;
+  status: "current" | "superseded";
+  title: string;
+  summary: string;
+  evidencePreview: string;
+  provenance: string;
+  evidenceIds: EntityId[];
+  sourceProjectId: EntityId;
+  sourceSessionId: EntityId;
+  sourceSessionTitle: string;
+  sourceReportId: EntityId;
+  sourceReportItemId: EntityId;
+  sourceReportUpdatedAt: string;
+  promotedAt: string;
+  supersededAt?: string;
+  position: number;
+  ownership?: SessionReportItemOwnership;
+};
+
+export type RecordKnowledge = {
+  recordId: EntityId;
+  items: RecordKnowledgeItem[];
+  totalCount: number;
+  knowledgeUpdatedAt?: string;
 };
 
 export type ProjectSummary = {

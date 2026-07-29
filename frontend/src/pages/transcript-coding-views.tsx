@@ -736,7 +736,7 @@ export function TranscriptCodingWorkspaceView({
 
   return (
     <section className={className} aria-labelledby="transcript-coding-heading">
-      <div className="mx-auto grid max-w-[70rem] gap-6">
+      <div className="mx-auto grid w-full gap-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold leading-8" id="transcript-coding-heading">Transcript coding</h2>
@@ -845,7 +845,7 @@ export function TranscriptCodingWorkspaceView({
               />
             </div>
 
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,44rem)_minmax(0,24.5rem)]">
+            <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,13fr)_minmax(24.5rem,7fr)]">
               <div className="min-w-0">
                 {listView ? (
                   <section aria-labelledby="highlight-results-heading" className="grid gap-4">
@@ -980,7 +980,7 @@ export function TranscriptCodingWorkspaceView({
                     totalCount={filterTotalCount}
                   />
                 ) : panel === "accepted" ? (
-                  <section aria-labelledby="accepted-highlights-heading" className="grid gap-4">
+                  <section aria-labelledby="accepted-highlights-heading" className="grid min-w-0 gap-4">
                     <header>
                       <h3 className="text-xl font-semibold" id="accepted-highlights-heading">Accepted highlights</h3>
                       <p className="mt-1 text-sm text-[var(--air-color-text-secondary)]">Researcher-approved coded Highlights.</p>

@@ -32,6 +32,14 @@ export const queryKeys = {
   recordSessions: (recordId: EntityId) => ["records", recordId, "sessions"] as const,
   recordChatSources: (recordId: EntityId) =>
     ["records", recordId, "chat", "sources"] as const,
+  recordKnowledge: (recordId: EntityId, includeSuperseded = false) =>
+    ["records", recordId, "knowledge", { includeSuperseded }] as const,
+  recordKnowledgeSources: (recordId: EntityId) =>
+    ["records", recordId, "knowledge", "sources"] as const,
+  recordKnowledgeEvidence: (recordId: EntityId, itemId: EntityId, evidenceId: EntityId) =>
+    ["records", recordId, "knowledge", "items", itemId, "evidence", evidenceId] as const,
+  recordTranscriptCodes: (recordId: EntityId) =>
+    ["records", recordId, "transcript-codes"] as const,
   recordSynthesisEligibility: (recordId: EntityId) => ["records", recordId, "synthesis", "eligibility"] as const,
   recordSynthesis: (recordId: EntityId) => ["records", recordId, "synthesis", "latest"] as const,
   recordSynthesisEvidence: (recordId: EntityId, itemId: EntityId, evidenceId: EntityId) =>

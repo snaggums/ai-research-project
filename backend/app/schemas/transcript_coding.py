@@ -52,6 +52,41 @@ class RecordCodeRead(BaseModel):
     updated_at: datetime
 
 
+class RecordCodeSupportingHighlightRead(BaseModel):
+    id: str
+    project_id: str
+    project_name: str
+    session_id: str
+    session_title: str
+    excerpt: str
+    speaker: str | None
+    location: str | None
+
+
+class RecordCodeEvidenceGroupRead(BaseModel):
+    session_id: str
+    session_title: str
+    highlights: list[RecordCodeSupportingHighlightRead]
+
+
+class RecordAcceptedCodeRead(BaseModel):
+    id: str
+    record_id: str
+    name: str
+    description: str | None
+    accepted_highlight_count: int
+    session_count: int
+    latest_evidence_at: datetime
+    evidence_groups: list[RecordCodeEvidenceGroupRead]
+
+
+class RecordTranscriptCodesRead(BaseModel):
+    record_id: str
+    accepted_code_count: int
+    session_count: int
+    codes: list[RecordAcceptedCodeRead]
+
+
 class RecordCodeCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=1200)

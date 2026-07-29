@@ -46,7 +46,7 @@ export function RecordCodeListItem({
             </span>
           </span>
           <span>
-            <span className="block text-sm font-semibold">{code.eligibleSessionCount}</span>
+            <span className="block text-sm font-semibold">{code.sessionCount}</span>
             <span className="mt-1 block text-[11px] text-[var(--air-color-text-secondary)]">
               Sessions
             </span>

@@ -22,6 +22,25 @@ const props = {
 };
 
 describe("Transcript Coding Workspace filters", () => {
+  it("uses the full content width with a 65/35 desktop Transcript and side-rail split", () => {
+    render(<TranscriptCodingWorkspaceView {...props} />);
+
+    const codingSection = screen
+      .getByRole("heading", { name: "Transcript coding" })
+      .closest("section");
+    if (!codingSection) throw new Error("Expected the Transcript coding section.");
+
+    const workspace = codingSection.firstElementChild;
+    expect(workspace).toHaveClass("w-full");
+    expect(workspace).not.toHaveClass("max-w-[70rem]");
+
+    const sidePanel = screen.getByLabelText("Transcript coding side panel");
+    expect(sidePanel.parentElement).toHaveClass(
+      "gap-6",
+      "lg:grid-cols-[minmax(0,13fr)_minmax(24.5rem,7fr)]",
+    );
+  });
+
   it("focuses a Record-level supporting Highlight in the accepted list", async () => {
     const highlight = transcriptCodingHighlights.find(
       (candidate) => candidate.codes.length > 0,

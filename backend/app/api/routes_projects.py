@@ -39,5 +39,9 @@ def delete_project(project_id: str, db: Session = Depends(get_db)):
     project = project_service.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    project_service.delete_project(db, project)
+    try:
+        project_service.delete_project(db, project)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return None
