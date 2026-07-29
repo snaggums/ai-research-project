@@ -807,9 +807,9 @@ describe("application router foundation", () => {
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
 
     expect(
-      await screen.findByRole("heading", { name: "Ask Medicare Fraud Documenter" }),
+      await screen.findByRole("heading", { name: "Ask this record" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Ask Record" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Ask this record" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -867,7 +867,7 @@ describe("application router foundation", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Source availability" })).toBeInTheDocument();
     expect(screen.getAllByText("0")).toHaveLength(2);
-    expect(screen.queryByRole("textbox", { name: "Ask Medicaid Fraud Documenter" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Ask this record" })).not.toBeInTheDocument();
   });
 
   it("withholds an Ask Record conclusion when only partial evidence is returned", async () => {
@@ -877,7 +877,7 @@ describe("application router foundation", () => {
     });
     render(<AppProviders><RouterProvider router={router} /></AppProviders>);
 
-    const composer = await screen.findByRole("textbox", { name: "Ask Medicare Fraud Documenter" });
+    const composer = await screen.findByRole("textbox", { name: "Ask this record" });
     await user.type(
       composer,
       "Did participants prefer biometric verification over one-time passcodes?",

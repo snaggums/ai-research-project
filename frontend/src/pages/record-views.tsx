@@ -226,7 +226,7 @@ export function RecordDetailView({
           value: "transcript-codes",
         },
         ...(askRecord
-          ? [{ content: askRecord, label: "Ask Record", value: "ask-record" }]
+          ? [{ content: askRecord, label: "Ask this record", value: "ask-record" }]
           : []),
       ]}
       onValueChange={(value) =>

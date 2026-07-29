@@ -72,7 +72,6 @@ export interface AskRecordWorkspaceProps
   onQuestionChange?: (question: string) => void;
   onSuggestedQuestion?: (question: string) => void;
   question?: string;
-  recordName?: string;
   sourceAvailability?: AskRecordSourceAvailability[];
   sourceDisclosure?: string;
   state?: AskRecordWorkspaceState;
@@ -223,13 +222,11 @@ function QuestionComposer({
   disabled,
   onAsk,
   question,
-  recordName,
   setQuestion,
 }: {
   disabled: boolean;
   onAsk?: (question: string) => Promise<void> | void;
   question: string;
-  recordName: string;
   setQuestion: (value: string) => void;
 }) {
   async function submit() {
@@ -248,7 +245,7 @@ function QuestionComposer({
     >
       <TextareaField
         disabled={disabled}
-        label={`Ask ${recordName}`}
+        label="Ask this record"
         onChange={(event) => setQuestion(event.currentTarget.value)}
         placeholder="Ask a cited question across this Record…"
         value={question}
@@ -277,7 +274,6 @@ export function AskRecordWorkspace({
   onRetry,
   onSuggestedQuestion,
   question: controlledQuestion,
-  recordName = "Medicaid Fraud Documenter",
   sourceAvailability = [],
   sourceDisclosure = defaultSourceDisclosure,
   state = "suggested",
@@ -315,7 +311,7 @@ export function AskRecordWorkspace({
     >
       <header className="grid gap-2">
         <h2 className="text-2xl font-semibold" id="ask-record-heading">
-          Ask {recordName}
+          Ask this record
         </h2>
         <p className="text-sm leading-6 text-[var(--air-color-text-secondary)]">
           Ask across Record Knowledge, reviewed or approved Session Reports, and
@@ -474,7 +470,6 @@ export function AskRecordWorkspace({
           disabled={generating}
           onAsk={onAsk}
           question={composerQuestion}
-          recordName={recordName}
           setQuestion={setComposerQuestion}
         />
       ) : null}
