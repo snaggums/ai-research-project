@@ -57,7 +57,7 @@ import {
 import { exportUrl } from "@/api/exports";
 
 const emptyForm: ProjectPayload = { name: "", description: "" };
-const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
+const providers = ["openai", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
 const embeddingProviders = ["mock", "openai", "ollama"];
 const suggestedQuestions = [
   "What are the strongest usability issues in these transcripts?",
