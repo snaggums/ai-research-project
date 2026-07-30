@@ -6,6 +6,22 @@ import { AIProviderSettingsForm } from "@/components/research/ai-provider-settin
 import { mockAISettingsValues } from "@/mocks/fixtures/settings";
 
 describe("AIProviderSettingsForm", () => {
+  it("hides Anthropic from the Provider options", async () => {
+    const user = userEvent.setup();
+    render(
+      <AIProviderSettingsForm
+        initialValues={mockAISettingsValues}
+        onSave={() => undefined}
+        onTest={() => undefined}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "Provider" }));
+
+    expect(screen.queryByRole("option", { name: "anthropic" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "openai" })).toBeInTheDocument();
+  });
+
   it("saves normalized provider settings", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();

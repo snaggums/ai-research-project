@@ -28,7 +28,7 @@ export interface AIProviderSettingsFormProps extends React.HTMLAttributes<HTMLEl
   statusMessage?: string;
 }
 
-const providers = ["openai", "anthropic", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
+const providers = ["openai", "gemini", "openrouter", "azure_openai", "ollama", "mock"];
 const embeddingProviders = ["openai", "ollama", "mock"];
 
 const stateFeedback: Partial<Record<AIProviderSettingsFormState, { title: string; tone: "info" | "success" | "error" }>> = {
