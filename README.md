@@ -1,6 +1,6 @@
 # Sky-AIR
 
-30 Apps in 30 Days: Stephanie and Abigail Team
+30 Apps in 30 Days:
 
 AI-Assisted UX Research Repository
 
